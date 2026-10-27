@@ -19,6 +19,7 @@ import {
   validateBudgetProfile,
   validateSource,
   type ICEBudgetProfile,
+  type ICELodAllocationMode,
 } from '@ice3/toolchain-core';
 
 interface ParsedArguments {
@@ -80,7 +81,18 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     '--max-bytes',
   );
   const lod = args.flags.has('--lod')
-    ? (() => {
+      ? (() => {
+        const requestedAllocation = args.values.get('--lod-allocation')
+          ?? 'proportional';
+        if (
+          requestedAllocation !== 'proportional'
+          && requestedAllocation !== 'adaptive'
+        ) {
+          throw new Error(
+            'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --lod-allocation must be proportional or adaptive',
+          );
+        }
+        const allocation: ICELodAllocationMode = requestedAllocation;
         const ratio = fractionNumber(
           args.values.get('--lod-ratio') ?? '0.15',
           '--lod-ratio',
@@ -93,6 +105,15 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
           args.values.get('--lod-min-unit-triangles') ?? '8',
           '--lod-min-unit-triangles',
         );
+        const curveSamples = positiveInteger(
+          args.values.get('--lod-curve-samples') ?? '8',
+          '--lod-curve-samples',
+        );
+        if (curveSamples < 4 || curveSamples > 32) {
+          throw new Error(
+            'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --lod-curve-samples must be between 4 and 32',
+          );
+        }
         if (minTrianglesPerUnit > maxTrianglesPerProxy) {
           throw new Error(
             'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --lod-min-unit-triangles must not exceed --lod-max-triangles',
@@ -103,6 +124,8 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
           '--coarse-chunk-max-bytes',
         );
         return {
+          allocation,
+          curveSamples,
           ratio,
           maxTrianglesPerProxy,
           minTrianglesPerUnit,
@@ -392,6 +415,8 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--lod-ratio',
     '--lod-max-triangles',
     '--lod-min-unit-triangles',
+    '--lod-allocation',
+    '--lod-curve-samples',
     '--coarse-chunk-max-bytes',
   ]);
   const knownFlags = new Set([

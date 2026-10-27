@@ -105,6 +105,14 @@ Use `--coarse-chunk-max-bytes` to override the default 32 MiB coarse chunk
 limit; when omitted it follows `--max-bytes`. Oversized indivisible devices
 remain intact and are reported.
 
+Select the coarse-model allocation strategy with
+`--lod-allocation proportional|adaptive`. The default is `proportional`;
+`adaptive` generates deterministic per-device error curves and spends each
+Tile's triangle budget where marginal error reduction is largest.
+`--lod-curve-samples 4..32` controls the logarithmic samples per semantic
+device in adaptive mode and defaults to `8`. Adaptive sampling remains offline
+and changes neither the Prepared GLB profile nor the Tileset schema.
+
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.
