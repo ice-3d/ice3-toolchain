@@ -314,6 +314,49 @@ test('partition writes hierarchical LOD content and aggregate stats', async () =
   expect(result.stats.overBudgetCoarseNodes).toBe(0);
 });
 
+test('partition writes static render batches and reports their reduction', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  const printed: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    printed.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-demo',
+    '--max-triangles',
+    '16',
+    '--render-batch',
+    'static',
+    '--json',
+  ])).toBe(0);
+
+  const result = JSON.parse(printed.at(-1)!) as {
+    stats: {
+      renderBatchMode: string;
+      renderBatchCount: number;
+      renderBatchInputPrimitives: number;
+      renderBatchDrawReduction: number;
+    };
+  };
+  expect(result.stats).toMatchObject({
+    renderBatchMode: 'static',
+    renderBatchCount: expect.any(Number),
+    renderBatchInputPrimitives: 4,
+  });
+  expect(result.stats.renderBatchCount)
+    .toBeLessThan(result.stats.renderBatchInputPrimitives);
+  expect(result.stats.renderBatchDrawReduction).toBeGreaterThan(0);
+});
+
 test.each([
   [['--lod-ratio', '0']],
   [['--lod-ratio', '1']],

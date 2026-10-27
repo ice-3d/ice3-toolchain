@@ -3,6 +3,7 @@ import { readAccessor } from '../source/readAccessor.js';
 import {
   buildPreparedGLB,
   type ICEGeometryOverride,
+  type ICEPreparedGLB,
   type ICEPreparedMeshOverride,
 } from '../output/buildPreparedGLB.js';
 import type { ICEAssetContractStats } from '../output/assetContract.js';
@@ -75,6 +76,13 @@ export interface ICEPartitionResult {
     readonly semanticProxyTriangles: number;
     readonly semanticProxySavedTriangles: number;
     readonly semanticProxyMaximumErrorMeters: number;
+    readonly renderBatchMode: 'off' | 'static';
+    readonly renderBatchInputPrimitives: number;
+    readonly renderBatchCount: number;
+    readonly renderBatchTriangles: number;
+    readonly renderBatchBytes: number;
+    readonly renderBatchFallbackPrimitives: number;
+    readonly renderBatchDrawReduction: number;
   };
   readonly warnings: readonly string[];
 }
@@ -115,8 +123,14 @@ export async function partitionAsset(
   }
   const maxTriangles = options.maxTriangles ?? DEFAULT_MAX_TRIANGLES;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+  const renderBatch = options.renderBatch ?? 'off';
   validatePositive(maxTriangles, 'maxTriangles');
   validatePositive(maxBytes, 'maxBytes');
+  if (renderBatch !== 'off' && renderBatch !== 'static') {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: renderBatch must be off or static',
+    );
+  }
   const semanticProxy = options.lod?.semanticProxy;
   if (
     semanticProxy !== undefined
@@ -160,6 +174,11 @@ export async function partitionAsset(
       adaptiveUnitIds: new Set(),
       adaptiveRatios: [],
       maximumAdaptiveErrorMeters: 0,
+      renderBatchInputPrimitives: 0,
+      renderBatchCount: 0,
+      renderBatchTriangles: 0,
+      renderBatchBytes: 0,
+      renderBatchFallbackPrimitives: 0,
       semanticProxyCache: new Map(),
       semanticProxyAcceptedIds: new Set(),
       semanticProxyRejectedIds: new Set(),
@@ -203,7 +222,11 @@ export async function partitionAsset(
     const expectedNodeCount = new Set(
       analysis.units.flatMap((unit) => unit.nodeIndices),
     ).size;
-    if (nodeCount !== expectedNodeCount) {
+    if (
+      renderBatch === 'off'
+        ? nodeCount !== expectedNodeCount
+        : nodeCount < expectedNodeCount
+    ) {
       throw new Error(
         `ICE3_TOOL_TILESET_INVALID: node count ${nodeCount} does not match ${expectedNodeCount}`,
       );
@@ -283,6 +306,16 @@ export async function partitionAsset(
         semanticProxySavedTriangles: state.semanticProxySavedTriangles,
         semanticProxyMaximumErrorMeters:
           state.semanticProxyMaximumErrorMeters,
+        renderBatchMode: renderBatch,
+        renderBatchInputPrimitives: state.renderBatchInputPrimitives,
+        renderBatchCount: state.renderBatchCount,
+        renderBatchTriangles: state.renderBatchTriangles,
+        renderBatchBytes: state.renderBatchBytes,
+        renderBatchFallbackPrimitives: state.renderBatchFallbackPrimitives,
+        renderBatchDrawReduction: state.renderBatchInputPrimitives === 0
+          ? 0
+          : (state.renderBatchInputPrimitives - state.renderBatchCount)
+            / state.renderBatchInputPrimitives,
       },
       warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
     };
@@ -307,6 +340,11 @@ interface ICBuildState {
   readonly adaptiveUnitIds: Set<string>;
   readonly adaptiveRatios: number[];
   maximumAdaptiveErrorMeters: number;
+  renderBatchInputPrimitives: number;
+  renderBatchCount: number;
+  renderBatchTriangles: number;
+  renderBatchBytes: number;
+  renderBatchFallbackPrimitives: number;
   readonly semanticProxyCache: Map<
     string,
     Promise<ICESemanticProxyCreateResult>
@@ -397,11 +435,15 @@ async function buildNode(
       nodeIndices,
       flattenWorldTransforms: true,
     },
+    ...(options.renderBatch === 'static'
+      ? { renderBatching: { mode: 'static' as const } }
+      : {}),
   });
   if (built.budget.status === 'error') {
     throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: partition exceeds hard budget');
   }
   if (built.bytes.byteLength <= maxBytes) {
+    recordRenderBatchStats(state, built);
     const contentUri = `parts/part-${String(state.nextLeaf).padStart(3, '0')}.glb`;
     state.nextLeaf += 1;
     return {
@@ -497,6 +539,7 @@ async function buildCoarseNode(
     normalized,
   );
   if (built.coarseBytes!.byteLength <= limit || node.units.length === 1) {
+    recordRenderBatchStats(state, built);
     for (const unitId of built.preservedUnits) {
       state.preservedCoarseUnits.add(unitId);
     }
@@ -592,6 +635,7 @@ async function buildSingleCoarseNode(
   readonly preservedUnits: readonly string[];
   readonly overBudget: boolean;
   readonly adaptiveMetrics?: ICoarseAdaptiveMetrics;
+  readonly renderBatching?: NonNullable<ICEPreparedGLB['renderBatching']>;
 }> {
   const lod = options.lod!;
   const selection = lod.allocation === 'adaptive'
@@ -625,6 +669,9 @@ async function buildSingleCoarseNode(
       nodeIndices: node.units.flatMap((unit) => unit.nodeIndices),
       flattenWorldTransforms: true,
     },
+    ...(options.renderBatch === 'static'
+      ? { renderBatching: { mode: 'static' as const } }
+      : {}),
   });
   if (built.budget.status === 'error') {
     throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: coarse partition exceeds budget');
@@ -641,6 +688,9 @@ async function buildSingleCoarseNode(
     coarseStats: built.stats,
     preservedUnits: selection.preservedUnits,
     overBudget,
+    ...(built.renderBatching
+      ? { renderBatching: built.renderBatching }
+      : {}),
     ...(selection.adaptiveMetrics
       ? { adaptiveMetrics: selection.adaptiveMetrics }
       : {}),
@@ -1042,6 +1092,27 @@ function collectCoarseTrees(tree: BuiltTree): BuiltTree[] {
     ...(tree.coarseBytes || tree.coarseContents?.length ? [tree] : []),
     ...tree.children.flatMap(collectCoarseTrees),
   ];
+}
+
+function recordRenderBatchStats(
+  state: ICBuildState,
+  built: {
+    readonly renderBatching?: {
+      readonly inputPrimitiveCount: number;
+      readonly batchCount: number;
+      readonly triangleCount: number;
+      readonly byteLength: number;
+      readonly fallbackPrimitiveCount: number;
+    };
+  },
+): void {
+  const stats = built.renderBatching;
+  if (!stats) return;
+  state.renderBatchInputPrimitives += stats.inputPrimitiveCount;
+  state.renderBatchCount += stats.batchCount;
+  state.renderBatchTriangles += stats.triangleCount;
+  state.renderBatchBytes += stats.byteLength;
+  state.renderBatchFallbackPrimitives += stats.fallbackPrimitiveCount;
 }
 
 function createFinishedTree(

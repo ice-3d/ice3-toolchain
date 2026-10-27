@@ -66,6 +66,13 @@ export interface ICEPreparedGLB {
   readonly metrics: ICEAssetMetrics;
   readonly budget: ICEBudgetResult;
   readonly contentDigest: string;
+  readonly renderBatching?: {
+    readonly inputPrimitiveCount: number;
+    readonly batchCount: number;
+    readonly triangleCount: number;
+    readonly byteLength: number;
+    readonly fallbackPrimitiveCount: number;
+  };
 }
 
 type JSONRecord = Record<string, unknown>;
@@ -705,6 +712,27 @@ export function buildPreparedGLB(
     metrics: finalized.metrics,
     budget: finalized.budget,
     contentDigest: digest,
+    ...(renderBatching
+      ? {
+          renderBatching: {
+            inputPrimitiveCount: renderBatching.inputPrimitiveCount,
+            batchCount: renderBatching.outputBatchCount,
+            triangleCount: renderBatching.batches.reduce(
+              (total, batch) => total + batch.triangleCount,
+              0,
+            ),
+            byteLength: renderBatching.batches.reduce(
+              (total, batch) => total
+                + batch.positions.byteLength
+                + batch.indices.byteLength
+                + batch.semanticIndices.byteLength
+                + (batch.colors?.byteLength ?? 0),
+              0,
+            ),
+            fallbackPrimitiveCount: 0,
+          },
+        }
+      : {}),
   };
 }
 
