@@ -52,6 +52,7 @@ export async function createGeometryWorkspace(
   const records = new Map<string, IGEStoredGeometry>();
   let memoryBytes = 0;
   let spilledBytes = 0;
+  let nextSpillIndex = 0;
   let disposed = false;
 
   return {
@@ -79,7 +80,8 @@ export async function createGeometryWorkspace(
         memoryBytes += byteLength;
         return;
       }
-      const path = join(root, `${records.size}.bin`);
+      const path = join(root, `${nextSpillIndex}.bin`);
+      nextSpillIndex += 1;
       await writeFile(path, encodeGeometry(geometry));
       records.set(key, { byteLength, path });
       spilledBytes += byteLength;

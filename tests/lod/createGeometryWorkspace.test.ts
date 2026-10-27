@@ -66,3 +66,33 @@ test.each([1024, 1])(
     await workspace.dispose();
   },
 );
+
+test('keeps concurrent spilled writes isolated', async () => {
+  const workspace = await createGeometryWorkspace({ maxMemoryBytes: 1 });
+  const first = {
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    indices: new Uint32Array([0, 1, 2]),
+  };
+  const second = {
+    positions: new Float32Array([
+      0, 0, 0,
+      1, 0, 0,
+      0, 1, 0,
+      1, 1, 0,
+      2, 0, 0,
+      2, 1, 0,
+    ]),
+    indices: new Uint32Array([0, 1, 2, 1, 3, 2, 3, 5, 2]),
+  };
+
+  await Promise.all([
+    workspace.write('first', first),
+    workspace.write('second', second),
+  ]);
+
+  expect([...(await workspace.read('first')).indices])
+    .toEqual([...first.indices]);
+  expect([...(await workspace.read('second')).indices])
+    .toEqual([...second.indices]);
+  await workspace.dispose();
+});
