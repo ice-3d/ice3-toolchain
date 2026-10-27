@@ -102,6 +102,14 @@ export {
   type ICELodUnitCurveOptions,
 } from './lod/createLodUnitCurve.js';
 export {
+  collectFitSamples,
+} from './lod/semanticProxy/collectFitSamples.js';
+export type {
+  ICESemanticProxy,
+  ICESemanticProxyFitSamples,
+  ICESemanticProxyKind,
+} from './lod/semanticProxy/types.js';
+export {
   createCoarseChunkPlan,
   type ICECoarseChunk,
   type ICECoarseChunkUnit,
@@ -118,4 +126,5 @@ export type {
   ICEPartitionUnit,
   ICELodBuildOptions,
   ICELodAllocationMode,
+  ICESemanticProxyMode,
 } from './partition/types.js';
