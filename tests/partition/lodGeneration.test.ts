@@ -55,3 +55,17 @@ test('generates coarse and fine content in one hierarchical result', async () =>
     node.extras.ice3.id.startsWith('lod-demo:lod:group-root/node/')
   ))).toBe(true);
 });
+
+test('reports a coarse proxy that exceeds its target after simplification', async () => {
+  const result = await partitionAsset(createLodPartitionSource(), {
+    assetId: 'lod-demo',
+    maxTriangles: 8,
+    lod: {
+      ratio: 0.15,
+      maxTrianglesPerProxy: 16,
+      minTrianglesPerUnit: 1,
+    },
+  });
+
+  expect(result.stats.overBudgetCoarseNodes).toBeGreaterThan(0);
+});

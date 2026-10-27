@@ -35,6 +35,7 @@ export interface ICEBuildOptions {
 export interface ICEGeometryOverride {
   readonly positions: Float32Array;
   readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
 }
 
 export interface ICEBuildSelection {
@@ -217,11 +218,6 @@ export function buildPreparedGLB(
       const override = options.geometryOverrides?.get(
         `${meshIndex}:${primitiveIndex}`,
       );
-      if (override && attributes?.COLOR_0 !== undefined) {
-        throw new Error(
-          'ICE3_TOOL_LOD_INVALID: colored primitives cannot use geometry overrides',
-        );
-      }
       const prepared = prepareMesh(
         override?.positions ?? positionData.values,
         override?.indices ?? new Uint32Array(indexData.values),
@@ -241,17 +237,28 @@ export function buildPreparedGLB(
       const colorAccessor = attributes?.COLOR_0;
       let colorAccessorIndex: number | undefined;
       if (colorAccessor !== undefined) {
-        const colorData = readAccessor(source, Number(colorAccessor));
+        const colorData = override?.colors
+          ? {
+              components: override.colors.length / (prepared.positions.length / 3),
+              values: override.colors,
+            }
+          : readAccessor(source, Number(colorAccessor));
         if (
-          colorData.kind !== 'float32'
+          (
+            !override?.colors
+            && (
+              !('kind' in colorData)
+              || colorData.kind !== 'float32'
+            )
+          )
           || (colorData.components !== 3 && colorData.components !== 4)
           || colorData.values.length / colorData.components
-            !== positionData.values.length / 3
+            !== prepared.positions.length / 3
         ) {
           throw new Error('ICE3_TOOL_INVALID_GEOMETRY: COLOR_0 must match POSITION');
         }
         const base = linearMaterialColors[sourceMaterial] ?? [1, 1, 1, 1];
-        const displayColors = new Float32Array(positionData.values.length);
+        const displayColors = new Float32Array(prepared.positions.length);
         for (let vertex = 0; vertex < displayColors.length / 3; vertex += 1) {
           for (let channel = 0; channel < 3; channel += 1) {
             displayColors[vertex * 3 + channel] = linearToSrgb(
