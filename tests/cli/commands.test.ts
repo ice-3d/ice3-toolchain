@@ -355,6 +355,19 @@ test('partition writes static render batches and reports their reduction', async
   expect(result.stats.renderBatchCount)
     .toBeLessThan(result.stats.renderBatchInputPrimitives);
   expect(result.stats.renderBatchDrawReduction).toBeGreaterThan(0);
+
+  const nodeIds: string[] = [];
+  for (const file of readdirSync(join(output, 'parts'))) {
+    const bytes = readFileSync(join(output, 'parts', file));
+    const jsonLength = bytes.readUInt32LE(12);
+    const document = JSON.parse(
+      bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+    ) as {
+      nodes: Array<{ extras: { ice3: { id: string } } }>;
+    };
+    nodeIds.push(...document.nodes.map((node) => node.extras.ice3.id));
+  }
+  expect(new Set(nodeIds).size).toBe(nodeIds.length);
 });
 
 test('partition accepts standard chunked coarse contents', async () => {
@@ -387,6 +400,41 @@ test('partition accepts standard chunked coarse contents', async () => {
     root: { contents?: Array<{ uri: string }> };
   };
   expect(tileset.root.contents?.length).toBeGreaterThan(1);
+});
+
+test('gives render batch nodes unique IDs across partitions', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-id-demo',
+    '--max-triangles',
+    '1',
+    '--render-batch',
+    'static',
+    '--json',
+  ])).toBe(0);
+
+  const nodeIds: string[] = [];
+  for (const file of readdirSync(join(output, 'parts'))) {
+    const bytes = readFileSync(join(output, 'parts', file));
+    const jsonLength = bytes.readUInt32LE(12);
+    const document = JSON.parse(
+      bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+    ) as {
+      nodes: Array<{ extras: { ice3: { id: string } } }>;
+    };
+    nodeIds.push(...document.nodes.map((node) => node.extras.ice3.id));
+  }
+  expect(new Set(nodeIds).size).toBe(nodeIds.length);
 });
 
 test.each([

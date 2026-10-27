@@ -555,7 +555,9 @@ export function buildPreparedGLB(
         mesh: meshIndex,
         extras: {
           ice3: {
-            id: `${assetId}/render-batch-node/${index}`,
+            id: `${assetId}/render-batch-node/${
+              renderBatching.semanticNodeIds[0]
+            }/${index}`,
           },
         },
       });
