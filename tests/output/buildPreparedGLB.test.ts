@@ -9,11 +9,25 @@ test('builds byte-identical prepared GLB output', async () => {
   const second = buildPreparedGLB(source, { assetId: 'sample' });
 
   expect(first.bytes).toEqual(second.bytes);
-  expect(first.stats).toEqual({
+  expect(first.metrics).toMatchObject({
     nodeCount: 1,
+    maxNodeDepth: 0,
     meshCount: 1,
+    primitiveCount: 2,
     triangleCount: 1,
     edgeSegmentCount: 3,
+    materialCount: 5,
+    selectionGroupCount: 1,
+  });
+  expect(first.stats).toEqual({
+    nodeCount: 1,
+    maxNodeDepth: 0,
+    meshCount: 1,
+    primitiveCount: 2,
+    triangleCount: 1,
+    edgeSegmentCount: 3,
+    materialCount: 5,
+    selectionGroupCount: 1,
   });
 });
 

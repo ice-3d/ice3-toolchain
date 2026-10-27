@@ -4,6 +4,11 @@ import { readAccessor } from '../source/readAccessor.js';
 import { bakeLocalMatrix, type ICEMatrix4Tuple } from '../scene/bakeMatrix.js';
 import { prepareMesh } from '../scene/prepareMesh.js';
 import { validateSource } from '../scene/validateSource.js';
+import {
+  contractStats,
+  type ICEAssetContractStats,
+  type ICEAssetMetrics,
+} from './assetContract.js';
 
 export interface ICEBuildOptions {
   readonly assetId: string;
@@ -13,12 +18,8 @@ export interface ICEBuildOptions {
 
 export interface ICEPreparedGLB {
   readonly bytes: Uint8Array;
-  readonly stats: Readonly<{
-    nodeCount: number;
-    meshCount: number;
-    triangleCount: number;
-    edgeSegmentCount: number;
-  }>;
+  readonly stats: ICEAssetContractStats;
+  readonly metrics: ICEAssetMetrics;
 }
 
 type JSONRecord = Record<string, unknown>;
@@ -146,8 +147,10 @@ export function buildPreparedGLB(
   const accessors: Accessor[] = [];
   const outputMeshes: JSONRecord[] = [];
   let binaryLength = 0;
+  let primitiveCount = 0;
   let triangleCount = 0;
   let edgeSegmentCount = 0;
+  const selectionNodes = new Set<number>();
 
   const append = (bytes: Uint8Array): number => {
     const padding = (4 - (binaryLength % 4)) % 4;
@@ -164,6 +167,9 @@ export function buildPreparedGLB(
 
   for (const [meshIndex, mesh] of sourceMeshes.entries()) {
     const primitives: JSONRecord[] = [];
+    const nodeOwners = sourceNodes
+      .map((node, index) => Number(node.mesh) === meshIndex ? index : -1)
+      .filter((index) => index >= 0);
     for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
       if (Number(primitive.mode ?? 4) === 1) {
         continue;
@@ -273,7 +279,11 @@ export function buildPreparedGLB(
       }
       triangleCount += prepared.indices.length / 3;
       edgeSegmentCount += prepared.edgeIndices.length / 2;
+      for (const owner of nodeOwners) {
+        selectionNodes.add(owner);
+      }
     }
+    primitiveCount += primitives.length;
     outputMeshes.push({
       primitives,
       extras: { ice3: { id: `${assetId}/mesh/${meshIndex}` } },
@@ -292,6 +302,31 @@ export function buildPreparedGLB(
   rawBinary.copy(binary);
   const digest = createHash('sha256').update(binary).digest('hex');
   const sceneNodeIndices = integers(sourceScene.nodes);
+  const nodeDepth = (
+    index: number,
+    visiting = new Set<number>(),
+  ): number => {
+    if (visiting.has(index)) {
+      throw new Error('ICE3_TOOL_INVALID_SOURCE: node cycle detected');
+    }
+    const children = integers(sourceNodes[index]?.children);
+    if (children.length === 0) return 0;
+    const next = new Set(visiting).add(index);
+    return 1 + Math.max(...children.map((child) => nodeDepth(child, next)));
+  };
+  const maxNodeDepth = sceneNodeIndices.length === 0
+    ? 0
+    : Math.max(...sceneNodeIndices.map((index) => nodeDepth(index)));
+  const baseStats: ICEAssetContractStats = {
+    nodeCount: outputNodes.length,
+    maxNodeDepth,
+    meshCount: outputMeshes.length,
+    primitiveCount,
+    triangleCount,
+    edgeSegmentCount,
+    materialCount: outputMaterials.length,
+    selectionGroupCount: selectionNodes.size,
+  };
   const json = {
     asset: {
       version: '2.0',
@@ -314,10 +349,7 @@ export function buildPreparedGLB(
           colorSpace: 'srgb',
           bounds,
           stats: {
-            nodeCount: outputNodes.length,
-            meshCount: outputMeshes.length,
-            triangleCount,
-            edgeSegmentCount,
+            ...baseStats,
           },
         },
       },
@@ -331,14 +363,20 @@ export function buildPreparedGLB(
     bufferViews,
     buffers: [{ byteLength: rawBinary.byteLength }],
   };
+  const bytes = packGLB(json, binary);
+  const packed = Buffer.from(bytes);
+  const jsonChunkBytes = packed.readUInt32LE(12);
+  const binChunkBytes = packed.readUInt32LE(20 + jsonChunkBytes);
+  const metrics: ICEAssetMetrics = {
+    ...baseStats,
+    encodedBytes: bytes.byteLength,
+    jsonChunkBytes,
+    binChunkBytes,
+  };
   return {
-    bytes: packGLB(json, binary),
-    stats: {
-      nodeCount: outputNodes.length,
-      meshCount: outputMeshes.length,
-      triangleCount,
-      edgeSegmentCount,
-    },
+    bytes,
+    stats: contractStats(metrics),
+    metrics,
   };
 }
 

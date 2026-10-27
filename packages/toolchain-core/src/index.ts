@@ -25,4 +25,12 @@ export {
   type ICEBuildOptions,
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
+export {
+  ICE_ASSET_CONTRACT_VERSION,
+  contractStats,
+  type ICEAssetContract,
+  type ICEAssetContractStats,
+  type ICEAssetMetrics,
+  type ICEAssetPreparation,
+} from './output/assetContract.js';
 export { validatePreparedGLB } from './output/validatePreparedGLB.js';
