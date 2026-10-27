@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { ICESourceReport } from '../scene/validateSource.js';
+import {
+  BUDGET_PROFILES,
+  evaluateAssetBudget,
+} from './evaluateAssetBudget.js';
 
 type JSONRecord = Record<string, unknown>;
 
@@ -124,10 +128,12 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
   }
 
   const meshes = records(json.meshes);
+  let primitiveCount = 0;
   let triangleCount = 0;
   let edgeSegmentCount = 0;
   for (const [meshIndex, mesh] of meshes.entries()) {
     for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
+      primitiveCount += 1;
       const mode = Number(primitive.mode ?? 4);
       const path = `${meshIndex}:${primitiveIndex}`;
       if (mode !== 4 && mode !== 1) {
@@ -187,13 +193,73 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
   }
 
   const stats = record(profile.stats);
+  const contractVersion = profile.contractVersion;
+  const hasContract = contractVersion !== undefined;
   if (
     Number(stats?.nodeCount) !== nodes.length
     || Number(stats?.meshCount) !== meshes.length
     || Number(stats?.triangleCount) !== triangleCount
     || Number(stats?.edgeSegmentCount) !== edgeSegmentCount
+    || (hasContract && (
+      Number(stats?.primitiveCount) !== primitiveCount
+      || Number(stats?.materialCount) !== records(json.materials).length
+      || Number(stats?.maxNodeDepth) !== maxNodeDepth(nodes, scenes)
+      || Number(stats?.selectionGroupCount) !== selectionGroupCount(nodes, meshes)
+    ))
   ) {
     errors.add('ICE3_TOOL_INVALID_PROFILE_STATS');
+  }
+
+  if (hasContract) {
+    if (contractVersion !== '1.0') {
+      errors.add('ICE3_TOOL_CONTRACT_UNSUPPORTED');
+    }
+    const preparation = record(profile.preparation);
+    if (preparation?.runtimeConversionRequired !== false) {
+      errors.add('ICE3_TOOL_RUNTIME_CONVERSION_REQUIRED');
+    }
+    const budget = record(profile.budget);
+    const status = budget?.status;
+    const warningCount = Number(budget?.warningCount);
+    const errorCount = Number(budget?.errorCount);
+    if (
+      !budget
+      || !['pass', 'warning', 'error'].includes(String(status))
+      || !Number.isInteger(warningCount)
+      || warningCount < 0
+      || !Number.isInteger(errorCount)
+      || errorCount < 0
+      || (status === 'error') !== (errorCount > 0)
+      || (status === 'pass' && warningCount > 0)
+    ) {
+      errors.add('ICE3_TOOL_INVALID_BUDGET');
+    } else {
+      const builtIn = typeof budget.profile === 'string'
+        ? BUDGET_PROFILES[budget.profile]
+        : undefined;
+      if (builtIn) {
+        const expected = evaluateAssetBudget({
+          encodedBytes: bytes.byteLength,
+          jsonChunkBytes: jsonChunkBytes(Buffer.from(bytes)),
+          binChunkBytes: parsed.binary.byteLength,
+          nodeCount: nodes.length,
+          maxNodeDepth: maxNodeDepth(nodes, scenes),
+          meshCount: meshes.length,
+          primitiveCount,
+          triangleCount,
+          edgeSegmentCount,
+          materialCount: records(json.materials).length,
+          selectionGroupCount: selectionGroupCount(nodes, meshes),
+        }, builtIn);
+        if (
+          budget.status !== expected.status
+          || warningCount !== expected.warningCount
+          || errorCount !== expected.errorCount
+        ) {
+          errors.add('ICE3_TOOL_INVALID_BUDGET');
+        }
+      }
+    }
   }
 
   const meshIds = new Set<string>();
@@ -203,6 +269,46 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
 
   return { errors: [...errors], warnings: [] };
 }
+
+const jsonChunkBytes = (bytes: Buffer): number => bytes.readUInt32LE(12);
+
+const selectionGroupCount = (
+  nodes: readonly JSONRecord[],
+  meshes: readonly JSONRecord[],
+): number => {
+  let count = 0;
+  for (const node of nodes) {
+    if (node.mesh === undefined) continue;
+    const mesh = meshes[Number(node.mesh)];
+    if (
+      mesh
+      && records(mesh.primitives).some((primitive) => (
+        Number(primitive.mode ?? 4) === 4
+      ))
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+};
+
+const maxNodeDepth = (
+  nodes: readonly JSONRecord[],
+  scenes: readonly JSONRecord[],
+): number => {
+  const visit = (index: number, visiting = new Set<number>()): number => {
+    if (visiting.has(index)) return 0;
+    const next = new Set(visiting).add(index);
+    const children = integers(nodes[index]?.children);
+    return children.length === 0
+      ? 0
+      : 1 + Math.max(...children.map((child) => visit(child, next)));
+  };
+  const roots = integers(scenes[0]?.nodes);
+  return roots.length === 0
+    ? 0
+    : Math.max(...roots.map((root) => visit(root)));
+};
 
 function parseGLB(bytes: Buffer): ParsedGLB {
   if (
@@ -285,6 +391,14 @@ function records(value: unknown): JSONRecord[] {
   return Array.isArray(value)
     ? value.filter((item): item is JSONRecord => (
         Boolean(item) && typeof item === 'object' && !Array.isArray(item)
+      ))
+    : [];
+}
+
+function integers(value: unknown): number[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is number => (
+        typeof item === 'number' && Number.isInteger(item)
       ))
     : [];
 }

@@ -54,6 +54,35 @@ test('rejects profile statistics that do not match mesh accessors', async () => 
   );
 });
 
+test('rejects runtime conversion and unsupported contract versions', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  const valid = buildPreparedGLB(source, { assetId: 'sample' }).bytes;
+
+  const conversion = mutateProfile(valid, (profile) => {
+    const preparation = profile.preparation as Record<string, unknown>;
+    preparation.runtimeConversionRequired = true;
+  });
+  expect(validatePreparedGLB(conversion).errors).toContain(
+    'ICE3_TOOL_RUNTIME_CONVERSION_REQUIRED',
+  );
+
+  const unsupported = mutateProfile(valid, (profile) => {
+    profile.contractVersion = '2.0';
+  });
+  expect(validatePreparedGLB(unsupported).errors).toContain(
+    'ICE3_TOOL_CONTRACT_UNSUPPORTED',
+  );
+});
+
+const mutateProfile = (
+  bytes: Uint8Array,
+  mutate: (profile: Record<string, unknown>) => void,
+): Uint8Array => rewriteJSON(bytes, (json) => {
+  const asset = json.asset as Record<string, unknown>;
+  const extras = asset.extras as Record<string, unknown>;
+  mutate(extras.ice3 as Record<string, unknown>);
+});
+
 function rewriteJSON(
   source: Uint8Array,
   mutate: (json: Record<string, unknown>) => void,

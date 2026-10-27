@@ -2,6 +2,17 @@ import { expect, test } from 'node-test';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';
 import { buildPreparedGLB } from '../../packages/toolchain-core/src/output/buildPreparedGLB.js';
 import type { ICESourceDocument } from '../../packages/toolchain-core/src/source/readSource.js';
+import { BUDGET_PROFILES } from '../../packages/toolchain-core/src/output/evaluateAssetBudget.js';
+
+const readProfile = (bytes: Uint8Array): Record<string, unknown> => {
+  const buffer = Buffer.from(bytes);
+  const length = buffer.readUInt32LE(12);
+  const json = JSON.parse(
+    buffer.subarray(20, 20 + length).toString('utf8').trimEnd(),
+  ) as Record<string, unknown>;
+  const asset = json.asset as Record<string, unknown>;
+  return (asset.extras as Record<string, unknown>).ice3 as Record<string, unknown>;
+};
 
 test('builds byte-identical prepared GLB output', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
@@ -142,4 +153,31 @@ test('bakes vertex colors into display-ready profile colors', () => {
     1,
     1,
   ]);
+});
+
+test('embeds preparation, extended stats, and budget status', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  const built = buildPreparedGLB(source, {
+    assetId: 'sample',
+    budget: BUDGET_PROFILES['interactive-desktop-v1'],
+  });
+  const profile = readProfile(built.bytes);
+  expect(profile.contractVersion).toBe('1.0');
+  expect(profile.stats).toMatchObject({
+    nodeCount: 1,
+    maxNodeDepth: 0,
+    meshCount: 1,
+    primitiveCount: 2,
+    triangleCount: 1,
+    materialCount: 5,
+    selectionGroupCount: 1,
+  });
+  expect(profile.preparation).toMatchObject({
+    runtimeConversionRequired: false,
+    matrixTransformsBaked: true,
+  });
+  expect(profile.budget).toMatchObject({
+    profile: 'interactive-desktop-v1',
+    status: 'pass',
+  });
 });

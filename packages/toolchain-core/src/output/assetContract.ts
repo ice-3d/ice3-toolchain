@@ -50,4 +50,10 @@ export interface ICEAssetContract {
   readonly contractVersion: '1.0';
   readonly stats: ICEAssetContractStats;
   readonly preparation: ICEAssetPreparation;
+  readonly budget: Readonly<{
+    profile: string;
+    status: 'pass' | 'warning' | 'error';
+    warningCount: number;
+    errorCount: number;
+  }>;
 }

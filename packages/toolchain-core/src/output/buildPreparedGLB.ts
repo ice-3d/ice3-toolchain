@@ -6,14 +6,22 @@ import { prepareMesh } from '../scene/prepareMesh.js';
 import { validateSource } from '../scene/validateSource.js';
 import {
   contractStats,
+  type ICEAssetContract,
   type ICEAssetContractStats,
   type ICEAssetMetrics,
 } from './assetContract.js';
+import {
+  BUDGET_PROFILES,
+  evaluateAssetBudget,
+  type ICEBudgetProfile,
+  type ICEBudgetResult,
+} from './evaluateAssetBudget.js';
 
 export interface ICEBuildOptions {
   readonly assetId: string;
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
+  readonly budget?: ICEBudgetProfile;
 }
 
 export interface ICEPreparedGLB {
@@ -327,6 +335,21 @@ export function buildPreparedGLB(
     materialCount: outputMaterials.length,
     selectionGroupCount: selectionNodes.size,
   };
+  const budgetProfile = options.budget
+    ?? BUDGET_PROFILES['interactive-desktop-v1']!;
+  const preparation = {
+    runtimeConversionRequired: false as const,
+    sourceFormat: 'gltf-2.0' as const,
+    unitsNormalized: true as const,
+    matrixTransformsBaked: true as const,
+    requiredCompressionDecoded: true as const,
+    edgesPrepared: options.edges !== false,
+    selectionGroupsPrepared: true as const,
+    options: {
+      creaseAngleDegrees,
+      edges: options.edges !== false,
+    },
+  };
   const json = {
     asset: {
       version: '2.0',
@@ -335,6 +358,7 @@ export function buildPreparedGLB(
         ice3: {
           profile: 'ice3-prepared',
           profileVersion: '1.0',
+          contractVersion: '1.0',
           assetId,
           contentDigest: {
             algorithm: 'sha256',
@@ -351,6 +375,13 @@ export function buildPreparedGLB(
           stats: {
             ...baseStats,
           },
+          preparation,
+          budget: {
+            profile: budgetProfile.id,
+            status: 'pass',
+            warningCount: 0,
+            errorCount: 0,
+          },
         },
       },
     },
@@ -363,22 +394,120 @@ export function buildPreparedGLB(
     bufferViews,
     buffers: [{ byteLength: rawBinary.byteLength }],
   };
-  const bytes = packGLB(json, binary);
-  const packed = Buffer.from(bytes);
-  const jsonChunkBytes = packed.readUInt32LE(12);
-  const binChunkBytes = packed.readUInt32LE(20 + jsonChunkBytes);
-  const metrics: ICEAssetMetrics = {
+  const baseMetrics: ICEAssetMetrics = {
     ...baseStats,
-    encodedBytes: bytes.byteLength,
+    encodedBytes: 0,
+    jsonChunkBytes: 0,
+    binChunkBytes: 0,
+  };
+  const initialContract: ICEAssetContract = {
+    contractVersion: '1.0',
+    stats: baseStats,
+    preparation,
+    budget: {
+      profile: budgetProfile.id,
+      status: 'pass',
+      warningCount: 0,
+      errorCount: 0,
+    },
+  };
+  const finalized = packWithContract(
+    json,
+    binary,
+    baseMetrics,
+    initialContract,
+    budgetProfile,
+  );
+  return {
+    bytes: finalized.bytes,
+    stats: contractStats(finalized.metrics),
+    metrics: finalized.metrics,
+  };
+}
+
+const withContract = (
+  json: JSONRecord,
+  contract: ICEAssetContract,
+): JSONRecord => {
+  const asset = record(json.asset)!;
+  const extras = record(asset.extras)!;
+  const ice3 = record(extras.ice3)!;
+  return {
+    ...json,
+    asset: {
+      ...asset,
+      extras: {
+        ...extras,
+        ice3: {
+          ...ice3,
+          contractVersion: contract.contractVersion,
+          stats: contract.stats,
+          preparation: contract.preparation,
+          budget: contract.budget,
+        },
+      },
+    },
+  };
+};
+
+const measurePackedMetrics = (
+  packed: Uint8Array,
+  base: ICEAssetMetrics,
+): ICEAssetMetrics => {
+  const buffer = Buffer.from(packed);
+  const jsonChunkBytes = buffer.readUInt32LE(12);
+  const binHeader = 20 + jsonChunkBytes;
+  const binChunkBytes = buffer.readUInt32LE(binHeader);
+  return {
+    ...base,
+    encodedBytes: packed.byteLength,
     jsonChunkBytes,
     binChunkBytes,
   };
-  return {
-    bytes,
-    stats: contractStats(metrics),
-    metrics,
-  };
-}
+};
+
+const packWithContract = (
+  json: JSONRecord,
+  binary: Buffer,
+  baseMetrics: ICEAssetMetrics,
+  contract: ICEAssetContract,
+  budget: ICEBudgetProfile,
+): {
+  readonly bytes: Uint8Array;
+  readonly metrics: ICEAssetMetrics;
+  readonly budget: ICEBudgetResult;
+} => {
+  let previousSignature = '';
+  let contractValue = contract;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const packed = packGLB(withContract(json, contractValue), binary);
+    const metrics = measurePackedMetrics(packed, baseMetrics);
+    const budgetResult = evaluateAssetBudget(metrics, budget);
+    const signature = [
+      metrics.encodedBytes,
+      metrics.jsonChunkBytes,
+      metrics.binChunkBytes,
+      budgetResult.status,
+      budgetResult.warningCount,
+      budgetResult.errorCount,
+    ].join(':');
+    if (signature === previousSignature) {
+      return { bytes: packed, metrics, budget: budgetResult };
+    }
+    previousSignature = signature;
+    contractValue = {
+      ...contract,
+      stats: contractStats(metrics),
+      budget: {
+        profile: budget.id,
+        status: budgetResult.status,
+        warningCount: budgetResult.warningCount,
+        errorCount: budgetResult.errorCount,
+      },
+    };
+  }
+  throw new Error('ICE3_TOOL_BUDGET_UNSTABLE: final GLB size did not converge');
+};
 
 function packGLB(json: unknown, binary: Buffer): Uint8Array {
   const jsonBytes = Buffer.from(JSON.stringify(json), 'utf8');
