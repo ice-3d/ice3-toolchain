@@ -377,7 +377,17 @@ async function buildCoarseNode(
     normalized,
   );
   if (built.coarseBytes!.byteLength <= limit || node.units.length === 1) {
-    return built;
+    for (const unitId of built.preservedUnits) {
+      state.preservedCoarseUnits.add(unitId);
+    }
+    if (built.overBudget) state.overBudgetCoarseNodes += 1;
+    return {
+      coarseUri: built.coarseUri!,
+      coarseTriangleCount: built.coarseTriangleCount!,
+      coarseError: built.coarseError!,
+      coarseBytes: built.coarseBytes!,
+      coarseStats: built.coarseStats!,
+    };
   }
   const middle = Math.ceil(node.units.length / 2);
   const split = [
@@ -430,7 +440,10 @@ async function buildSingleCoarseNode(
 ): Promise<Pick<
   BuiltTree,
   'coarseUri' | 'coarseTriangleCount' | 'coarseError' | 'coarseBytes' | 'coarseStats'
->> {
+> & {
+  readonly preservedUnits: readonly string[];
+  readonly overBudget: boolean;
+}> {
   const lod = options.lod!;
   const targets = allocateLodTargets(node.units, lod);
   const overrides = new Map<string, {
@@ -439,6 +452,7 @@ async function buildSingleCoarseNode(
     readonly colors?: Float32Array;
   }>();
   let maximumError = 0;
+  const preservedUnits: string[] = [];
   for (const [unitIndex, unit] of node.units.entries()) {
     const target = targets[unitIndex]!;
     let preserved = false;
@@ -498,7 +512,7 @@ async function buildSingleCoarseNode(
       }
     }
     if (preserved) {
-      state.preservedCoarseUnits.add(unit.nodeIndices.join(','));
+      preservedUnits.push(unit.nodeIndices.join(','));
     }
   }
   const built = buildPreparedGLB(source, {
@@ -518,17 +532,19 @@ async function buildSingleCoarseNode(
   if (built.budget.status === 'error') {
     throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: coarse partition exceeds budget');
   }
-  if (targets.reduce((sum, target) => sum + target.targetTriangles, 0)
-    > lod.maxTrianglesPerProxy
-    || built.stats.triangleCount > lod.maxTrianglesPerProxy) {
-    state.overBudgetCoarseNodes += 1;
-  }
+  const overBudget = (
+    targets.reduce((sum, target) => sum + target.targetTriangles, 0)
+      > lod.maxTrianglesPerProxy
+    || built.stats.triangleCount > lod.maxTrianglesPerProxy
+  );
   return {
     coarseUri: `coarse/${partitionId}.glb`,
     coarseTriangleCount: built.stats.triangleCount,
     coarseError: maximumError,
     coarseBytes: built.bytes,
     coarseStats: built.stats,
+    preservedUnits,
+    overBudget,
   };
 }
 
