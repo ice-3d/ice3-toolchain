@@ -33,7 +33,11 @@ export interface ICEPartitionOptions {
   readonly lod?: ICELodBuildOptions;
 }
 
+export type ICELodAllocationMode = 'proportional' | 'adaptive';
+
 export interface ICELodBuildOptions {
+  readonly allocation?: ICELodAllocationMode;
+  readonly curveSamples?: number;
   readonly ratio: number;
   readonly maxTrianglesPerProxy: number;
   readonly minTrianglesPerUnit: number;

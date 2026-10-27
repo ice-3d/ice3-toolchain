@@ -84,6 +84,10 @@ export {
   type ICELodUnitTarget,
 } from './lod/allocateLodTargets.js';
 export {
+  createLodSampleSchedule,
+  type ICELodSampleScheduleOptions,
+} from './lod/createLodSampleSchedule.js';
+export {
   createCoarseChunkPlan,
   type ICECoarseChunk,
   type ICECoarseChunkUnit,
@@ -99,4 +103,5 @@ export type {
   ICEPartitionOptions,
   ICEPartitionUnit,
   ICELodBuildOptions,
+  ICELodAllocationMode,
 } from './partition/types.js';
