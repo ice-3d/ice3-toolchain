@@ -3,6 +3,7 @@ import { readSource } from '../../packages/toolchain-core/src/source/readSource.
 import { buildPreparedGLB } from '../../packages/toolchain-core/src/output/buildPreparedGLB.js';
 import type { ICESourceDocument } from '../../packages/toolchain-core/src/source/readSource.js';
 import { BUDGET_PROFILES } from '../../packages/toolchain-core/src/output/evaluateAssetBudget.js';
+import { createPartitionSource } from '../partition/createPartitionSource.js';
 
 const readProfile = (bytes: Uint8Array): Record<string, unknown> => {
   const buffer = Buffer.from(bytes);
@@ -40,6 +41,82 @@ test('builds byte-identical prepared GLB output', async () => {
     materialCount: 5,
     selectionGroupCount: 1,
   });
+});
+
+test('writes a LOD namespace while preserving selection identity', () => {
+  const built = buildPreparedGLB(createPartitionSource(), {
+    assetId: 'overview',
+    selectionIdAssetId: 'source-asset',
+    selection: {
+      nodeIndices: [0],
+      flattenWorldTransforms: true,
+    },
+  });
+  const buffer = Buffer.from(built.bytes);
+  const jsonLength = buffer.readUInt32LE(12);
+  const document = JSON.parse(
+    buffer.subarray(20, 20 + jsonLength).toString('utf8').replace(/ +$/g, ''),
+  ) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3).toEqual({
+    id: 'overview/node/0',
+    selectionId: 'source-asset/node/0',
+  });
+});
+
+test('treats normalized geometry overrides as triangle lists', () => {
+  const positions = new Float32Array([
+    0, 0, 0,
+    1, 0, 0,
+    0, 1, 0,
+    1, 1, 0,
+  ]);
+  const indices = new Uint16Array([0, 1, 2, 3]);
+  const binary = Buffer.alloc(56);
+  Buffer.from(positions.buffer).copy(binary, 0);
+  Buffer.from(indices.buffer).copy(binary, 48);
+  const source: ICESourceDocument = {
+    baseDirectory: '.',
+    buffers: [new Uint8Array(binary)],
+    json: {
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0 }],
+      meshes: [{
+        primitives: [{
+          attributes: { POSITION: 0 },
+          indices: 1,
+          mode: 5,
+        }],
+      }],
+      materials: [],
+      buffers: [{ byteLength: 56 }],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 48 },
+        { buffer: 0, byteOffset: 48, byteLength: 8 },
+      ],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 4, type: 'VEC3' },
+        { bufferView: 1, componentType: 5123, count: 4, type: 'SCALAR' },
+      ],
+    },
+  };
+  const built = buildPreparedGLB(source, {
+    assetId: 'strip',
+    edges: false,
+    geometryOverrides: new Map([[
+      '0:0',
+      {
+        positions,
+        indices: new Uint32Array([0, 1, 2, 1, 3, 2]),
+      },
+    ]]),
+  });
+
+  expect(built.stats.triangleCount).toBe(2);
 });
 
 test('writes an ICE3 profile header and one BIN chunk', async () => {

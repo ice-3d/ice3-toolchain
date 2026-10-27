@@ -78,9 +78,29 @@ rename only after every GLB and content reference validates. `--output`,
 processing. Existing `--skip-edges`, `--budget`, `--warnings-as-errors`, and
 `--json` options are also supported.
 
-The first partition release treats each mesh node as an indivisible semantic
-unit, does not synthesize LOD, and reports
+Generate hierarchical LOD content in the same partition build:
+
+```bash
+node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
+  --output /tmp/hierarchical-result \
+  --asset-id partition-demo \
+  --max-triangles 16 \
+  --lod \
+  --lod-ratio 0.15 \
+  --lod-max-triangles 250000 \
+  --lod-min-unit-triangles 8
+```
+
+With `--lod`, internal tree nodes receive `coarse/` GLBs while leaves keep
+their independent fine partitions. The source is normalized once into a
+bounded temporary workspace; memory and spill files are released after success
+or failure. Each coarse node preserves the original device selection IDs and
+records world-space geometric error in the Tileset.
+
+Partition treats each mesh node as an indivisible semantic unit and reports
 `ICE3_TOOL_PARTITION_UNSPLITTABLE` when one unit exceeds the byte budget.
+LOD defaults are `0.15` ratio, 250,000 triangles per proxy, and at least 8
+triangles per device. The browser runtime never loads the simplifier.
 
 ## Scope
 
@@ -95,6 +115,8 @@ unit, does not synthesize LOD, and reports
   `ice3-prepared` profile in `asset.extras.ice3`.
 - M1 supports triangle and generated line primitives, node matrices, flat base
   colors, and crease-edge overlays.
+- Optional LOD proxies use a mature quadratic-error simplifier in the toolchain
+  only and retain stable semantic selection IDs.
 - Animations, skins, Morph targets, referenced textures, cameras, lights,
   sparse accessors, external output resources, and unsupported required
   extensions are rejected after preprocessing.

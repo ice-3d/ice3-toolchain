@@ -90,6 +90,13 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
     } else {
       ids.add(id);
     }
+    const selectionId = nodeProfile?.selectionId;
+    if (
+      selectionId !== undefined
+      && (typeof selectionId !== 'string' || !selectionId.trim())
+    ) {
+      errors.add('ICE3_TOOL_INVALID_SELECTION_ID');
+    }
     const matrix = node.matrix;
     if (
       !Array.isArray(matrix)

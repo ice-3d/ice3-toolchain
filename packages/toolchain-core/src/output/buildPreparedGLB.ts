@@ -24,10 +24,17 @@ import {
 
 export interface ICEBuildOptions {
   readonly assetId: string;
+  readonly selectionIdAssetId?: string;
+  readonly geometryOverrides?: ReadonlyMap<string, ICEGeometryOverride>;
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
   readonly budget?: ICEBudgetProfile;
   readonly selection?: ICEBuildSelection;
+}
+
+export interface ICEGeometryOverride {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
 }
 
 export interface ICEBuildSelection {
@@ -73,6 +80,7 @@ export function buildPreparedGLB(
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
   }
   const creaseAngleDegrees = options.creaseAngleDegrees ?? 30;
+  const selectionIdAssetId = options.selectionIdAssetId?.trim() ?? assetId;
   const sourceNodes = records(source.json.nodes);
   const sourceMeshes = records(source.json.meshes);
   const sourceScene = records(source.json.scenes)[Number(source.json.scene ?? 0)];
@@ -206,13 +214,23 @@ export function buildPreparedGLB(
       if (indexData.components !== 1) {
         throw new Error('ICE3_TOOL_INVALID_GEOMETRY: indices must be SCALAR');
       }
+      const override = options.geometryOverrides?.get(
+        `${meshIndex}:${primitiveIndex}`,
+      );
+      if (override && attributes?.COLOR_0 !== undefined) {
+        throw new Error(
+          'ICE3_TOOL_LOD_INVALID: colored primitives cannot use geometry overrides',
+        );
+      }
       const prepared = prepareMesh(
-        positionData.values,
-        new Uint32Array(indexData.values),
+        override?.positions ?? positionData.values,
+        override?.indices ?? new Uint32Array(indexData.values),
         creaseAngleDegrees,
         {
           id: `${assetId}/geometry/${meshIndex}/${primitiveIndex}`,
-          mode: Number(primitive.mode ?? 4) as 4 | 5 | 6,
+          mode: override
+            ? 4
+            : Number(primitive.mode ?? 4) as 4 | 5 | 6,
           generateEdges: options.edges !== false,
         },
       );
@@ -340,7 +358,16 @@ export function buildPreparedGLB(
               .map((child) => outputIndexBySource.get(child)!),
           }),
       ...(sourceMesh === undefined ? {} : { mesh: sourceMesh }),
-      extras: { ice3: { id: `${assetId}/node/${sourceIndex}` } },
+      extras: {
+        ice3: {
+          id: `${assetId}/node/${sourceIndex}`,
+          ...(options.selectionIdAssetId
+            ? {
+                selectionId: `${selectionIdAssetId}/node/${sourceIndex}`,
+              }
+            : {}),
+        },
+      },
     };
   });
 

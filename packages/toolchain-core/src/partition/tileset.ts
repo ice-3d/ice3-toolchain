@@ -6,6 +6,7 @@ export interface ICEFinishedTile {
   readonly bounds: ICEBounds;
   readonly contentUri: string;
   readonly partitionId: string;
+  readonly geometricError: number;
   readonly children: readonly ICEFinishedTile[];
 }
 
@@ -50,11 +51,12 @@ export function createTilesetDocument(
 function createTile(assetId: string, input: ICEFinishedTile): JSONRecord {
   validateBounds(input.bounds);
   const isLeaf = input.children.length === 0;
+  validateError(input);
   const tile: JSONRecord = {
     boundingVolume: {
       box: toTilesBox(input.bounds),
     },
-    geometricError: isLeaf ? 0 : boundsDiagonal(input.bounds),
+    geometricError: input.geometricError,
     refine: 'REPLACE',
   };
   if (input.contentUri) {
@@ -85,6 +87,26 @@ function createTile(assetId: string, input: ICEFinishedTile): JSONRecord {
   return tile;
 }
 
+function validateError(input: ICEFinishedTile): void {
+  if (
+    !Number.isFinite(input.geometricError)
+    || input.geometricError < 0
+  ) {
+    throw new Error('ICE3_TOOL_TILESET_INVALID: geometricError is invalid');
+  }
+  if (input.children.length === 0 && input.geometricError !== 0) {
+    throw new Error('ICE3_TOOL_TILESET_INVALID: leaf geometricError must be zero');
+  }
+  for (const child of input.children) {
+    validateError(child);
+    if (child.geometricError > input.geometricError) {
+      throw new Error(
+        'ICE3_TOOL_TILESET_INVALID: child geometricError exceeds parent',
+      );
+    }
+  }
+}
+
 function toTilesBox(bounds: ICEBounds): number[] {
   const centerX = (bounds.min[0] + bounds.max[0]) / 2;
   const centerY = (bounds.min[1] + bounds.max[1]) / 2;
@@ -98,14 +120,6 @@ function toTilesBox(bounds: ICEBounds): number[] {
     0, 0, halfY,
     0, halfZ, 0,
   ];
-}
-
-function boundsDiagonal(bounds: ICEBounds): number {
-  return Math.hypot(
-    bounds.max[0] - bounds.min[0],
-    bounds.max[1] - bounds.min[1],
-    bounds.max[2] - bounds.min[2],
-  );
 }
 
 function validateBounds(bounds: ICEBounds): void {

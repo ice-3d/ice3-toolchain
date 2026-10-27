@@ -3,8 +3,8 @@ import { partitionAsset } from '../../packages/toolchain-core/src/partition/part
 import { validatePreparedGLB } from '../../packages/toolchain-core/src/output/validatePreparedGLB.js';
 import { createPartitionSource } from './createPartitionSource.js';
 
-test('writes independent GLBs and a tileset that conserve source triangles', () => {
-  const result = partitionAsset(createPartitionSource(), {
+test('writes independent GLBs and a tileset that conserve source triangles', async () => {
+  const result = await partitionAsset(createPartitionSource(), {
     assetId: 'partition-demo',
     maxTriangles: 1,
   });
@@ -17,15 +17,15 @@ test('writes independent GLBs and a tileset that conserve source triangles', () 
     .toBe(true);
 });
 
-test('reports an indivisible node that exceeds the byte limit', () => {
-  expect(() => partitionAsset(createPartitionSource(), {
+test('reports an indivisible node that exceeds the byte limit', async () => {
+  await expect(partitionAsset(createPartitionSource(), {
     assetId: 'partition-demo',
     maxBytes: 1,
-  })).toThrow(/ICE3_TOOL_PARTITION_UNSPLITTABLE/);
+  })).rejects.toThrow(/ICE3_TOOL_PARTITION_UNSPLITTABLE/);
 });
 
-test('does not split nodes that share one mesh', () => {
-  const result = partitionAsset(createPartitionSource(true), {
+test('does not split nodes that share one mesh', async () => {
+  const result = await partitionAsset(createPartitionSource(true), {
     assetId: 'partition-demo',
     maxTriangles: 1,
   });
@@ -34,13 +34,13 @@ test('does not split nodes that share one mesh', () => {
   expect(result.stats.triangleCount).toBe(1);
 });
 
-test('produces byte-identical files and Tileset for identical inputs', () => {
+test('produces byte-identical files and Tileset for identical inputs', async () => {
   const source = createPartitionSource();
-  const first = partitionAsset(source, {
+  const first = await partitionAsset(source, {
     assetId: 'partition-demo',
     maxTriangles: 2,
   });
-  const second = partitionAsset(source, {
+  const second = await partitionAsset(source, {
     assetId: 'partition-demo',
     maxTriangles: 2,
   });

@@ -270,3 +270,72 @@ test('partition rejects an existing output directory', async () => {
   ])).toBe(1);
   expect(readdirSync(output)).toEqual([]);
 });
+
+test('partition writes hierarchical LOD content and aggregate stats', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  const printed: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    printed.push(String(value));
+  });
+
+  const code = await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'lod-demo',
+    '--max-triangles',
+    '1',
+    '--lod',
+    '--lod-ratio',
+    '0.15',
+    '--json',
+  ]);
+  const result = JSON.parse(printed.at(-1)!) as {
+    stats: {
+      coarseBytes: number;
+      maxCoarseBytes: number;
+      preservedCoarseUnits: number;
+      overBudgetCoarseNodes: number;
+    };
+  };
+
+  expect(code).toBe(0);
+  expect(existsSync(join(output, 'tileset.json'))).toBe(true);
+  expect(readdirSync(join(output, 'coarse')).length).toBeGreaterThan(0);
+  expect(result.stats.coarseBytes).toBeGreaterThan(0);
+  expect(result.stats.maxCoarseBytes).toBeGreaterThan(0);
+  expect(result.stats.preservedCoarseUnits).toBe(4);
+  expect(result.stats.overBudgetCoarseNodes).toBe(0);
+});
+
+test.each([
+  [['--lod-ratio', '0']],
+  [['--lod-ratio', '1']],
+  [['--lod-max-triangles', '0']],
+  [['--lod-min-unit-triangles', '9', '--lod-max-triangles', '8']],
+])('partition rejects invalid LOD options %j', async (lodArguments) => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'demo',
+    '--lod',
+    ...lodArguments,
+  ])).toBe(1);
+  expect(existsSync(output)).toBe(false);
+});

@@ -30,6 +30,14 @@ export interface ICEPartitionOptions {
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
   readonly budget?: import('../output/evaluateAssetBudget.js').ICEBudgetProfile;
+  readonly lod?: ICELodBuildOptions;
+}
+
+export interface ICELodBuildOptions {
+  readonly ratio: number;
+  readonly maxTrianglesPerProxy: number;
+  readonly minTrianglesPerUnit: number;
+  readonly maxMemoryBytes?: number;
 }
 
 export interface ICEPartitionFile {

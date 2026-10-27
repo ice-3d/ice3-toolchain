@@ -79,6 +79,32 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     args.values.get('--max-bytes') ?? '33554432',
     '--max-bytes',
   );
+  const lod = args.flags.has('--lod')
+    ? (() => {
+        const ratio = fractionNumber(
+          args.values.get('--lod-ratio') ?? '0.15',
+          '--lod-ratio',
+        );
+        const maxTrianglesPerProxy = positiveInteger(
+          args.values.get('--lod-max-triangles') ?? '250000',
+          '--lod-max-triangles',
+        );
+        const minTrianglesPerUnit = positiveInteger(
+          args.values.get('--lod-min-unit-triangles') ?? '8',
+          '--lod-min-unit-triangles',
+        );
+        if (minTrianglesPerUnit > maxTrianglesPerProxy) {
+          throw new Error(
+            'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --lod-min-unit-triangles must not exceed --lod-max-triangles',
+          );
+        }
+        return {
+          ratio,
+          maxTrianglesPerProxy,
+          minTrianglesPerUnit,
+        };
+      })()
+    : undefined;
   if (await pathExists(outputPath)) {
     throw new Error(
       'ICE3_TOOL_PARTITION_OUTPUT_EXISTS: output directory already exists',
@@ -91,13 +117,14 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);
   }
   const budget = await resolveBudget(args.values.get('--budget'));
-  const result = partitionAsset(source, {
+  const result = await partitionAsset(source, {
     assetId,
     maxTriangles,
     maxBytes,
     creaseAngleDegrees: Number(args.values.get('--crease-angle') ?? 30),
     edges: !args.flags.has('--skip-edges'),
     budget,
+    ...(lod ? { lod } : {}),
   });
   const warnings = [...new Set([...sourceReport.warnings, ...result.warnings])];
   if (
@@ -357,11 +384,15 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--budget',
     '--max-triangles',
     '--max-bytes',
+    '--lod-ratio',
+    '--lod-max-triangles',
+    '--lod-min-unit-triangles',
   ]);
   const knownFlags = new Set([
     '--json',
     '--skip-edges',
     '--warnings-as-errors',
+    '--lod',
   ]);
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index]!;
@@ -395,6 +426,26 @@ function positiveNumber(value: string, option: string): number {
   if (!Number.isFinite(parsed) || parsed <= 0) {
     throw new Error(
       `ICE3_TOOL_PARTITION_OPTIONS_INVALID: ${option} must be positive`,
+    );
+  }
+  return parsed;
+}
+
+function positiveInteger(value: string, option: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(
+      `ICE3_TOOL_PARTITION_OPTIONS_INVALID: ${option} must be a positive integer`,
+    );
+  }
+  return parsed;
+}
+
+function fractionNumber(value: string, option: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed >= 1) {
+    throw new Error(
+      `ICE3_TOOL_PARTITION_OPTIONS_INVALID: ${option} must be between zero and one`,
     );
   }
   return parsed;
