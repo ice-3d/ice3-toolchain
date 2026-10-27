@@ -80,7 +80,7 @@ export async function createLodUnitCurve(
       preservedSource ||= simplified.preservedSource;
     }
 
-    samples.push({
+    pushParetoSample(samples, {
       targetTriangles,
       actualTriangles,
       errorMeters,
@@ -88,12 +88,38 @@ export async function createLodUnitCurve(
       primitives,
     });
   }
+  if (samples.length === 0) {
+    throw new Error('ICE3_TOOL_LOD_INVALID: unit curve has no valid samples');
+  }
 
   return {
     unitId: options.unitId,
     sourceTriangles: options.sourceTriangles,
     samples,
   };
+}
+
+function pushParetoSample(
+  samples: ICELodCurveSample[],
+  next: ICELodCurveSample,
+): void {
+  while (
+    samples.length > 0
+    && next.actualTriangles <= samples.at(-1)!.actualTriangles
+    && next.errorMeters <= samples.at(-1)!.errorMeters
+  ) {
+    samples.pop();
+  }
+  const previous = samples.at(-1);
+  if (
+    !previous
+    || (
+      next.actualTriangles > previous.actualTriangles
+      && next.errorMeters < previous.errorMeters
+    )
+  ) {
+    samples.push(next);
+  }
 }
 
 function validateOptions(options: ICELodUnitCurveOptions): void {
