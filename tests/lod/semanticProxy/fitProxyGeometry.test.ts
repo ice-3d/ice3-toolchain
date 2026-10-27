@@ -1,5 +1,51 @@
 import { expect, test } from 'node-test';
+import { collectFitSamples } from '../../../packages/toolchain-core/src/lod/semanticProxy/collectFitSamples.js';
 import { fitProxyGeometry } from '../../../packages/toolchain-core/src/lod/semanticProxy/fitProxyGeometry.js';
+
+const symmetricBox = (): { positions: Float32Array; indices: Uint32Array } => {
+  const half = [4, 2, 1] as const;
+  const cells = 3;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let axis = 0; axis < 3; axis += 1) {
+    for (const side of [-1, 1]) {
+      const start = positions.length / 3;
+      const first = (axis + 1) % 3;
+      const second = (axis + 2) % 3;
+      for (let b = 0; b <= cells; b += 1) {
+        for (let a = 0; a <= cells; a += 1) {
+          const point = [0, 0, 0];
+          point[axis] = half[axis]! * side;
+          point[first] = -half[first]! + 2 * half[first]! * a / cells;
+          point[second] = -half[second]! + 2 * half[second]! * b / cells;
+          positions.push(...point);
+        }
+      }
+      const stride = cells + 1;
+      for (let b = 0; b < cells; b += 1) {
+        for (let a = 0; a < cells; a += 1) {
+          const p = start + b * stride + a;
+          const q = p + 1;
+          const r = p + stride;
+          const s = r + 1;
+          indices.push(p, q, r, q, s, r);
+        }
+      }
+    }
+  }
+  return {
+    positions: new Float32Array(positions),
+    indices: new Uint32Array(indices),
+  };
+};
+
+test('uses unique surface vertices to avoid rotating symmetric box axes', () => {
+  const source = symmetricBox();
+  const obb = fitProxyGeometry(collectFitSamples([source]))
+    .candidates.find((candidate) => candidate.kind === 'obb')!;
+
+  expect(obb.volume).toBeCloseTo(64, 2);
+});
 
 test('fits an oriented box with twelve triangles', () => {
   const result = fitProxyGeometry({

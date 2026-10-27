@@ -29,7 +29,7 @@ export function fitProxyGeometry(
   samples: ICESemanticProxyFitSamples,
 ): ICESemanticProxyFitResult {
   validateSamples(samples);
-  const covariance = weightedCovariance(samples);
+  const covariance = vertexCovariance(samples);
   const eigen = symmetricEigen(covariance);
   const [lambda1, lambda2, lambda3] = eigen.values;
   if (lambda1 <= 1e-12) {
@@ -210,27 +210,24 @@ function fitCylinder(
   };
 }
 
-function weightedCovariance(samples: ICESemanticProxyFitSamples): Matrix3 {
-  let weight = 0;
+function vertexCovariance(samples: ICESemanticProxyFitSamples): Matrix3 {
   const mean = [0, 0, 0];
-  for (let index = 0; index < samples.areas.length; index += 1) {
-    const area = samples.areas[index]!;
-    weight += area;
+  const vertexCount = samples.vertices.length / 3;
+  for (let index = 0; index < vertexCount; index += 1) {
     for (let axis = 0; axis < 3; axis += 1) {
-      mean[axis] = mean[axis]! + samples.centroids[index * 3 + axis]! * area;
+      mean[axis] = mean[axis]! + samples.vertices[index * 3 + axis]!;
     }
   }
-  for (let axis = 0; axis < 3; axis += 1) mean[axis] = mean[axis]! / weight;
+  for (let axis = 0; axis < 3; axis += 1) mean[axis] = mean[axis]! / vertexCount;
   const covariance = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-  for (let index = 0; index < samples.areas.length; index += 1) {
-    const area = samples.areas[index]!;
+  for (let index = 0; index < vertexCount; index += 1) {
     const delta = [0, 1, 2].map((axis) => (
-      samples.centroids[index * 3 + axis]! - mean[axis]!
+      samples.vertices[index * 3 + axis]! - mean[axis]!
     ));
     for (let row = 0; row < 3; row += 1) {
       for (let column = row; column < 3; column += 1) {
         covariance[row * 3 + column] = covariance[row * 3 + column]!
-          + area * delta[row]! * delta[column]!;
+          + delta[row]! * delta[column]!;
       }
     }
   }

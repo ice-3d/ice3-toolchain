@@ -28,12 +28,11 @@ export function evaluateProxyCandidates(
       * extent(samples.bounds.min[1], samples.bounds.max[1])
       * extent(samples.bounds.min[2], samples.bounds.max[2]),
   );
-  const fitPoints = allFitPoints(samples);
   return candidates.map((candidate) => {
-    const maximumDeviation = Math.max(
-      ...fitPoints.map((point) => (
-        distanceToMeshSurface(point, candidate.positions, candidate.indices)
-      )),
+    const maximumDeviation = maximumFitDeviation(
+      samples,
+      candidate.positions,
+      candidate.indices,
     );
     const normalizedMaximumDeviation = localDiagonal <= Number.EPSILON
       ? Infinity
@@ -127,19 +126,25 @@ function closestPointOnTriangle(point: Vector, a: Vector, b: Vector, c: Vector):
   return add(a, add(scale(ab, v), scale(ac, w)));
 }
 
-function allFitPoints(samples: ICESemanticProxyFitSamples): readonly Vector[] {
-  return [
-    ...points(samples.vertices),
-    ...points(samples.centroids),
-  ];
-}
-
-function points(values: Float32Array): readonly Vector[] {
-  return Array.from({ length: values.length / 3 }, (_value, index) => [
-    values[index * 3]!,
-    values[index * 3 + 1]!,
-    values[index * 3 + 2]!,
-  ]);
+function maximumFitDeviation(
+  samples: ICESemanticProxyFitSamples,
+  positions: Float32Array,
+  indices: Uint32Array,
+): number {
+  let maximum = 0;
+  for (const values of [samples.vertices, samples.centroids]) {
+    for (let index = 0; index < values.length; index += 3) {
+      maximum = Math.max(
+        maximum,
+        distanceToMeshSurface(
+          [values[index]!, values[index + 1]!, values[index + 2]!],
+          positions,
+          indices,
+        ),
+      );
+    }
+  }
+  return maximum;
 }
 
 function vertex(positions: Float32Array, index: number): Vector {
