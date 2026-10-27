@@ -68,6 +68,11 @@ export {
   type ICETilesetDocument,
 } from './partition/tileset.js';
 export {
+  simplifyGeometry,
+  type ICESimplifiedGeometry,
+  type ICESimplifyGeometryOptions,
+} from './lod/simplifyGeometry.js';
+export {
   partitionAsset,
   type ICEPartitionResult,
 } from './partition/partitionAsset.js';
