@@ -11,6 +11,15 @@ const readDocument = (bytes: Uint8Array) => {
   return JSON.parse(
     buffer.subarray(20, 20 + jsonLength).toString('utf8').replace(/ +$/g, ''),
   ) as {
+    asset: {
+      extras: {
+        ice3: {
+          stats: {
+            triangleCount: number;
+          };
+        };
+      };
+    };
     nodes: Array<{
       extras: {
         ice3: {
@@ -156,4 +165,26 @@ test('keeps proportional lod output byte-for-byte stable', async () => {
     ['parts/part-003.glb', 3400,
       '1e7bd06bb7e9796e2a0ecb39c93bb19f0d8c14f2df66075f011fbfe0028f4f9a'],
   ]);
+});
+
+test('uses the proportional node budget as the adaptive ceiling', async () => {
+  const result = await partitionAsset(createAdaptiveLodPartitionSource(), {
+    assetId: 'adaptive-budget-demo',
+    maxTriangles: 64,
+    lod: {
+      allocation: 'adaptive',
+      curveSamples: 6,
+      ratio: 0.15,
+      maxTrianglesPerProxy: 1000,
+      minTrianglesPerUnit: 4,
+    },
+  });
+  const root = result.files.find(
+    (file) => file.path === 'coarse/group-root.glb',
+  )!;
+  const document = readDocument(root.bytes);
+
+  expect(document.asset.extras.ice3.stats.triangleCount).toBeLessThanOrEqual(
+    Math.floor(128 * 0.15) + Math.floor(128 * 0.15),
+  );
 });

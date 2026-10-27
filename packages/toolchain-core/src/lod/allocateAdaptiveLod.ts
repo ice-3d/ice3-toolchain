@@ -17,7 +17,7 @@ export function allocateAdaptiveLod(
   );
   if (allocatedTriangles > input.maxTriangles) {
     throw new Error(
-      'ICE3_TOOL_LOD_BUDGET_INVALID: device minimums exceed proxy budget',
+      `ICE3_TOOL_LOD_BUDGET_INVALID: device minimums exceed proxy budget (minimum ${allocatedTriangles}, budget ${input.maxTriangles}, units ${curves.length})`,
     );
   }
 

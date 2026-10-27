@@ -665,9 +665,16 @@ async function selectAdaptiveCoarseGeometry(
   const curves = await Promise.all(node.units.map((unit) => (
     loadUnitCurve(source, unit, options, state, workspace, normalized)
   )));
+  const proportionalBudget = allocateLodTargets(node.units, lod).reduce(
+    (total, target) => total + target.targetTriangles,
+    0,
+  );
   const allocation = allocateAdaptiveLod({
     curves,
-    maxTriangles: lod.maxTrianglesPerProxy,
+    maxTriangles: Math.min(
+      lod.maxTrianglesPerProxy,
+      proportionalBudget,
+    ),
     nodeDiagonalMeters: boundsDiagonal(node.bounds),
   });
   const selectionByUnit = new Map(
