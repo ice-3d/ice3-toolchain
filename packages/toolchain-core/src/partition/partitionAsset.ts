@@ -95,7 +95,7 @@ export async function partitionAsset(
       : new Map<string, ICNormalizedPrimitive>();
     const state: ICBuildState = {
       nextLeaf: 0,
-      preservedCoarseUnits: 0,
+      preservedCoarseUnits: new Set<string>(),
       overBudgetCoarseNodes: 0,
       worldMatrices: collectNodeWorldMatrices(source),
     };
@@ -171,7 +171,7 @@ export async function partitionAsset(
           0,
           ...coarseTrees.map((tree) => tree.coarseBytes?.byteLength ?? 0),
         ),
-        preservedCoarseUnits: state.preservedCoarseUnits,
+        preservedCoarseUnits: state.preservedCoarseUnits.size,
         overBudgetCoarseNodes: state.overBudgetCoarseNodes,
       },
       warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
@@ -189,7 +189,7 @@ interface ICNormalizedPrimitive {
 
 interface ICBuildState {
   nextLeaf: number;
-  preservedCoarseUnits: number;
+  readonly preservedCoarseUnits: Set<string>;
   overBudgetCoarseNodes: number;
   readonly worldMatrices: readonly ICEMatrix4Tuple[];
 }
@@ -345,7 +345,6 @@ async function buildCoarseNode(
     readonly indices: Uint32Array;
   }>();
   let maximumError = 0;
-  let preservedUnits = 0;
   for (const [unitIndex, unit] of node.units.entries()) {
     const target = targets[unitIndex]!;
     let preserved = false;
@@ -389,9 +388,10 @@ async function buildCoarseNode(
         );
       }
     }
-    if (preserved) preservedUnits += 1;
+    if (preserved) {
+      state.preservedCoarseUnits.add(unit.nodeIndices.join(','));
+    }
   }
-  state.preservedCoarseUnits += preservedUnits;
   if (targets.reduce((sum, target) => sum + target.targetTriangles, 0)
     > lod.maxTrianglesPerProxy) {
     state.overBudgetCoarseNodes += 1;
