@@ -134,6 +134,9 @@ candidates. The default is `off`; `auto` requires
 surface deviation is at most `0.05`, volume inflation is at most `2.0`, and the
 device has at least eight times fewer triangles. Accepted proxies compete with
 QEM samples in the same LOD budget; rejected candidates fall back to QEM.
+The OBB aspect limit also rejects source bounds above `8:1`, preserving visible
+structure on long conveyors and similar equipment; cylinder candidates are not
+subject to this aspect limit.
 
 Proxy replacement operates only on source mesh geometry. Node transforms, node
 IDs, and semantic selection IDs remain unchanged, and proxy and QEM devices can
