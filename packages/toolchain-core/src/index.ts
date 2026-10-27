@@ -23,8 +23,14 @@ export {
 export {
   buildPreparedGLB,
   type ICEBuildOptions,
+  type ICEBuildSelection,
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
+export {
+  collectNodeWorldMatrices,
+  multiplyMatrices,
+  transformBounds,
+} from './scene/nodeMatrices.js';
 export {
   ICE_ASSET_CONTRACT_VERSION,
   contractStats,

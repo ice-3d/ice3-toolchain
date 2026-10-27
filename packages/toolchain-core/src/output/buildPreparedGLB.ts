@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto';
 import type { ICESourceDocument } from '../source/readSource.js';
 import { readAccessor } from '../source/readAccessor.js';
 import { bakeLocalMatrix, type ICEMatrix4Tuple } from '../scene/bakeMatrix.js';
+import {
+  collectNodeWorldMatrices,
+  multiplyMatrices,
+  transformBounds,
+} from '../scene/nodeMatrices.js';
 import { prepareMesh } from '../scene/prepareMesh.js';
 import { validateSource } from '../scene/validateSource.js';
 import {
@@ -22,6 +27,12 @@ export interface ICEBuildOptions {
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
   readonly budget?: ICEBudgetProfile;
+  readonly selection?: ICEBuildSelection;
+}
+
+export interface ICEBuildSelection {
+  readonly nodeIndices: readonly number[];
+  readonly flattenWorldTransforms: boolean;
 }
 
 export interface ICEPreparedGLB {
@@ -67,21 +78,13 @@ export function buildPreparedGLB(
   if (!sourceScene) {
     throw new Error('ICE3_TOOL_INVALID_SOURCE: active scene is missing');
   }
-
-  const outputNodes = sourceNodes.map((node, index) => ({
-    name: typeof node.name === 'string' ? node.name : `node-${index}`,
-    matrix: bakeLocalMatrix(
-      numbers(node.matrix, 16),
-      numbers(node.translation, 3),
-      numbers(node.rotation, 4),
-      numbers(node.scale, 3),
-    ),
-    ...(node.children === undefined
-      ? {}
-      : { children: integers(node.children) }),
-    ...(node.mesh === undefined ? {} : { mesh: Number(node.mesh) }),
-    extras: { ice3: { id: `${assetId}/node/${index}` } },
-  }));
+  const selectedNodeIndices = options.selection
+    ? validateNodeSelection(options.selection.nodeIndices, sourceNodes.length)
+    : sourceNodes.map((_node, index) => index);
+  const selectedNodes = new Set(selectedNodeIndices);
+  const worldMatrices = options.selection
+    ? collectNodeWorldMatrices(source)
+    : undefined;
 
   const materialEntries = records(source.json.materials);
   const outputMaterials: JSONRecord[] = [];
@@ -156,6 +159,7 @@ export function buildPreparedGLB(
   const bufferViews: BufferView[] = [];
   const accessors: Accessor[] = [];
   const outputMeshes: JSONRecord[] = [];
+  const sourceMeshToOutputMesh = new Map<number, number>();
   let binaryLength = 0;
   let primitiveCount = 0;
   let triangleCount = 0;
@@ -179,7 +183,8 @@ export function buildPreparedGLB(
     const primitives: JSONRecord[] = [];
     const nodeOwners = sourceNodes
       .map((node, index) => Number(node.mesh) === meshIndex ? index : -1)
-      .filter((index) => index >= 0);
+      .filter((index) => index >= 0 && selectedNodes.has(index));
+    if (nodeOwners.length === 0) continue;
     for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
       if (Number(primitive.mode ?? 4) === 1) {
         continue;
@@ -294,24 +299,70 @@ export function buildPreparedGLB(
       }
     }
     primitiveCount += primitives.length;
+    sourceMeshToOutputMesh.set(meshIndex, outputMeshes.length);
     outputMeshes.push({
       primitives,
       extras: { ice3: { id: `${assetId}/mesh/${meshIndex}` } },
     });
   }
 
-  const bounds = computeAssetBounds(
-    source,
-    sourceNodes,
-    sourceMeshes,
-    outputNodes,
+  const outputIndexBySource = new Map(
+    selectedNodeIndices.map((sourceIndex, outputIndex) => (
+      [sourceIndex, outputIndex] as const
+    )),
   );
+  const outputNodes = selectedNodeIndices.map((sourceIndex) => {
+    const node = sourceNodes[sourceIndex]!;
+    const sourceMesh = node.mesh === undefined
+      ? undefined
+      : sourceMeshToOutputMesh.get(Number(node.mesh));
+    const flatten = options.selection?.flattenWorldTransforms === true;
+    return {
+      name: typeof node.name === 'string' ? node.name : `node-${sourceIndex}`,
+      matrix: flatten
+        ? worldMatrices![sourceIndex]!
+        : bakeLocalMatrix(
+            numbers(node.matrix, 16),
+            numbers(node.translation, 3),
+            numbers(node.rotation, 4),
+            numbers(node.scale, 3),
+          ),
+      ...(flatten || node.children === undefined
+        ? {}
+        : {
+            children: integers(node.children)
+              .filter((child) => outputIndexBySource.has(child))
+              .map((child) => outputIndexBySource.get(child)!),
+          }),
+      ...(sourceMesh === undefined ? {} : { mesh: sourceMesh }),
+      extras: { ice3: { id: `${assetId}/node/${sourceIndex}` } },
+    };
+  });
+
+  const bounds = options.selection
+    ? computeSelectionBounds(
+        source,
+        sourceNodes,
+        sourceMeshes,
+        selectedNodeIndices,
+        worldMatrices!,
+      )
+    : computeAssetBounds(source, sourceNodes, sourceMeshes, outputNodes);
   const rawBinary = Buffer.concat(binaryParts);
   const paddedLength = Math.ceil(rawBinary.length / 4) * 4;
   const binary = Buffer.alloc(paddedLength);
   rawBinary.copy(binary);
   const digest = createHash('sha256').update(binary).digest('hex');
-  const sceneNodeIndices = integers(sourceScene.nodes);
+  const selectedChildren = new Set(
+    selectedNodeIndices.flatMap((sourceIndex) => (
+      integers(sourceNodes[sourceIndex]?.children)
+    )),
+  );
+  const sceneNodeIndices = options.selection
+    ? selectedNodeIndices
+        .filter((sourceIndex) => !selectedChildren.has(sourceIndex))
+        .map((sourceIndex) => outputIndexBySource.get(sourceIndex)!)
+    : integers(sourceScene.nodes);
   const nodeDepth = (
     index: number,
     visiting = new Set<number>(),
@@ -324,7 +375,7 @@ export function buildPreparedGLB(
     const next = new Set(visiting).add(index);
     return 1 + Math.max(...children.map((child) => nodeDepth(child, next)));
   };
-  const maxNodeDepth = sceneNodeIndices.length === 0
+  const maxNodeDepth = options.selection || sceneNodeIndices.length === 0
     ? 0
     : Math.max(...sceneNodeIndices.map((index) => nodeDepth(index)));
   const baseStats: ICEAssetContractStats = {
@@ -542,7 +593,7 @@ function computeAssetBounds(
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
   const visit = (index: number, parent = identity()): void => {
     const local = outputNodes[index]!.matrix as ICEMatrix4Tuple;
-    const world = multiply(parent, local);
+    const world = multiplyMatrices(parent, local);
     const meshIndex = nodes[index]?.mesh;
     if (meshIndex !== undefined) {
       for (const primitive of records(meshes[Number(meshIndex)]?.primitives)) {
@@ -644,17 +695,77 @@ function identity(): ICEMatrix4Tuple {
   return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 }
 
-function multiply(left: ICEMatrix4Tuple, right: ICEMatrix4Tuple): ICEMatrix4Tuple {
-  const output = new Float32Array(16);
-  for (let column = 0; column < 4; column += 1) {
-    for (let row = 0; row < 4; row += 1) {
-      output[column * 4 + row] = (
-        left[row]! * right[column * 4]!
-        + left[4 + row]! * right[column * 4 + 1]!
-        + left[8 + row]! * right[column * 4 + 2]!
-        + left[12 + row]! * right[column * 4 + 3]!
-      );
+function validateNodeSelection(
+  indices: readonly number[],
+  nodeCount: number,
+): number[] {
+  const selected = [...new Set(indices)].sort((left, right) => left - right);
+  if (
+    selected.length === 0
+    || selected.some((index) => (
+      !Number.isInteger(index) || index < 0 || index >= nodeCount
+    ))
+  ) {
+    throw new Error(
+      'ICE3_TOOL_INVALID_OPTIONS: selection node indices are invalid',
+    );
+  }
+  return selected;
+}
+
+function computeSelectionBounds(
+  source: ICESourceDocument,
+  nodes: readonly JSONRecord[],
+  meshes: readonly JSONRecord[],
+  nodeIndices: readonly number[],
+  worldMatrices: readonly ICEMatrix4Tuple[],
+): { min: [number, number, number]; max: [number, number, number] } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  const accessors = records(source.json.accessors);
+  for (const nodeIndex of nodeIndices) {
+    const meshIndex = nodes[nodeIndex]?.mesh;
+    if (meshIndex === undefined) continue;
+    for (const primitive of records(meshes[Number(meshIndex)]?.primitives)) {
+      if (Number(primitive.mode ?? 4) === 1) continue;
+      const accessorIndex = Number(record(primitive.attributes)?.POSITION);
+      const accessor = accessors[accessorIndex];
+      const local = sourceAccessorBounds(source, accessor, accessorIndex);
+      const world = transformBounds(local, worldMatrices[nodeIndex]!);
+      for (let axis = 0; axis < 3; axis += 1) {
+        min[axis] = Math.min(min[axis]!, world.min[axis]!);
+        max[axis] = Math.max(max[axis]!, world.max[axis]!);
+      }
     }
   }
-  return [...output] as unknown as ICEMatrix4Tuple;
+  return {
+    min: min.every(Number.isFinite) ? min : [0, 0, 0],
+    max: max.every(Number.isFinite) ? max : [0, 0, 0],
+  };
+}
+
+function sourceAccessorBounds(
+  source: ICESourceDocument,
+  accessor: JSONRecord | undefined,
+  accessorIndex: number,
+): { min: [number, number, number]; max: [number, number, number] } {
+  const min = numbers(accessor?.min, 3);
+  const max = numbers(accessor?.max, 3);
+  if (min && max) {
+    return {
+      min: [min[0]!, min[1]!, min[2]!],
+      max: [max[0]!, max[1]!, max[2]!],
+    };
+  }
+  const data = readAccessor(source, accessorIndex);
+  const boundsMin: [number, number, number] = [Infinity, Infinity, Infinity];
+  const boundsMax: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (let offset = 0; offset < data.values.length; offset += data.components) {
+    for (let axis = 0; axis < 3; axis += 1) {
+      const value = data.values[offset + axis]!;
+      boundsMin[axis] = Math.min(boundsMin[axis]!, value);
+      boundsMax[axis] = Math.max(boundsMax[axis]!, value);
+    }
+  }
+  return { min: boundsMin, max: boundsMax };
 }

@@ -4,6 +4,10 @@ import {
   bakeLocalMatrix,
   type ICEMatrix4Tuple,
 } from '../scene/bakeMatrix.js';
+import {
+  multiplyMatrices,
+  transformBounds,
+} from '../scene/nodeMatrices.js';
 import type {
   ICEBounds,
   ICEPartitionAnalysis,
@@ -34,7 +38,7 @@ export function analyzePartitionUnits(
       numbers(node.rotation, 4),
       numbers(node.scale, 3),
     );
-    const world = multiply(parent, local);
+    const world = multiplyMatrices(parent, local);
     worldMatrices[index] = world;
     for (const child of integers(node.children)) {
       visit(child, world);
@@ -153,57 +157,6 @@ function accessorBounds(
     }
   }
   return { min: boundsMin, max: boundsMax };
-}
-
-function transformBounds(
-  bounds: ICEBounds,
-  matrix: ICEMatrix4Tuple,
-): ICEBounds {
-  const min: [number, number, number] = [Infinity, Infinity, Infinity];
-  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
-  for (const x of [bounds.min[0], bounds.max[0]]) {
-    for (const y of [bounds.min[1], bounds.max[1]]) {
-      for (const z of [bounds.min[2], bounds.max[2]]) {
-        const point = transformPoint(matrix, x, y, z);
-        for (let axis = 0; axis < 3; axis += 1) {
-          min[axis] = Math.min(min[axis]!, point[axis]!);
-          max[axis] = Math.max(max[axis]!, point[axis]!);
-        }
-      }
-    }
-  }
-  return { min, max };
-}
-
-function transformPoint(
-  matrix: ICEMatrix4Tuple,
-  x: number,
-  y: number,
-  z: number,
-): [number, number, number] {
-  return [
-    matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
-    matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
-    matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
-  ];
-}
-
-function multiply(
-  left: ICEMatrix4Tuple,
-  right: ICEMatrix4Tuple,
-): ICEMatrix4Tuple {
-  const output = new Array<number>(16).fill(0);
-  for (let column = 0; column < 4; column += 1) {
-    for (let row = 0; row < 4; row += 1) {
-      for (let index = 0; index < 4; index += 1) {
-        const offset = column * 4 + row;
-        output[offset] = (output[offset] ?? 0)
-          +
-          left[index * 4 + row]! * right[column * 4 + index]!;
-      }
-    }
-  }
-  return output as unknown as ICEMatrix4Tuple;
 }
 
 function identity(): ICEMatrix4Tuple {
