@@ -24,6 +24,7 @@ export {
   buildPreparedGLB,
   type ICEBuildOptions,
   type ICEBuildSelection,
+  type ICEGeometryOverride,
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
 export {
@@ -79,6 +80,10 @@ export {
   type ICEWorkspaceGeometry,
 } from './lod/createGeometryWorkspace.js';
 export {
+  allocateLodTargets,
+  type ICELodUnitTarget,
+} from './lod/allocateLodTargets.js';
+export {
   partitionAsset,
   type ICEPartitionResult,
 } from './partition/partitionAsset.js';
@@ -88,4 +93,5 @@ export type {
   ICEPartitionFile,
   ICEPartitionOptions,
   ICEPartitionUnit,
+  ICELodBuildOptions,
 } from './partition/types.js';

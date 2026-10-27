@@ -91,7 +91,7 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);
   }
   const budget = await resolveBudget(args.values.get('--budget'));
-  const result = partitionAsset(source, {
+  const result = await partitionAsset(source, {
     assetId,
     maxTriangles,
     maxBytes,
