@@ -32,6 +32,26 @@ test('writes standard local Cartesian tile boxes and 0 leaf error', () => {
   });
 });
 
+test('writes standard contents for a chunked tile', () => {
+  const document = createTilesetDocument('factory', {
+    bounds: { min: [0, 0, 0], max: [4, 2, 2] },
+    contentUris: [
+      'coarse/group-root/part-000.glb',
+      'coarse/group-root/part-001.glb',
+    ],
+    partitionId: 'group-root',
+    geometricError: 0,
+    children: [],
+  });
+
+  expect(document.root).toMatchObject({
+    contents: [
+      { uri: 'coarse/group-root/part-000.glb' },
+      { uri: 'coarse/group-root/part-001.glb' },
+    ],
+  });
+});
+
 test('writes a parent culling box that contains both child boxes', () => {
   const group: ICEFinishedTile = {
     bounds: { min: [0, 0, 0], max: [4, 2, 2] },
