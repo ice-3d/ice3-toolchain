@@ -343,6 +343,7 @@ async function buildCoarseNode(
   const overrides = new Map<string, {
     readonly positions: Float32Array;
     readonly indices: Uint32Array;
+    readonly colors?: Float32Array;
   }>();
   let maximumError = 0;
   for (const [unitIndex, unit] of node.units.entries()) {
@@ -353,11 +354,24 @@ async function buildCoarseNode(
         const key = `${meshIndex}:${primitive.index}`;
         const info = normalized.get(key);
         if (!info) continue;
-        if (info.hasVertexColors) {
-          preserved = true;
-          continue;
-        }
         const geometry = await workspace.read(info.key);
+        const colorData = info.hasVertexColors
+          ? readAccessor(
+              source,
+              Number(record(primitive.value.attributes)?.COLOR_0),
+            )
+          : undefined;
+        if (
+          colorData
+          && (
+            colorData.kind !== 'float32'
+            || (colorData.components !== 3 && colorData.components !== 4)
+          )
+        ) {
+          throw new Error(
+            'ICE3_TOOL_LOD_INVALID: vertex colors must be float VEC3 or VEC4',
+          );
+        }
         const primitiveTarget = Math.max(
           1,
           Math.floor(
@@ -372,12 +386,14 @@ async function buildCoarseNode(
           {
             targetTriangles: primitiveTarget,
             minimumTriangles: 1,
+            ...(colorData ? { vertexColors: colorData.values } : {}),
           },
         );
         preserved ||= simplified.preservedSource;
         overrides.set(key, {
           positions: simplified.positions,
           indices: simplified.indices,
+          ...(simplified.colors ? { colors: simplified.colors } : {}),
         });
         maximumError = Math.max(
           maximumError,

@@ -61,3 +61,67 @@ test('preserves already-minimal geometry', async () => {
   expect(result.preservedSource).toBe(true);
   expect(result.triangleCount).toBe(1);
 });
+
+test('welds duplicated vertices before simplification', async () => {
+  const source = grid();
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let triangle = 0; triangle < source.indices.length; triangle += 3) {
+    for (let corner = 0; corner < 3; corner += 1) {
+      const sourceIndex = source.indices[triangle + corner]!;
+      positions.push(
+        source.positions[sourceIndex * 3]!,
+        source.positions[sourceIndex * 3 + 1]!,
+        source.positions[sourceIndex * 3 + 2]!,
+      );
+      indices.push(indices.length);
+    }
+  }
+
+  const result = await simplifyGeometry(
+    new Float32Array(positions),
+    new Uint32Array(indices),
+    { targetTriangles: 32, minimumTriangles: 8 },
+  );
+
+  expect(result.sourceTriangles).toBe(128);
+  expect(result.triangleCount).toBeLessThan(128);
+  expect(result.triangleCount).toBeGreaterThanOrEqual(8);
+});
+
+test('simplifies colored triangle soup while preserving vertex colors', async () => {
+  const source = grid();
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const colors: number[] = [];
+  for (let triangle = 0; triangle < source.indices.length; triangle += 3) {
+    for (let corner = 0; corner < 3; corner += 1) {
+      const sourceIndex = source.indices[triangle + corner]!;
+      positions.push(
+        source.positions[sourceIndex * 3]!,
+        source.positions[sourceIndex * 3 + 1]!,
+        source.positions[sourceIndex * 3 + 2]!,
+      );
+      colors.push(
+        source.positions[sourceIndex * 3]!,
+        0.5,
+        source.positions[sourceIndex * 3 + 1]!,
+      );
+      indices.push(indices.length);
+    }
+  }
+
+  const result = await simplifyGeometry(
+    new Float32Array(positions),
+    new Uint32Array(indices),
+    {
+      targetTriangles: 32,
+      minimumTriangles: 8,
+      vertexColors: new Float32Array(colors),
+    },
+  );
+
+  expect(result.triangleCount).toBeLessThan(128);
+  expect(result.colors).toHaveLength(result.positions.length);
+  expect(result.colors?.every((value) => Number.isFinite(value))).toBe(true);
+});
