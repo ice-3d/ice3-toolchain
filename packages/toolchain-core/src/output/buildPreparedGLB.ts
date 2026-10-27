@@ -46,6 +46,7 @@ export interface ICEPreparedGLB {
 type JSONRecord = Record<string, unknown>;
 
 interface BufferView {
+  readonly buffer: 0;
   readonly byteOffset: number;
   readonly byteLength: number;
 }
@@ -172,7 +173,11 @@ export function buildPreparedGLB(
       binaryParts.push(Buffer.alloc(padding));
       binaryLength += padding;
     }
-    const view = { byteOffset: binaryLength, byteLength: bytes.byteLength };
+    const view = {
+      buffer: 0 as const,
+      byteOffset: binaryLength,
+      byteLength: bytes.byteLength,
+    };
     bufferViews.push(view);
     binaryParts.push(Buffer.from(bytes));
     binaryLength += bytes.byteLength;

@@ -54,6 +54,19 @@ test('rejects profile statistics that do not match mesh accessors', async () => 
   );
 });
 
+test('rejects a buffer view without its required buffer index', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  const generated = buildPreparedGLB(source, { assetId: 'sample' }).bytes;
+  const bytes = rewriteJSON(generated, (json) => {
+    const views = json.bufferViews as Array<Record<string, unknown>>;
+    delete views[0]!.buffer;
+  });
+
+  expect(validatePreparedGLB(bytes).errors).toContain(
+    'ICE3_TOOL_INVALID_BUFFER_VIEW:0',
+  );
+});
+
 test('rejects runtime conversion and unsupported contract versions', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const valid = buildPreparedGLB(source, { assetId: 'sample' }).bytes;
