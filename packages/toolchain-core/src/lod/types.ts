@@ -7,6 +7,7 @@ export interface ICELodUnitPrimitive {
   readonly sourceKey: string;
   readonly workspaceKey: string;
   readonly triangleCount: number;
+  readonly materialIndex?: number;
 }
 
 export interface ICELodCurveSample {

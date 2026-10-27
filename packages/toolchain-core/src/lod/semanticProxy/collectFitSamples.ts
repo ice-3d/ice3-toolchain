@@ -31,12 +31,16 @@ export function collectFitSamples(
       insertUnique(vertices, vertexKeys, a);
       insertUnique(vertices, vertexKeys, b);
       insertUnique(vertices, vertexKeys, c);
-      insertUnique(centroids, centroidKeys, [
+      const centroid = [
         (a[0] + b[0] + c[0]) / 3,
         (a[1] + b[1] + c[1]) / 3,
         (a[2] + b[2] + c[2]) / 3,
-      ]);
-      areas.push(area);
+      ] as const;
+      const centroidKey = centroid.map(quantize).join(',');
+      if (!centroidKeys.has(centroidKey)) {
+        insertUnique(centroids, centroidKeys, centroid);
+        areas.push(area);
+      }
     }
   }
   if (areas.length === 0) throw invalidFit('no positive-area triangles');

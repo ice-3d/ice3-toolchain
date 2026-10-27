@@ -115,6 +115,14 @@ export {
   type ICESemanticProxyGeometryCandidate,
 } from './lod/semanticProxy/fitProxyGeometry.js';
 export {
+  createSemanticProxy,
+  type ICESemanticProxyCreateOptions,
+  type ICESemanticProxyCreateResult,
+} from './lod/semanticProxy/createSemanticProxy.js';
+export type {
+  ICESemanticProxyEvaluation,
+} from './lod/semanticProxy/evaluateProxy.js';
+export {
   createCoarseChunkPlan,
   type ICECoarseChunk,
   type ICECoarseChunkUnit,
