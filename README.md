@@ -32,8 +32,16 @@ Build an ICE3 Prepared GLB:
 ```bash
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output fixtures/prepared-cube.glb \
+  --report fixtures/prepared-cube.report.json \
+  --budget interactive-desktop-v1 \
   --asset-id prepared-cube
 ```
+
+`--budget` accepts the built-in `interactive-desktop-v1` profile, the
+`unrestricted` profile, or a JSON budget file. Hard-limit failures never
+publish an output file. `--warnings-as-errors` turns soft-limit warnings into
+release failures. `--report` writes an optional deterministic sidecar report
+for CI and tool UIs; runtime loading never requires it.
 
 For a very large model where generated edges would dominate draw calls, use
 `--skip-edges` to produce a geometry-only preview.

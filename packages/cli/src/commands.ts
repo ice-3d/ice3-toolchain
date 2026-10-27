@@ -1,10 +1,15 @@
+import { createHash } from 'node:crypto';
 import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, resolve } from 'node:path';
 import {
+  BUDGET_PROFILES,
   buildPreparedGLB,
+  createAssetReport,
   readSource,
   validatePreparedGLB,
+  validateBudgetProfile,
   validateSource,
+  type ICEBudgetProfile,
 } from '@ice3/toolchain-core';
 
 interface ParsedArguments {
@@ -43,36 +48,91 @@ async function buildCommand(args: ParsedArguments): Promise<void> {
   const sourcePath = requiredPositional(args, 0, 'source');
   const outputPath = resolve(requiredValue(args, '--output'));
   const source = await readSource(sourcePath);
-  const report = validateSource(source);
-  if (report.errors.length > 0) {
-    throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
+  const sourceReport = validateSource(source);
+  if (sourceReport.errors.length > 0) {
+    throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);
   }
   const assetId = args.values.get('--asset-id') ?? defaultAssetId(outputPath);
   const creaseAngleDegrees = Number(args.values.get('--crease-angle') ?? 30);
+  const budget = await resolveBudget(args.values.get('--budget'));
   const built = buildPreparedGLB(source, {
     assetId,
     creaseAngleDegrees,
     edges: !args.flags.has('--skip-edges'),
+    budget,
   });
+  if (built.budget.status === 'error') {
+    throw new Error(
+      `ICE3_TOOL_BUDGET_EXCEEDED: ${budget.id}`,
+    );
+  }
+  if (
+    built.budget.status === 'warning'
+    && args.flags.has('--warnings-as-errors')
+  ) {
+    throw new Error(`ICE3_TOOL_BUDGET_WARNING: ${budget.id}`);
+  }
   const validation = validatePreparedGLB(built.bytes);
   if (validation.errors.length > 0) {
     throw new Error(`ICE3_TOOL_OUTPUT_INVALID: ${validation.errors.join(', ')}`);
   }
 
+  const reportPath = args.values.get('--report');
+  const report = reportPath
+    ? createAssetReport({
+        toolVersion: await readToolVersion(),
+        sourceFormat: 'gltf-2.0',
+        sourceDigest: `sha256:${
+          createHash('sha256').update(await readFile(sourcePath)).digest('hex')
+        }`,
+        assetId,
+        profileVersion: '1.0',
+        contractVersion: '1.0',
+        contentDigest: `sha256:${built.contentDigest}`,
+        metrics: built.metrics,
+        budget: built.budget,
+        diagnostics: sourceReport.warnings.map((message) => ({
+          code: 'ICE3_TOOL_RECOVERABLE_WARNING',
+          severity: 'warning' as const,
+          message,
+        })),
+      })
+    : undefined;
   const temporary = `${outputPath}.${process.pid}.tmp`;
+  const reportTemporary = reportPath
+    ? `${reportPath}.${process.pid}.tmp`
+    : undefined;
   try {
+    if (reportPath && reportTemporary && report) {
+      await writeFile(reportTemporary, `${JSON.stringify(report, null, 2)}\n`);
+    }
     await writeFile(temporary, built.bytes);
+    if (reportTemporary && reportPath) {
+      await rename(reportTemporary, reportPath);
+    }
     await rename(temporary, outputPath);
   } catch (error) {
     await unlink(temporary).catch(() => {});
+    if (reportTemporary) {
+      await unlink(reportTemporary).catch(() => {});
+    }
+    if (reportPath) {
+      throw new Error(
+        `ICE3_TOOL_REPORT_WRITE_FAILED: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     throw error;
   }
   printResult(args, {
     command: 'build',
     output: outputPath,
+    ...(reportPath ? { report: reportPath } : {}),
     errors: [],
-    warnings: report.warnings,
+    warnings: sourceReport.warnings,
     stats: built.stats,
+    budget: built.budget,
   });
 }
 
@@ -190,7 +250,13 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
   const positionals: string[] = [];
   const values = new Map<string, string>();
   const flags = new Set<string>();
-  const valued = new Set(['--output', '--asset-id', '--crease-angle']);
+  const valued = new Set([
+    '--output',
+    '--asset-id',
+    '--crease-angle',
+    '--report',
+    '--budget',
+  ]);
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index]!;
     if (valued.has(argument)) {
@@ -227,4 +293,26 @@ function defaultAssetId(path: string): string {
   return basename(path, extname(path))
     .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'asset';
+}
+
+async function resolveBudget(value: string | undefined): Promise<ICEBudgetProfile> {
+  const selected = value ?? 'interactive-desktop-v1';
+  if (Object.hasOwn(BUDGET_PROFILES, selected)) {
+    return BUDGET_PROFILES[selected]!;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(resolve(selected), 'utf8'));
+  } catch {
+    throw new Error(`ICE3_TOOL_INVALID_BUDGET: cannot read ${selected}`);
+  }
+  return validateBudgetProfile(parsed);
+}
+
+async function readToolVersion(): Promise<string> {
+  const packageJson = JSON.parse(await readFile(
+    new URL('../../../package.json', import.meta.url),
+    'utf8',
+  )) as { version: string };
+  return packageJson.version;
 }

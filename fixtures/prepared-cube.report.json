@@ -1,1 +1,97 @@
-{"command":"inspect","source":"fixtures/prepared-cube.glb","errors":[],"warnings":[],"stats":{"nodeCount":1,"meshCount":1,"triangleCount":12,"edgeSegmentCount":12}}
+{
+  "kind": "ice3-asset-report",
+  "schemaVersion": "1.0",
+  "asset": {
+    "id": "prepared-cube",
+    "profileVersion": "1.0",
+    "contractVersion": "1.0",
+    "contentDigest": "sha256:d344746c820f36fdd4c4506f8a4d99873033caecda7595131a1e1e1a45ffce72"
+  },
+  "status": "pass",
+  "tool": {
+    "name": "ice3-toolchain",
+    "version": "0.0.0"
+  },
+  "source": {
+    "format": "gltf-2.0",
+    "digest": "sha256:7288195ad5147000bd7ba96d8ffb7a26aee3d9535c53890da12e9db765075737"
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxNodeDepth": 0,
+    "meshCount": 1,
+    "primitiveCount": 2,
+    "triangleCount": 12,
+    "edgeSegmentCount": 12,
+    "materialCount": 5,
+    "selectionGroupCount": 1,
+    "encodedBytes": 3068,
+    "jsonChunkBytes": 2824,
+    "binChunkBytes": 216
+  },
+  "budget": {
+    "profile": "interactive-desktop-v1",
+    "status": "pass",
+    "warningCount": 0,
+    "errorCount": 0,
+    "checks": [
+      {
+        "id": "nodes",
+        "metric": "nodeCount",
+        "value": 1,
+        "softLimit": 25000,
+        "hardLimit": 50000,
+        "status": "pass"
+      },
+      {
+        "id": "meshes",
+        "metric": "meshCount",
+        "value": 1,
+        "softLimit": 5000,
+        "hardLimit": 15000,
+        "status": "pass"
+      },
+      {
+        "id": "primitives",
+        "metric": "primitiveCount",
+        "value": 2,
+        "softLimit": 10000,
+        "hardLimit": 30000,
+        "status": "pass"
+      },
+      {
+        "id": "triangles",
+        "metric": "triangleCount",
+        "value": 12,
+        "softLimit": 5000000,
+        "hardLimit": 20000000,
+        "status": "pass"
+      },
+      {
+        "id": "edges",
+        "metric": "edgeSegmentCount",
+        "value": 12,
+        "softLimit": 10000000,
+        "hardLimit": 40000000,
+        "status": "pass"
+      },
+      {
+        "id": "encodedBytes",
+        "metric": "encodedBytes",
+        "value": 3068,
+        "softLimit": 134217728,
+        "hardLimit": 536870912,
+        "status": "pass"
+      },
+      {
+        "id": "selectionGroups",
+        "metric": "selectionGroupCount",
+        "value": 1,
+        "softLimit": 20000,
+        "hardLimit": 100000,
+        "status": "pass"
+      }
+    ]
+  },
+  "diagnostics": []
+}

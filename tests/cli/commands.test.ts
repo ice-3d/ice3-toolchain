@@ -167,3 +167,47 @@ test('build accepts a no-edge preview option', async () => {
   };
   expect(report.stats.edgeSegmentCount).toBe(0);
 });
+
+test('build writes a report and rejects hard budgets before publishing GLB', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-budget-'));
+  directories.push(directory);
+  const output = join(directory, 'asset.glb');
+  const reportPath = join(directory, 'asset.report.json');
+  const code = await runCli([
+    'build',
+    'tests/fixtures/minimal.gltf',
+    '--output',
+    output,
+    '--report',
+    reportPath,
+    '--budget',
+    'interactive-desktop-v1',
+    '--json',
+  ]);
+  expect(code).toBe(0);
+  expect(existsSync(output)).toBe(true);
+  expect(JSON.parse(readFileSync(reportPath, 'utf8')).kind)
+    .toBe('ice3-asset-report');
+
+  const rejectedOutput = join(directory, 'rejected.glb');
+  const tinyHardBudgetPath = join(directory, 'tiny-budget.json');
+  writeFileSync(tinyHardBudgetPath, JSON.stringify({
+    id: 'tiny',
+    limits: [{
+      id: 'triangleCount',
+      label: 'Triangles',
+      softLimit: 0,
+      hardLimit: 0,
+    }],
+  }));
+  expect(await runCli([
+    'build',
+    'tests/fixtures/minimal.gltf',
+    '--output',
+    rejectedOutput,
+    '--budget',
+    tinyHardBudgetPath,
+    '--json',
+  ])).toBe(1);
+  expect(existsSync(rejectedOutput)).toBe(false);
+});

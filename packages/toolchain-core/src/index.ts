@@ -42,4 +42,10 @@ export {
   type ICEBudgetProfile,
   type ICEBudgetResult,
 } from './output/evaluateAssetBudget.js';
+export {
+  createAssetReport,
+  type ICEAssetReport,
+  type ICEAssetReportDiagnostic,
+  type ICEAssetReportInput,
+} from './output/createAssetReport.js';
 export { validatePreparedGLB } from './output/validatePreparedGLB.js';

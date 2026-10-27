@@ -28,6 +28,8 @@ export interface ICEPreparedGLB {
   readonly bytes: Uint8Array;
   readonly stats: ICEAssetContractStats;
   readonly metrics: ICEAssetMetrics;
+  readonly budget: ICEBudgetResult;
+  readonly contentDigest: string;
 }
 
 type JSONRecord = Record<string, unknown>;
@@ -422,6 +424,8 @@ export function buildPreparedGLB(
     bytes: finalized.bytes,
     stats: contractStats(finalized.metrics),
     metrics: finalized.metrics,
+    budget: finalized.budget,
+    contentDigest: digest,
   };
 }
 
