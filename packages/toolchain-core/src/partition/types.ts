@@ -15,3 +15,10 @@ export interface ICEPartitionAnalysis {
   readonly triangleCount: number;
   readonly units: readonly ICEPartitionUnit[];
 }
+
+export interface ICEPartitionPlanNode {
+  readonly bounds: ICEBounds;
+  readonly triangleCount: number;
+  readonly units: readonly ICEPartitionUnit[];
+  readonly children: readonly ICEPartitionPlanNode[];
+}

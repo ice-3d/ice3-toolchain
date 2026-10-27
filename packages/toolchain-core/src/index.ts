@@ -52,6 +52,10 @@ export { validatePreparedGLB } from './output/validatePreparedGLB.js';
 export {
   analyzePartitionUnits,
 } from './partition/analyzePartitionUnits.js';
+export {
+  createPartitionPlan,
+  type ICEPartitionPlanNode,
+} from './partition/createPartitionPlan.js';
 export type {
   ICEBounds,
   ICEPartitionAnalysis,
