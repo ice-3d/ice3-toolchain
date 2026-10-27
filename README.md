@@ -128,6 +128,13 @@ workspace, including original vertex colors; excess geometry spills to unique
 temporary files. The workspace and incomplete output directory are removed on
 success, failure, or cancellation.
 
+Use `--semantic-proxy off|auto` to enable conservative OBB and cylinder
+candidates. The default is `off`; `auto` requires
+`--lod --lod-allocation adaptive`. A proxy is accepted only when normalized
+surface deviation is at most `0.05`, volume inflation is at most `2.0`, and the
+device has at least eight times fewer triangles. Accepted proxies compete with
+QEM samples in the same LOD budget; rejected candidates fall back to QEM.
+
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.

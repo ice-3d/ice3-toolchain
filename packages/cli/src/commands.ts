@@ -20,6 +20,7 @@ import {
   validateSource,
   type ICEBudgetProfile,
   type ICELodAllocationMode,
+  type ICESemanticProxyMode,
 } from '@ice3/toolchain-core';
 
 interface ParsedArguments {
@@ -80,6 +81,14 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     args.values.get('--max-bytes') ?? '33554432',
     '--max-bytes',
   );
+  if (
+    args.values.has('--semantic-proxy')
+    && !args.flags.has('--lod')
+  ) {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --semantic-proxy requires --lod',
+    );
+  }
   const lod = args.flags.has('--lod')
       ? (() => {
         const requestedAllocation = args.values.get('--lod-allocation')
@@ -93,6 +102,21 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
           );
         }
         const allocation: ICELodAllocationMode = requestedAllocation;
+        const requestedSemanticProxy = args.values.get('--semantic-proxy') ?? 'off';
+        if (
+          requestedSemanticProxy !== 'off'
+          && requestedSemanticProxy !== 'auto'
+        ) {
+          throw new Error(
+            'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --semantic-proxy must be auto or off',
+          );
+        }
+        const semanticProxy: ICESemanticProxyMode = requestedSemanticProxy;
+        if (semanticProxy === 'auto' && allocation !== 'adaptive') {
+          throw new Error(
+            'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --semantic-proxy auto requires --lod-allocation adaptive',
+          );
+        }
         const ratio = fractionNumber(
           args.values.get('--lod-ratio') ?? '0.15',
           '--lod-ratio',
@@ -125,6 +149,7 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
         );
         return {
           allocation,
+          semanticProxy,
           curveSamples,
           ratio,
           maxTrianglesPerProxy,
@@ -417,6 +442,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--lod-min-unit-triangles',
     '--lod-allocation',
     '--lod-curve-samples',
+    '--semantic-proxy',
     '--coarse-chunk-max-bytes',
   ]);
   const knownFlags = new Set([
