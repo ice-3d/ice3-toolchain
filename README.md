@@ -60,6 +60,28 @@ node packages/cli/dist/main.js validate fixtures/prepared-cube.glb
 renames it after the generated profile validates. A failed build leaves no
 partial output.
 
+Partition a large asset into an OGC 3D Tiles 1.1 tree and independent Prepared
+GLBs:
+
+```bash
+node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
+  --output /tmp/partition-result \
+  --asset-id partition-demo \
+  --max-triangles 500000 \
+  --max-bytes 33554432
+```
+
+The output directory must not exist. It contains `tileset.json` and
+`parts/part-NNN.glb`. The command publishes the directory with one atomic
+rename only after every GLB and content reference validates. `--output`,
+`--asset-id`, `--max-triangles`, and `--max-bytes` are validated before source
+processing. Existing `--skip-edges`, `--budget`, `--warnings-as-errors`, and
+`--json` options are also supported.
+
+The first partition release treats each mesh node as an indivisible semantic
+unit, does not synthesize LOD, and reports
+`ICE3_TOOL_PARTITION_UNSPLITTABLE` when one unit exceeds the byte budget.
+
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.

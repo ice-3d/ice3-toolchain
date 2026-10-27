@@ -115,6 +115,7 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       || offset < 0
       || length < 0
       || offset + length > parsed.binary.byteLength
+      || view.buffer !== 0
       || view.byteStride !== undefined
     ) {
       errors.add(`ICE3_TOOL_INVALID_BUFFER_VIEW:${index}`);

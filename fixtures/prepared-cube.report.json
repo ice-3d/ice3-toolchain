@@ -25,8 +25,8 @@
     "edgeSegmentCount": 12,
     "materialCount": 5,
     "selectionGroupCount": 1,
-    "encodedBytes": 3068,
-    "jsonChunkBytes": 2824,
+    "encodedBytes": 3100,
+    "jsonChunkBytes": 2856,
     "binChunkBytes": 216
   },
   "budget": {
@@ -78,7 +78,7 @@
       {
         "id": "encodedBytes",
         "metric": "encodedBytes",
-        "value": 3068,
+        "value": 3100,
         "softLimit": 134217728,
         "hardLimit": 536870912,
         "status": "pass"

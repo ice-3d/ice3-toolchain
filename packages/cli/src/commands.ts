@@ -1,10 +1,19 @@
-import { createHash } from 'node:crypto';
-import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import { basename, extname, resolve } from 'node:path';
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  access,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import {
   BUDGET_PROFILES,
   buildPreparedGLB,
   createAssetReport,
+  partitionAsset,
   readSource,
   validatePreparedGLB,
   validateBudgetProfile,
@@ -37,11 +46,101 @@ export async function runCli(argv: readonly string[]): Promise<number> {
       await validateCommand(args);
       return 0;
     }
+    if (args.command === 'partition') {
+      await partitionCommand(args);
+      return 0;
+    }
     throw new Error(`ICE3_TOOL_INVALID_COMMAND: unknown command ${args.command}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+async function partitionCommand(args: ParsedArguments): Promise<void> {
+  if (args.positionals.length !== 1) {
+    throw new Error(
+      'ICE3_TOOL_INVALID_OPTIONS: partition requires exactly one source',
+    );
+  }
+  const sourcePath = requiredPositional(args, 0, 'source');
+  const outputPath = resolve(requiredValue(args, '--output'));
+  const assetId = requiredValue(args, '--asset-id').trim();
+  if (!assetId) {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: assetId must not be empty',
+    );
+  }
+  const maxTriangles = positiveNumber(
+    args.values.get('--max-triangles') ?? '500000',
+    '--max-triangles',
+  );
+  const maxBytes = positiveNumber(
+    args.values.get('--max-bytes') ?? '33554432',
+    '--max-bytes',
+  );
+  if (await pathExists(outputPath)) {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OUTPUT_EXISTS: output directory already exists',
+    );
+  }
+
+  const source = await readSource(sourcePath);
+  const sourceReport = validateSource(source);
+  if (sourceReport.errors.length > 0) {
+    throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);
+  }
+  const budget = await resolveBudget(args.values.get('--budget'));
+  const result = partitionAsset(source, {
+    assetId,
+    maxTriangles,
+    maxBytes,
+    creaseAngleDegrees: Number(args.values.get('--crease-angle') ?? 30),
+    edges: !args.flags.has('--skip-edges'),
+    budget,
+  });
+  const warnings = [...new Set([...sourceReport.warnings, ...result.warnings])];
+  if (
+    warnings.length > 0
+    && args.flags.has('--warnings-as-errors')
+  ) {
+    throw new Error(`ICE3_TOOL_BUDGET_WARNING: ${warnings[0]}`);
+  }
+
+  const temporary = `${outputPath}.${process.pid}.${randomUUID()}.tmp`;
+  await mkdir(dirname(temporary), { recursive: true });
+  try {
+    await mkdir(temporary);
+    for (const file of result.files) {
+      const validation = validatePreparedGLB(file.bytes);
+      if (validation.errors.length > 0) {
+        throw new Error(
+          `ICE3_TOOL_TILESET_INVALID: ${validation.errors.join(', ')}`,
+        );
+      }
+      const destination = join(temporary, file.path);
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, file.bytes);
+    }
+    validateTilesetResult(result.tileset, result.files);
+    await writeFile(
+      join(temporary, 'tileset.json'),
+      `${JSON.stringify(result.tileset, null, 2)}\n`,
+    );
+    await rename(temporary, outputPath);
+  } catch (error) {
+    await rm(temporary, { recursive: true, force: true });
+    throw error;
+  }
+
+  printResult(args, {
+    command: 'partition',
+    output: outputPath,
+    partitionCount: result.partitionCount,
+    errors: [],
+    warnings,
+    stats: result.stats,
+  });
 }
 
 async function buildCommand(args: ParsedArguments): Promise<void> {
@@ -256,6 +355,13 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--crease-angle',
     '--report',
     '--budget',
+    '--max-triangles',
+    '--max-bytes',
+  ]);
+  const knownFlags = new Set([
+    '--json',
+    '--skip-edges',
+    '--warnings-as-errors',
   ]);
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index]!;
@@ -264,13 +370,68 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
       if (!value) throw new Error(`ICE3_TOOL_INVALID_OPTIONS: ${argument} needs a value`);
       values.set(argument, value);
       index += 1;
-    } else if (argument.startsWith('--')) {
+    } else if (argument.startsWith('--') && knownFlags.has(argument)) {
       flags.add(argument);
+    } else if (argument.startsWith('--')) {
+      throw new Error(`ICE3_TOOL_INVALID_OPTIONS: unknown option ${argument}`);
     } else {
       positionals.push(argument);
     }
   }
   return { command, positionals, values, flags };
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function positiveNumber(value: string, option: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(
+      `ICE3_TOOL_PARTITION_OPTIONS_INVALID: ${option} must be positive`,
+    );
+  }
+  return parsed;
+}
+
+function validateTilesetResult(
+  tileset: unknown,
+  files: readonly { readonly path: string }[],
+): void {
+  const document = tileset as {
+    asset?: { version?: unknown };
+    root?: unknown;
+  };
+  if (document.asset?.version !== '1.1' || !document.root) {
+    throw new Error('ICE3_TOOL_TILESET_INVALID: invalid tileset document');
+  }
+  const contentUris: string[] = [];
+  const visit = (value: unknown): void => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+    const tile = value as {
+      content?: { uri?: unknown };
+      children?: unknown[];
+    };
+    if (typeof tile.content?.uri === 'string') {
+      contentUris.push(tile.content.uri);
+    }
+    for (const child of tile.children ?? []) visit(child);
+  };
+  visit(document.root);
+  const expected = new Set(files.map((file) => file.path));
+  if (
+    contentUris.length !== expected.size
+    || new Set(contentUris).size !== contentUris.length
+    || contentUris.some((uri) => !expected.has(uri))
+  ) {
+    throw new Error('ICE3_TOOL_TILESET_INVALID: content references are invalid');
+  }
 }
 
 function requiredPositional(
