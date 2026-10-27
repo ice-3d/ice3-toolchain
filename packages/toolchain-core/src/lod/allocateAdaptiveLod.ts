@@ -57,7 +57,7 @@ export function allocateAdaptiveLod(
       actualTriangles: sample.actualTriangles,
       errorMeters: sample.errorMeters,
       preservedSource: sample.preservedSource,
-      primitives: sample.primitives,
+      replacement: sample.replacement,
     };
   });
   return {
@@ -108,6 +108,9 @@ export type {
   ICELodAllocationSelection,
   ICELodCurvePrimitive,
   ICELodCurveSample,
+  ICELodMeshReplacement,
+  ICELodPrimitiveReplacement,
+  ICELodSampleReplacement,
   ICELodUnitCurve,
   ICELodUnitPrimitive,
 } from './types.js';

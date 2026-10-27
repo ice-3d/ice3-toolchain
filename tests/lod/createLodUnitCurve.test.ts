@@ -39,12 +39,15 @@ test('creates monotonic samples and retains sampled vertex colors', async () => 
       .map((sample) => sample.actualTriangles)
       .sort((left, right) => left - right));
   expect(curve.samples.at(-1)!.actualTriangles).toBe(2);
+  const last = curve.samples.at(-1)!.replacement;
+  expect(last.kind).toBe('primitives');
   const geometry = await workspace.read(
-    curve.samples.at(-1)!.primitives[0]!.geometryKey,
+    last.kind === 'primitives' ? last.primitives[0]!.geometryKey : '',
   );
   expect(geometry.colors?.length).toBe(16);
   for (const sample of curve.samples) {
-    for (const primitive of sample.primitives) {
+    if (sample.replacement.kind !== 'primitives') continue;
+    for (const primitive of sample.replacement.primitives) {
       const sampled = await workspace.read(primitive.geometryKey);
       if (!sampled.colors) continue;
       expect([3, 4]).toContain(

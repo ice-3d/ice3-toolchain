@@ -91,6 +91,9 @@ export {
   type ICELodAllocationSelection,
   type ICELodCurvePrimitive,
   type ICELodCurveSample,
+  type ICELodMeshReplacement,
+  type ICELodPrimitiveReplacement,
+  type ICELodSampleReplacement,
   type ICELodUnitCurve,
   type ICELodUnitPrimitive,
 } from './lod/allocateAdaptiveLod.js';

@@ -1,6 +1,7 @@
 import type { ICEGeometryWorkspace } from './createGeometryWorkspace.js';
 import { createLodSampleSchedule } from './createLodSampleSchedule.js';
 import { simplifyGeometry } from './simplifyGeometry.js';
+import type { ICESemanticProxy } from './semanticProxy/types.js';
 import type {
   ICELodCurvePrimitive,
   ICELodCurveSample,
@@ -16,6 +17,7 @@ export interface ICELodUnitCurveOptions {
   readonly minimumTriangles: number;
   readonly sampleCount: number;
   readonly worldScale: number;
+  readonly proxy?: ICESemanticProxy;
 }
 
 export async function createLodUnitCurve(
@@ -31,6 +33,18 @@ export async function createLodUnitCurve(
     sampleCount: options.sampleCount,
   });
   const samples: ICELodCurveSample[] = [];
+  if (options.proxy) {
+    pushParetoSample(samples, {
+      targetTriangles: options.proxy.triangleCount,
+      actualTriangles: options.proxy.triangleCount,
+      errorMeters: options.proxy.errorMeters,
+      preservedSource: false,
+      replacement: {
+        kind: 'mesh',
+        proxy: options.proxy,
+      },
+    });
+  }
 
   for (const [sampleIndex, targetTriangles] of schedule.entries()) {
     const primitives: ICELodCurvePrimitive[] = [];
@@ -85,7 +99,10 @@ export async function createLodUnitCurve(
       actualTriangles,
       errorMeters,
       preservedSource,
-      primitives,
+      replacement: {
+        kind: 'primitives',
+        primitives,
+      },
     });
   }
   if (samples.length === 0) {

@@ -188,3 +188,74 @@ test('uses the proportional node budget as the adaptive ceiling', async () => {
     Math.floor(128 * 0.15) + Math.floor(128 * 0.15),
   );
 });
+
+test('allocates semantic proxy meshes in adaptive lod', async () => {
+  const source = createAdaptiveLodPartitionSource();
+  const binary = source.buffers[0]!;
+  const bufferViews = source.json.bufferViews as Array<Record<string, unknown>>;
+  const accessors = source.json.accessors as Array<Record<string, unknown>>;
+  const positions = new Float32Array(
+    binary.buffer,
+    binary.byteOffset,
+    Number(accessors[0]!.count) * 3,
+  );
+  const corners = [
+    [-3, -1, -0.5],
+    [3, -1, -0.5],
+    [-3, 1, -0.5],
+    [3, 1, -0.5],
+    [-3, -1, 0.5],
+    [3, -1, 0.5],
+    [-3, 1, 0.5],
+    [3, 1, 0.5],
+  ] as const;
+  for (let index = 0; index < positions.length / 3; index += 1) {
+    positions.set(corners[index % 8]!, index * 3);
+  }
+  const indexOffset = Number(bufferViews[2]!.byteOffset);
+  const indices = new Uint16Array(
+    binary.buffer,
+    binary.byteOffset + indexOffset,
+    Number(accessors[2]!.count),
+  );
+  const boxIndices = new Uint16Array([
+    0, 2, 1, 1, 2, 3,
+    4, 5, 6, 5, 7, 6,
+    0, 1, 4, 1, 5, 4,
+    2, 6, 3, 3, 6, 7,
+    0, 4, 2, 2, 4, 6,
+    1, 3, 5, 3, 7, 5,
+  ]);
+  for (let triangle = 0; triangle < indices.length / 3; triangle += 1) {
+    indices.set(
+      boxIndices.subarray(triangle % 12 * 3, triangle % 12 * 3 + 3),
+      triangle * 3,
+    );
+  }
+  accessors[0]!.min = [-3, -1, -0.5];
+  accessors[0]!.max = [3, 1, 0.5];
+
+  const result = await partitionAsset(source, {
+    assetId: 'semantic-proxy-demo',
+    maxTriangles: 64,
+    lod: {
+      allocation: 'adaptive',
+      semanticProxy: 'auto',
+      curveSamples: 6,
+      ratio: 0.8,
+      maxTrianglesPerProxy: 1024,
+      minTrianglesPerUnit: 4,
+    },
+  });
+  expect(result.stats.semanticProxyAcceptedUnits).toBeGreaterThan(0);
+  expect(result.stats.semanticProxySelectedContents).toBeGreaterThan(0);
+  expect(result.stats.semanticProxyObbUnits).toBeGreaterThan(0);
+  expect(result.stats.overBudgetCoarseNodes).toBe(0);
+  const root = result.files.find(
+    (file) => file.path === 'coarse/group-root.glb',
+  )!;
+  const nodes = readDocument(root.bytes).nodes;
+  expect(nodes.every((node) => (
+    node.extras.ice3.selectionId?.startsWith('semantic-proxy-demo/node/')
+  ))).toBe(true);
+});

@@ -1,6 +1,10 @@
 import type { ICESourceDocument } from '../source/readSource.js';
 import { readAccessor } from '../source/readAccessor.js';
-import { buildPreparedGLB } from '../output/buildPreparedGLB.js';
+import {
+  buildPreparedGLB,
+  type ICEGeometryOverride,
+  type ICEPreparedMeshOverride,
+} from '../output/buildPreparedGLB.js';
 import type { ICEAssetContractStats } from '../output/assetContract.js';
 import { validateSource } from '../scene/validateSource.js';
 import { prepareMesh } from '../scene/prepareMesh.js';
@@ -14,8 +18,16 @@ import {
   type ICEGeometryWorkspace,
 } from '../lod/createGeometryWorkspace.js';
 import { createLodUnitCurve } from '../lod/createLodUnitCurve.js';
+import {
+  createSemanticProxy,
+  type ICESemanticProxyCreateResult,
+} from '../lod/semanticProxy/createSemanticProxy.js';
 import { simplifyGeometry } from '../lod/simplifyGeometry.js';
 import type { ICELodUnitCurve } from '../lod/types.js';
+import type {
+  ICESemanticProxy,
+  ICESemanticProxyKind,
+} from '../lod/semanticProxy/types.js';
 import { analyzePartitionUnits } from './analyzePartitionUnits.js';
 import { createPartitionPlan } from './createPartitionPlan.js';
 import {
@@ -55,6 +67,14 @@ export interface ICEPartitionResult {
     readonly maximumUnitTriangleRatio: number;
     readonly maximumErrorMeters: number;
     readonly curveSampleCount: number;
+    readonly semanticProxyAcceptedUnits: number;
+    readonly semanticProxyObbUnits: number;
+    readonly semanticProxyCylinderUnits: number;
+    readonly semanticProxyRejectedUnits: number;
+    readonly semanticProxySelectedContents: number;
+    readonly semanticProxyTriangles: number;
+    readonly semanticProxySavedTriangles: number;
+    readonly semanticProxyMaximumErrorMeters: number;
   };
   readonly warnings: readonly string[];
 }
@@ -122,6 +142,14 @@ export async function partitionAsset(
       adaptiveUnitIds: new Set(),
       adaptiveRatios: [],
       maximumAdaptiveErrorMeters: 0,
+      semanticProxyCache: new Map(),
+      semanticProxyAcceptedIds: new Set(),
+      semanticProxyRejectedIds: new Set(),
+      semanticProxyKinds: new Map(),
+      semanticProxySelectedContents: 0,
+      semanticProxyTriangles: 0,
+      semanticProxySavedTriangles: 0,
+      semanticProxyMaximumErrorMeters: 0,
     };
     const built = await buildNode(
       source,
@@ -228,6 +256,15 @@ export async function partitionAsset(
         curveSampleCount: options.lod?.allocation === 'adaptive'
           ? options.lod.curveSamples ?? 8
           : 0,
+        semanticProxyAcceptedUnits: state.semanticProxyAcceptedIds.size,
+        semanticProxyObbUnits: state.semanticProxyKinds.get('obb') ?? 0,
+        semanticProxyCylinderUnits: state.semanticProxyKinds.get('cylinder') ?? 0,
+        semanticProxyRejectedUnits: state.semanticProxyRejectedIds.size,
+        semanticProxySelectedContents: state.semanticProxySelectedContents,
+        semanticProxyTriangles: state.semanticProxyTriangles,
+        semanticProxySavedTriangles: state.semanticProxySavedTriangles,
+        semanticProxyMaximumErrorMeters:
+          state.semanticProxyMaximumErrorMeters,
       },
       warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
     };
@@ -240,6 +277,7 @@ interface ICNormalizedPrimitive {
   readonly key: string;
   readonly triangleCount: number;
   readonly hasVertexColors: boolean;
+  readonly materialIndex?: number;
 }
 
 interface ICBuildState {
@@ -251,20 +289,32 @@ interface ICBuildState {
   readonly adaptiveUnitIds: Set<string>;
   readonly adaptiveRatios: number[];
   maximumAdaptiveErrorMeters: number;
+  readonly semanticProxyCache: Map<
+    string,
+    Promise<ICESemanticProxyCreateResult>
+  >;
+  readonly semanticProxyAcceptedIds: Set<string>;
+  readonly semanticProxyRejectedIds: Set<string>;
+  readonly semanticProxyKinds: Map<ICESemanticProxyKind, number>;
+  semanticProxySelectedContents: number;
+  semanticProxyTriangles: number;
+  semanticProxySavedTriangles: number;
+  semanticProxyMaximumErrorMeters: number;
 }
 
 interface ICoarseAdaptiveMetrics {
   readonly unitIds: readonly string[];
   readonly ratios: readonly number[];
   readonly maximumErrorMeters: number;
+  readonly proxySelections: readonly {
+    readonly proxy: ICESemanticProxy;
+    readonly sourceTriangles: number;
+  }[];
 }
 
 interface ICoarseSelection {
-  readonly overrides: ReadonlyMap<string, {
-    readonly positions: Float32Array;
-    readonly indices: Uint32Array;
-    readonly colors?: Float32Array;
-  }>;
+  readonly overrides: ReadonlyMap<string, ICEGeometryOverride>;
+  readonly meshOverrides: ReadonlyMap<number, ICEPreparedMeshOverride>;
   readonly maximumError: number;
   readonly preservedUnits: readonly string[];
   readonly allocatedTriangles: number;
@@ -434,7 +484,12 @@ async function buildCoarseNode(
     }
     if (built.overBudget) state.overBudgetCoarseNodes += 1;
     if (built.adaptiveMetrics) {
-      const { unitIds, ratios, maximumErrorMeters } = built.adaptiveMetrics;
+      const {
+        unitIds,
+        ratios,
+        maximumErrorMeters,
+        proxySelections,
+      } = built.adaptiveMetrics;
       state.adaptiveRatios.push(...ratios);
       state.maximumAdaptiveErrorMeters = Math.max(
         state.maximumAdaptiveErrorMeters,
@@ -442,6 +497,18 @@ async function buildCoarseNode(
       );
       for (const unitId of classifyAdaptiveUnits(unitIds, ratios)) {
         state.adaptiveUnitIds.add(unitId);
+      }
+      for (const selection of proxySelections) {
+        state.semanticProxySelectedContents += 1;
+        state.semanticProxyTriangles += selection.proxy.triangleCount;
+        state.semanticProxySavedTriangles += Math.max(
+          0,
+          selection.sourceTriangles - selection.proxy.triangleCount,
+        );
+        state.semanticProxyMaximumErrorMeters = Math.max(
+          state.semanticProxyMaximumErrorMeters,
+          selection.proxy.errorMeters,
+        );
       }
     }
     return {
@@ -530,6 +597,7 @@ async function buildSingleCoarseNode(
     assetId: `${options.assetId.trim()}:lod:${partitionId}`,
     selectionIdAssetId: options.assetId.trim(),
     geometryOverrides: selection.overrides,
+    meshOverrides: selection.meshOverrides,
     ...(options.creaseAngleDegrees === undefined
       ? {}
       : { creaseAngleDegrees: options.creaseAngleDegrees }),
@@ -642,6 +710,7 @@ async function selectProportionalCoarseGeometry(
   }
   return {
     overrides,
+    meshOverrides: new Map(),
     maximumError,
     preservedUnits,
     allocatedTriangles: targets.reduce(
@@ -685,9 +754,14 @@ async function selectAdaptiveCoarseGeometry(
     readonly indices: Uint32Array;
     readonly colors?: Float32Array;
   }>();
+  const meshOverrides = new Map<number, ICEPreparedMeshOverride>();
   const preservedUnits: string[] = [];
   const unitIds: string[] = [];
   const ratios: number[] = [];
+  const proxySelections: Array<{
+    readonly proxy: ICESemanticProxy;
+    readonly sourceTriangles: number;
+  }> = [];
   for (const unit of node.units) {
     const unitId = unit.nodeIndices.join(',');
     const unitSelection = selectionByUnit.get(unitId);
@@ -699,17 +773,35 @@ async function selectAdaptiveCoarseGeometry(
       unitSelection.actualTriangles / Math.max(1, unit.triangleCount),
     );
     if (unitSelection.preservedSource) preservedUnits.push(unitId);
-    for (const primitive of unitSelection.primitives) {
-      const geometry = await workspace.read(primitive.geometryKey);
-      overrides.set(primitive.sourceKey, {
+    if (unitSelection.replacement.kind === 'mesh') {
+      const proxy = unitSelection.replacement.proxy;
+      const geometry = await workspace.read(proxy.geometryKey);
+      meshOverrides.set(unit.meshIndices[0]!, {
         positions: geometry.positions,
         indices: geometry.indices,
-        ...(geometry.colors ? { colors: geometry.colors } : {}),
+        ...(proxy.materialIndex === undefined
+          ? {}
+          : { materialIndex: proxy.materialIndex }),
+        ...(proxy.colors ? { colors: proxy.colors } : {}),
       });
+      proxySelections.push({
+        proxy,
+        sourceTriangles: unit.triangleCount,
+      });
+    } else {
+      for (const primitive of unitSelection.replacement.primitives) {
+        const geometry = await workspace.read(primitive.geometryKey);
+        overrides.set(primitive.sourceKey, {
+          positions: geometry.positions,
+          indices: geometry.indices,
+          ...(geometry.colors ? { colors: geometry.colors } : {}),
+        });
+      }
     }
   }
   return {
     overrides,
+    meshOverrides,
     maximumError: allocation.maximumErrorMeters,
     preservedUnits,
     allocatedTriangles: allocation.allocatedTriangles,
@@ -717,6 +809,7 @@ async function selectAdaptiveCoarseGeometry(
       unitIds,
       ratios,
       maximumErrorMeters: allocation.maximumErrorMeters,
+      proxySelections,
     },
   };
 }
@@ -732,29 +825,65 @@ function loadUnitCurve(
   const unitId = unit.nodeIndices.join(',');
   const cached = state.lodCurveCache.get(unitId);
   if (cached) return cached;
-  const primitives = unit.meshIndices.flatMap((meshIndex) => (
-    meshPrimitives(source, meshIndex).flatMap((primitive) => {
-      const normalizedPrimitive = normalized.get(
-        `${meshIndex}:${primitive.index}`,
-      );
-      return normalizedPrimitive
-        ? [{
-            sourceKey: normalizedPrimitive.key,
-            workspaceKey: normalizedPrimitive.key,
-            triangleCount: normalizedPrimitive.triangleCount,
-          }]
-        : [];
-    })
-  ));
-  const pending = createLodUnitCurve({
-    unitId,
-    sourceTriangles: unit.triangleCount,
-    primitives,
-    workspace,
-    minimumTriangles: options.lod!.minTrianglesPerUnit,
-    sampleCount: options.lod!.curveSamples ?? 8,
-    worldScale: maximumWorldScale(state.worldMatrices, unit.nodeIndices),
-  });
+  const pending = (async (): Promise<ICELodUnitCurve> => {
+    const primitives = unit.meshIndices.flatMap((meshIndex) => (
+      meshPrimitives(source, meshIndex).flatMap((primitive) => {
+        const normalizedPrimitive = normalized.get(
+          `${meshIndex}:${primitive.index}`,
+        );
+        return normalizedPrimitive
+          ? [{
+              sourceKey: normalizedPrimitive.key,
+              workspaceKey: normalizedPrimitive.key,
+              triangleCount: normalizedPrimitive.triangleCount,
+              ...(normalizedPrimitive.materialIndex === undefined
+                ? {}
+                : { materialIndex: normalizedPrimitive.materialIndex }),
+            }]
+          : [];
+      })
+    ));
+    let proxy: ICESemanticProxy | undefined;
+    if (options.lod!.semanticProxy === 'auto') {
+      let proxyPending = state.semanticProxyCache.get(unitId);
+      if (!proxyPending) {
+        proxyPending = createSemanticProxy({
+          meshIndex: unit.meshIndices[0]!,
+          sourceTriangles: unit.triangleCount,
+          primitives,
+          workspace,
+          worldScale: maximumWorldScale(state.worldMatrices, unit.nodeIndices),
+        });
+        state.semanticProxyCache.set(unitId, proxyPending);
+        proxyPending.catch(() => {
+          if (state.semanticProxyCache.get(unitId) === proxyPending) {
+            state.semanticProxyCache.delete(unitId);
+          }
+        });
+      }
+      const result = await proxyPending;
+      proxy = result.proxy;
+      if (proxy) {
+        state.semanticProxyAcceptedIds.add(unitId);
+        state.semanticProxyKinds.set(
+          proxy.kind,
+          (state.semanticProxyKinds.get(proxy.kind) ?? 0) + 1,
+        );
+      } else {
+        state.semanticProxyRejectedIds.add(unitId);
+      }
+    }
+    return createLodUnitCurve({
+      unitId,
+      sourceTriangles: unit.triangleCount,
+      primitives,
+      workspace,
+      minimumTriangles: options.lod!.minTrianglesPerUnit,
+      sampleCount: options.lod!.curveSamples ?? 8,
+      worldScale: maximumWorldScale(state.worldMatrices, unit.nodeIndices),
+      ...(proxy ? { proxy } : {}),
+    });
+  })();
   state.lodCurveCache.set(unitId, pending);
   pending.catch(() => {
     if (state.lodCurveCache.get(unitId) === pending) {
@@ -832,6 +961,9 @@ async function normalizeLodGeometry(
         key,
         triangleCount: prepared.indices.length / 3,
         hasVertexColors: attributes?.COLOR_0 !== undefined,
+        ...(primitive.value.material === undefined
+          ? {}
+          : { materialIndex: Number(primitive.value.material) }),
       });
     }
   }
