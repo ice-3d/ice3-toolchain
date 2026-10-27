@@ -228,7 +228,9 @@ export function buildPreparedGLB(
         creaseAngleDegrees,
         {
           id: `${assetId}/geometry/${meshIndex}/${primitiveIndex}`,
-          mode: Number(primitive.mode ?? 4) as 4 | 5 | 6,
+          mode: override
+            ? 4
+            : Number(primitive.mode ?? 4) as 4 | 5 | 6,
           generateEdges: options.edges !== false,
         },
       );
