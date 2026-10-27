@@ -84,6 +84,11 @@ export {
   type ICELodUnitTarget,
 } from './lod/allocateLodTargets.js';
 export {
+  createCoarseChunkPlan,
+  type ICECoarseChunk,
+  type ICECoarseChunkUnit,
+} from './lod/createCoarseChunkPlan.js';
+export {
   partitionAsset,
   type ICEPartitionResult,
 } from './partition/partitionAsset.js';
