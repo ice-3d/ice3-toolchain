@@ -314,6 +314,129 @@ test('partition writes hierarchical LOD content and aggregate stats', async () =
   expect(result.stats.overBudgetCoarseNodes).toBe(0);
 });
 
+test('partition writes static render batches and reports their reduction', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  const printed: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    printed.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-demo',
+    '--max-triangles',
+    '16',
+    '--render-batch',
+    'static',
+    '--json',
+  ])).toBe(0);
+
+  const result = JSON.parse(printed.at(-1)!) as {
+    stats: {
+      renderBatchMode: string;
+      renderBatchCount: number;
+      renderBatchInputPrimitives: number;
+      renderBatchDrawReduction: number;
+    };
+  };
+  expect(result.stats).toMatchObject({
+    renderBatchMode: 'static',
+    renderBatchCount: expect.any(Number),
+    renderBatchInputPrimitives: 4,
+  });
+  expect(result.stats.renderBatchCount)
+    .toBeLessThan(result.stats.renderBatchInputPrimitives);
+  expect(result.stats.renderBatchDrawReduction).toBeGreaterThan(0);
+
+  const nodeIds: string[] = [];
+  for (const file of readdirSync(join(output, 'parts'))) {
+    const bytes = readFileSync(join(output, 'parts', file));
+    const jsonLength = bytes.readUInt32LE(12);
+    const document = JSON.parse(
+      bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+    ) as {
+      nodes: Array<{ extras: { ice3: { id: string } } }>;
+    };
+    nodeIds.push(...document.nodes.map((node) => node.extras.ice3.id));
+  }
+  expect(new Set(nodeIds).size).toBe(nodeIds.length);
+});
+
+test('partition accepts standard chunked coarse contents', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-lod-demo',
+    '--max-triangles',
+    '3',
+    '--render-batch',
+    'static',
+    '--lod',
+    '--coarse-chunk-max-bytes',
+    '3000',
+    '--json',
+  ])).toBe(0);
+
+  const tileset = JSON.parse(
+    readFileSync(join(output, 'tileset.json'), 'utf8'),
+  ) as {
+    root: { contents?: Array<{ uri: string }> };
+  };
+  expect(tileset.root.contents?.length).toBeGreaterThan(1);
+});
+
+test('gives render batch nodes unique IDs across partitions', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-id-demo',
+    '--max-triangles',
+    '1',
+    '--render-batch',
+    'static',
+    '--json',
+  ])).toBe(0);
+
+  const nodeIds: string[] = [];
+  for (const file of readdirSync(join(output, 'parts'))) {
+    const bytes = readFileSync(join(output, 'parts', file));
+    const jsonLength = bytes.readUInt32LE(12);
+    const document = JSON.parse(
+      bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+    ) as {
+      nodes: Array<{ extras: { ice3: { id: string } } }>;
+    };
+    nodeIds.push(...document.nodes.map((node) => node.extras.ice3.id));
+  }
+  expect(new Set(nodeIds).size).toBe(nodeIds.length);
+});
+
 test.each([
   [['--lod-ratio', '0']],
   [['--lod-ratio', '1']],

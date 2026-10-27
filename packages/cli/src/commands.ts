@@ -20,6 +20,7 @@ import {
   validateSource,
   type ICEBudgetProfile,
   type ICELodAllocationMode,
+  type ICRenderBatchMode,
   type ICESemanticProxyMode,
 } from '@ice3/toolchain-core';
 
@@ -81,6 +82,13 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     args.values.get('--max-bytes') ?? '33554432',
     '--max-bytes',
   );
+  const requestedRenderBatch = args.values.get('--render-batch') ?? 'off';
+  if (requestedRenderBatch !== 'off' && requestedRenderBatch !== 'static') {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --render-batch must be off or static',
+    );
+  }
+  const renderBatch: ICRenderBatchMode = requestedRenderBatch;
   if (
     args.values.has('--semantic-proxy')
     && !args.flags.has('--lod')
@@ -177,6 +185,7 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     creaseAngleDegrees: Number(args.values.get('--crease-angle') ?? 30),
     edges: !args.flags.has('--skip-edges'),
     budget,
+    renderBatch,
     ...(lod ? { lod } : {}),
   });
   const warnings = [...new Set([...sourceReport.warnings, ...result.warnings])];
@@ -443,6 +452,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--lod-allocation',
     '--lod-curve-samples',
     '--semantic-proxy',
+    '--render-batch',
     '--coarse-chunk-max-bytes',
   ]);
   const knownFlags = new Set([
@@ -524,10 +534,14 @@ function validateTilesetResult(
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
     const tile = value as {
       content?: { uri?: unknown };
+      contents?: Array<{ uri?: unknown }>;
       children?: unknown[];
     };
     if (typeof tile.content?.uri === 'string') {
       contentUris.push(tile.content.uri);
+    }
+    for (const content of tile.contents ?? []) {
+      if (typeof content.uri === 'string') contentUris.push(content.uri);
     }
     for (const child of tile.children ?? []) visit(child);
   };

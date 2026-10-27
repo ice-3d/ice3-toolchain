@@ -152,9 +152,16 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       const indexIndex = Number(primitive.indices);
       const colorIndexRaw = record(primitive.attributes)?.COLOR_0;
       const colorIndex = colorIndexRaw === undefined ? undefined : Number(colorIndexRaw);
+      const semanticIndexRaw = record(primitive.attributes)?._ICE3_SEMANTIC_INDEX;
+      const semanticIndex = semanticIndexRaw === undefined
+        ? undefined
+        : Number(semanticIndexRaw);
       const position = accessors[positionIndex];
       const indices = accessors[indexIndex];
       const colors = colorIndex === undefined ? undefined : accessors[colorIndex];
+      const semantics = semanticIndex === undefined
+        ? undefined
+        : accessors[semanticIndex];
       if (
         position?.componentType !== 5126
         || position.type !== 'VEC3'
@@ -173,6 +180,16 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
         )
       ) {
         errors.add(`ICE3_TOOL_INVALID_VERTEX_COLORS:${path}`);
+      }
+      if (
+        semanticIndex !== undefined
+        && (
+          semantics?.componentType !== 5125
+          || semantics.type !== 'SCALAR'
+          || semantics.count !== position.count
+        )
+      ) {
+        errors.add(`ICE3_TOOL_INVALID_BATCH_SEMANTICS:${path}`);
       }
       const count = Number(indices.count);
       if (
@@ -201,6 +218,10 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
   }
 
   const stats = record(profile.stats);
+  const batchingSelectionIds = record(profile.batching)?.semanticSelectionIds;
+  const expectedSelectionCount = Array.isArray(batchingSelectionIds)
+    ? new Set(batchingSelectionIds).size
+    : selectionGroupCount(nodes, meshes);
   const contractVersion = profile.contractVersion;
   const hasContract = contractVersion !== undefined;
   if (
@@ -212,7 +233,7 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       Number(stats?.primitiveCount) !== primitiveCount
       || Number(stats?.materialCount) !== records(json.materials).length
       || Number(stats?.maxNodeDepth) !== maxNodeDepth(nodes, scenes)
-      || Number(stats?.selectionGroupCount) !== selectionGroupCount(nodes, meshes)
+      || Number(stats?.selectionGroupCount) !== expectedSelectionCount
     ))
   ) {
     errors.add('ICE3_TOOL_INVALID_PROFILE_STATS');

@@ -31,10 +31,12 @@ export interface ICEPartitionOptions {
   readonly edges?: boolean;
   readonly budget?: import('../output/evaluateAssetBudget.js').ICEBudgetProfile;
   readonly lod?: ICELodBuildOptions;
+  readonly renderBatch?: ICRenderBatchMode;
 }
 
 export type ICELodAllocationMode = 'proportional' | 'adaptive';
 export type ICESemanticProxyMode = 'off' | 'auto';
+export type ICRenderBatchMode = 'off' | 'static';
 
 export interface ICELodBuildOptions {
   readonly allocation?: ICELodAllocationMode;

@@ -105,6 +105,26 @@ Use `--coarse-chunk-max-bytes` to override the default 32 MiB coarse chunk
 limit; when omitted it follows `--max-bytes`. Oversized indivisible devices
 remain intact and are reported.
 
+Use `--render-batch off|static` to generate deterministic world-space render
+batches. `static` groups compatible triangles by material inside each emitted
+Prepared GLB while retaining semantic node identities; the default is `off`.
+Static batching can be combined with either non-LOD partitioning or
+`--lod --lod-allocation proportional|adaptive`.
+
+Material grouping uses the effective output material state, including flat base
+color and edge color, so source materials with identical rendered state do not
+create duplicate batches. LOD geometry and semantic proxy overrides are applied
+before batching. Batch nodes receive Tileset-wide unique IDs, while
+`selectionId` remains the existing business identity.
+
+On a controlled industrial asset with edges disabled and identical partition
+settings, static batching reduced visible runtime Draw Calls from 1,472 to 662
+(55.03%). The prepared output grew from 406,072,056 to 476,678,116 bytes, and
+the offline build grew from 22.68 s to 40.77 s. Peak resident memory fell from
+4.64 GiB to 3.42 GiB. Chromium and WebKit both reported zero page errors and
+zero failed requests. These are aggregate measurements; the source asset and
+derived files remain outside the repository.
+
 Select the coarse-model allocation strategy with
 `--lod-allocation proportional|adaptive`. The default is `proportional`;
 `adaptive` generates deterministic per-device error curves and spends each
