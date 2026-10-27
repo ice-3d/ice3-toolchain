@@ -101,6 +101,9 @@ Partition treats each mesh node as an indivisible semantic unit and reports
 `ICE3_TOOL_PARTITION_UNSPLITTABLE` when one unit exceeds the byte budget.
 LOD defaults are `0.15` ratio, 250,000 triangles per proxy, and at least 8
 triangles per device. The browser runtime never loads the simplifier.
+Use `--coarse-chunk-max-bytes` to override the default 32 MiB coarse chunk
+limit; when omitted it follows `--max-bytes`. Oversized indivisible devices
+remain intact and are reported.
 
 ## Scope
 
