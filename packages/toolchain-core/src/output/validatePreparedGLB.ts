@@ -124,6 +124,8 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
   }
 
   const meshes = records(json.meshes);
+  let triangleCount = 0;
+  let edgeSegmentCount = 0;
   for (const [meshIndex, mesh] of meshes.entries()) {
     for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
       const mode = Number(primitive.mode ?? 4);
@@ -152,6 +154,14 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       ) {
         errors.add(`ICE3_TOOL_INVALID_PRIMITIVE_COUNT:${path}`);
       }
+      if (mode === 4) {
+        triangleCount += count / 3;
+      } else {
+        edgeSegmentCount += count / 2;
+        if (record(record(primitive.extras)?.ice3)?.role !== 'edges') {
+          errors.add(`ICE3_TOOL_INVALID_EDGE_PRIMITIVE:${path}`);
+        }
+      }
       const maxIndex = readMaxIndex(
         parsed.binary,
         views[Number(indices.bufferView)]!,
@@ -162,6 +172,21 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       }
     }
   }
+
+  const stats = record(profile.stats);
+  if (
+    Number(stats?.nodeCount) !== nodes.length
+    || Number(stats?.meshCount) !== meshes.length
+    || Number(stats?.triangleCount) !== triangleCount
+    || Number(stats?.edgeSegmentCount) !== edgeSegmentCount
+  ) {
+    errors.add('ICE3_TOOL_INVALID_PROFILE_STATS');
+  }
+
+  const meshIds = new Set<string>();
+  validateProfileIds(meshes, meshIds, errors);
+  const materialIds = new Set<string>();
+  validateProfileIds(records(json.materials), materialIds, errors);
 
   return { errors: [...errors], warnings: [] };
 }
@@ -189,7 +214,12 @@ function parseGLB(bytes: Buffer): ParsedGLB {
     const chunk = bytes.subarray(offset + 8, offset + 8 + length);
     if (index === 0) {
       if (type !== 0x4e4f534a) throw new Error('ICE3_TOOL_INVALID_GLB');
-      const parsed = JSON.parse(chunk.toString('utf8').replace(/ +$/g, ''));
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(chunk.toString('utf8').replace(/ +$/g, ''));
+      } catch {
+        throw new Error('ICE3_TOOL_INVALID_GLB');
+      }
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         throw new Error('ICE3_TOOL_INVALID_GLB');
       }
@@ -203,6 +233,21 @@ function parseGLB(bytes: Buffer): ParsedGLB {
   }
   if (!json || !binary) throw new Error('ICE3_TOOL_INVALID_GLB');
   return { json, binary };
+}
+
+function validateProfileIds(
+  entries: readonly JSONRecord[],
+  ids: Set<string>,
+  errors: Set<string>,
+): void {
+  for (const entry of entries) {
+    const id = record(record(entry.extras)?.ice3)?.id;
+    if (typeof id !== 'string' || !id || ids.has(id)) {
+      errors.add('ICE3_TOOL_DUPLICATE_ID');
+    } else {
+      ids.add(id);
+    }
+  }
 }
 
 function readMaxIndex(

@@ -3,6 +3,7 @@ import type { ICESourceDocument } from '../source/readSource.js';
 import { readAccessor } from '../source/readAccessor.js';
 import { bakeLocalMatrix, type ICEMatrix4Tuple } from '../scene/bakeMatrix.js';
 import { prepareMesh } from '../scene/prepareMesh.js';
+import { validateSource } from '../scene/validateSource.js';
 
 export interface ICEBuildOptions {
   readonly assetId: string;
@@ -42,6 +43,10 @@ export function buildPreparedGLB(
   const assetId = options.assetId.trim();
   if (!assetId) {
     throw new Error('ICE3_TOOL_INVALID_OPTIONS: assetId must not be empty');
+  }
+  const report = validateSource(source);
+  if (report.errors.length > 0) {
+    throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
   }
   const creaseAngleDegrees = options.creaseAngleDegrees ?? 30;
   const sourceNodes = records(source.json.nodes);

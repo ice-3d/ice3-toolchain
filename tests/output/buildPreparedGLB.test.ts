@@ -26,3 +26,12 @@ test('writes an ICE3 profile header and one BIN chunk', async () => {
   expect(Buffer.from(glb).toString('utf8')).toContain('ice3-prepared');
   expect(Buffer.from(glb).toString('utf8')).toContain('sample');
 });
+
+test('rejects unsupported source features before packing', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  (source.json as Record<string, unknown>).animations = [{}];
+
+  expect(() => buildPreparedGLB(source, { assetId: 'sample' })).toThrow(
+    /ICE3_TOOL_SOURCE_UNSUPPORTED/,
+  );
+});
