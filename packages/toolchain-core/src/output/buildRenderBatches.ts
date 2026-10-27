@@ -68,6 +68,7 @@ export interface ICEBuildRenderBatchesResult {
 }
 
 interface BatchDraft {
+  readonly outputMaterialKey: string;
   readonly sourceMaterialIndex?: number;
   readonly hasColors: boolean;
   positions: number[];
@@ -175,12 +176,20 @@ export function buildRenderBatches(
         throw new Error('ICE3_TOOL_RENDER_BATCH_INVALID: material index is invalid');
       }
       const hasColors = primitive.colors !== undefined;
-      const key = draftKey(sourceMaterialIndex, hasColors);
+      const outputMaterialKey = materialOutputKey(
+        materials,
+        sourceMaterialIndex,
+      );
+      const key = draftKey(outputMaterialKey, hasColors);
       let vertexMap = new Map<number, number>();
       for (let offset = 0; offset < prepared.indices.length; offset += 3) {
         let draft = activeDrafts.get(key);
         if (!draft) {
-          draft = createDraft(sourceMaterialIndex, hasColors);
+          draft = createDraft(
+            outputMaterialKey,
+            sourceMaterialIndex,
+            hasColors,
+          );
           activeDrafts.set(key, draft);
         }
         if (!triangleFits(
@@ -191,7 +200,11 @@ export function buildRenderBatches(
           options,
         )) {
           sealDraft(draftsByKey, key, draft);
-          draft = createDraft(sourceMaterialIndex, hasColors);
+          draft = createDraft(
+            outputMaterialKey,
+            sourceMaterialIndex,
+            hasColors,
+          );
           activeDrafts.set(key, draft);
           vertexMap = new Map();
         }
@@ -222,7 +235,7 @@ export function buildRenderBatches(
   for (const draft of activeDrafts.values()) {
     sealDraft(
       draftsByKey,
-      draftKey(draft.sourceMaterialIndex, draft.hasColors),
+      draftKey(draft.outputMaterialKey, draft.hasColors),
       draft,
     );
   }
@@ -301,10 +314,12 @@ function collectEffectivePrimitives(
 }
 
 function createDraft(
+  outputMaterialKey: string,
   sourceMaterialIndex: number | undefined,
   hasColors: boolean,
 ): BatchDraft {
   return {
+    outputMaterialKey,
     ...(sourceMaterialIndex === undefined ? {} : { sourceMaterialIndex }),
     hasColors,
     positions: [],
@@ -448,10 +463,31 @@ function appendTransformedVertex(
 }
 
 function draftKey(
-  sourceMaterialIndex: number | undefined,
+  outputMaterialKey: string,
   hasColors: boolean,
 ): string {
-  return `${sourceMaterialIndex ?? 'default'}:${hasColors ? 1 : 0}`;
+  return `${outputMaterialKey}:${hasColors ? 1 : 0}`;
+}
+
+function materialOutputKey(
+  materials: readonly Record<string, unknown>[],
+  materialIndex: number | undefined,
+): string {
+  if (materialIndex === undefined) return 'default';
+  const material = materials[materialIndex]!;
+  const pbr = record(material.pbrMetallicRoughness);
+  const baseColor = Array.isArray(pbr?.baseColorFactor)
+    && pbr.baseColorFactor.length === 4
+    && pbr.baseColorFactor.every((value) => (
+      typeof value === 'number' && Number.isFinite(value)
+    ))
+    ? pbr.baseColorFactor
+    : [0.5, 0.5, 0.5, 1];
+  const edgeColor = record(record(material.extras)?.ice3)?.edgeColor;
+  return JSON.stringify([
+    baseColor,
+    typeof edgeColor === 'string' ? edgeColor : '#e6f2ff',
+  ]);
 }
 
 function boundsFromValues(values: readonly number[]): ICEBounds {

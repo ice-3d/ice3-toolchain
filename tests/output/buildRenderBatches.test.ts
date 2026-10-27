@@ -124,3 +124,27 @@ test('uses mesh overrides instead of source mesh geometry', () => {
     max: [70, 80, 0],
   });
 });
+
+test('groups distinct source materials with identical output states', () => {
+  const source = sourceWithIds();
+  const materials = source.json.materials as Array<Record<string, unknown>>;
+  materials.push({
+    name: 'steel-alias',
+    pbrMetallicRoughness: {
+      baseColorFactor: [0.2, 0.5, 0.9, 1],
+    },
+  });
+  const meshes = source.json.meshes as Array<{
+    primitives: Array<Record<string, unknown>>;
+  }>;
+  meshes[1]!.primitives[0]!.material = 1;
+
+  const result = buildRenderBatches(source, [0, 1], {
+    mode: 'static',
+    maxTrianglesPerBatch: 100,
+    maxBytesPerBatch: 1_000_000,
+  });
+
+  expect(result.outputBatchCount).toBe(1);
+  expect(result.batches[0]!.sourceMaterialIndex).toBe(0);
+});
