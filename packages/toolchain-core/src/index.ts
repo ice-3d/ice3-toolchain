@@ -73,6 +73,12 @@ export {
   type ICESimplifyGeometryOptions,
 } from './lod/simplifyGeometry.js';
 export {
+  createGeometryWorkspace,
+  type ICEGeometryWorkspace,
+  type ICEGeometryWorkspaceOptions,
+  type ICEWorkspaceGeometry,
+} from './lod/createGeometryWorkspace.js';
+export {
   partitionAsset,
   type ICEPartitionResult,
 } from './partition/partitionAsset.js';
