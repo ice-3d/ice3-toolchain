@@ -62,6 +62,11 @@ export {
   createPartitionPlan,
   type ICEPartitionPlanNode,
 } from './partition/createPartitionPlan.js';
+export {
+  createTilesetDocument,
+  type ICEFinishedTile,
+  type ICETilesetDocument,
+} from './partition/tileset.js';
 export type {
   ICEBounds,
   ICEPartitionAnalysis,
