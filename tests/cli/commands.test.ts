@@ -1,7 +1,9 @@
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -10,6 +12,7 @@ import { join, resolve } from 'node:path';
 import { afterEach, expect, test, vi } from 'node-test';
 import { runCli } from '../../packages/cli/src/commands.js';
 import { createCompressedFixture } from '../fixtures/createCompressedFixture.js';
+import { createPartitionSource } from '../partition/createPartitionSource.js';
 
 const directories: string[] = [];
 
@@ -19,6 +22,19 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+const writePartitionGLTF = (path: string): void => {
+  const document = createPartitionSource();
+  writeFileSync(path, JSON.stringify({
+    ...document.json,
+    buffers: [{
+      byteLength: 42,
+      uri: `data:application/octet-stream;base64,${
+        Buffer.from(document.buffers[0]!).toString('base64')
+      }`,
+    }],
+  }));
+};
 
 test('build writes a prepared GLB atomically', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-'));
@@ -210,4 +226,47 @@ test('build writes a report and rejects hard budgets before publishing GLB', asy
     '--json',
   ])).toBe(1);
   expect(existsSync(rejectedOutput)).toBe(false);
+});
+
+test('partition writes tileset and numbered GLBs without partial output', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  const code = await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'demo',
+    '--max-triangles',
+    '1',
+  ]);
+
+  expect(code).toBe(0);
+  expect(existsSync(join(output, 'tileset.json'))).toBe(true);
+  expect(readdirSync(join(output, 'parts'))).toHaveLength(4);
+});
+
+test('partition rejects an existing output directory', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  mkdirSync(output);
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'demo',
+  ])).toBe(1);
+  expect(readdirSync(output)).toEqual([]);
 });

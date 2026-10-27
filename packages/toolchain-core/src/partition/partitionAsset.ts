@@ -25,6 +25,7 @@ export interface ICEPartitionResult {
     readonly nodeCount: number;
     readonly maxPartBytes: number;
   };
+  readonly warnings: readonly string[];
 }
 
 interface BuiltTree {
@@ -34,6 +35,7 @@ interface BuiltTree {
   readonly children: readonly BuiltTree[];
   readonly bytes?: Uint8Array;
   readonly stats?: ICEAssetContractStats;
+  readonly warnings: readonly string[];
 }
 
 const DEFAULT_MAX_TRIANGLES = 500_000;
@@ -109,6 +111,7 @@ export function partitionAsset(
       nodeCount,
       maxPartBytes,
     },
+    warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
   };
 }
 
@@ -120,13 +123,15 @@ function buildNode(
   maxBytes: number,
 ): BuiltTree {
   if (node.children.length > 0) {
+    const children = node.children.map((child) => (
+      buildNode(source, options, child, maxTriangles, maxBytes)
+    ));
     return {
       bounds: node.bounds,
       triangleCount: node.triangleCount,
       units: node.units,
-      children: node.children.map((child) => (
-        buildNode(source, options, child, maxTriangles, maxBytes)
-      )),
+      children,
+      warnings: [...new Set(children.flatMap((child) => child.warnings))],
     };
   }
   const nodeIndices = node.units.flatMap((unit) => unit.nodeIndices);
@@ -153,6 +158,9 @@ function buildNode(
       children: [],
       bytes: built.bytes,
       stats: built.stats,
+      warnings: built.budget.status === 'warning'
+        ? [`ICE3_TOOL_BUDGET_WARNING:${built.budget.profile}`]
+        : [],
     };
   }
   if (node.units.length === 1) {
@@ -173,13 +181,15 @@ function buildNode(
       'ICE3_TOOL_PARTITION_UNSPLITTABLE: semantic units cannot satisfy maxBytes',
     );
   }
+  const children = split.children.map((child) => (
+    buildNode(source, options, child, maxTriangles, maxBytes)
+  ));
   return {
     bounds: split.bounds,
     triangleCount: split.triangleCount,
     units: split.units,
-    children: split.children.map((child) => (
-      buildNode(source, options, child, maxTriangles, maxBytes)
-    )),
+    children,
+    warnings: [...new Set(children.flatMap((child) => child.warnings))],
   };
 }
 
