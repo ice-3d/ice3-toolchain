@@ -21,6 +21,10 @@ import {
   type ICEBudgetProfile,
   type ICEBudgetResult,
 } from './evaluateAssetBudget.js';
+import {
+  buildRenderBatches,
+  type ICEToolRenderBatchMetadata,
+} from './buildRenderBatches.js';
 
 export interface ICEBuildOptions {
   readonly assetId: string;
@@ -31,6 +35,11 @@ export interface ICEBuildOptions {
   readonly edges?: boolean;
   readonly budget?: ICEBudgetProfile;
   readonly selection?: ICEBuildSelection;
+  readonly renderBatching?: {
+    readonly mode: 'static' | 'off';
+    readonly maxTrianglesPerBatch?: number;
+    readonly maxBytesPerBatch?: number;
+  };
 }
 
 export interface ICEGeometryOverride {
@@ -105,6 +114,16 @@ export function buildPreparedGLB(
     : undefined;
 
   const materialEntries = records(source.json.materials);
+  const renderBatching = options.renderBatching?.mode === 'static'
+    ? buildRenderBatches(source, selectedNodeIndices, {
+        mode: 'static',
+        maxTrianglesPerBatch:
+          options.renderBatching.maxTrianglesPerBatch ?? 500_000,
+        maxBytesPerBatch:
+          options.renderBatching.maxBytesPerBatch ?? 33_554_432,
+        selectionIdAssetId,
+      })
+    : undefined;
   const outputMaterials: JSONRecord[] = [];
   const baseMaterialIndices: number[] = [];
   const edgeMaterialIndices: number[] = [];
@@ -206,6 +225,7 @@ export function buildPreparedGLB(
     readonly indices: Uint32Array;
     readonly sourceMaterial: number;
     readonly colors?: Float32Array;
+    readonly semanticIndices?: Uint32Array;
     readonly mode: 4 | 5 | 6;
     readonly id: string;
     readonly primitives: JSONRecord[];
@@ -248,13 +268,31 @@ export function buildPreparedGLB(
           );
         }
       }
-      const colorView = append(new Uint8Array(displayColors.buffer));
+    const colorView = append(new Uint8Array(displayColors.buffer));
       colorAccessorIndex = accessors.length;
       accessors.push({
         bufferView: colorView,
         componentType: 5126,
         count: displayColors.length / 3,
         type: 'VEC3',
+      });
+    }
+    let semanticAccessorIndex: number | undefined;
+    if (options_.semanticIndices) {
+      if (options_.semanticIndices.length !== prepared.positions.length / 3) {
+        throw new Error(
+          'ICE3_TOOL_INVALID_GEOMETRY: semantic indices must match POSITION',
+        );
+      }
+      const semanticView = append(
+        new Uint8Array(options_.semanticIndices.buffer),
+      );
+      semanticAccessorIndex = accessors.length;
+      accessors.push({
+        bufferView: semanticView,
+        componentType: 5125,
+        count: options_.semanticIndices.length,
+        type: 'SCALAR',
       });
     }
     const triangleView = append(new Uint8Array(prepared.indices.buffer));
@@ -288,6 +326,9 @@ export function buildPreparedGLB(
         ...(colorAccessorIndex === undefined
           ? {}
           : { COLOR_0: colorAccessorIndex }),
+        ...(semanticAccessorIndex === undefined
+          ? {}
+          : { _ICE3_SEMANTIC_INDEX: semanticAccessorIndex }),
       },
       indices: triangleAccessorIndex,
       material: colorAccessorIndex === undefined
@@ -308,7 +349,44 @@ export function buildPreparedGLB(
     edgeSegmentCount += prepared.edgeIndices.length / 2;
   };
 
-  for (const [meshIndex, mesh] of sourceMeshes.entries()) {
+  const batchMetadata: Array<ICEToolRenderBatchMetadata['batches'][number]> = [];
+  if (renderBatching) {
+    for (const [index, batch] of renderBatching.batches.entries()) {
+      for (const owner of selectedNodeIndices) {
+        if (sourceNodes[owner]?.mesh !== undefined) selectionNodes.add(owner);
+      }
+      const primitives: JSONRecord[] = [];
+      const sourceMaterial = batch.sourceMaterialIndex ?? materialEntries.length;
+      appendPrimitive({
+        positions: batch.positions,
+        indices: batch.indices,
+        sourceMaterial,
+        ...(batch.colors ? { colors: batch.colors } : {}),
+        semanticIndices: batch.semanticIndices,
+        mode: 4,
+        id: `${assetId}/render-batch/${index}`,
+        primitives,
+      });
+      const meshIndex = outputMeshes.length;
+      outputMeshes.push({
+        primitives,
+        extras: { ice3: { id: `${assetId}/render-batch-mesh/${index}` } },
+      });
+      primitiveCount += primitives.length;
+      batchMetadata.push({
+        id: batch.id,
+        mesh: meshIndex,
+        primitive: 0,
+        material: batch.colors
+          ? vertexColorMaterialIndex
+          : baseMaterialIndices[sourceMaterial]!,
+        mode: 4,
+        triangleCount: batch.triangleCount,
+        bounds: batch.bounds,
+      });
+    }
+  }
+  if (!renderBatching) for (const [meshIndex, mesh] of sourceMeshes.entries()) {
     const primitives: JSONRecord[] = [];
     const nodeOwners = sourceNodes
       .map((node, index) => Number(node.mesh) === meshIndex ? index : -1)
@@ -411,6 +489,7 @@ export function buildPreparedGLB(
   );
   const outputNodes = selectedNodeIndices.map((sourceIndex) => {
     const node = sourceNodes[sourceIndex]!;
+    const semanticSelectionId = record(record(node.extras)?.ice3)?.selectionId;
     const sourceMesh = node.mesh === undefined
       ? undefined
       : sourceMeshToOutputMesh.get(Number(node.mesh));
@@ -436,7 +515,13 @@ export function buildPreparedGLB(
       extras: {
         ice3: {
           id: `${assetId}/node/${sourceIndex}`,
-          ...(options.selectionIdAssetId
+          ...(renderBatching
+            ? {
+                selectionId: typeof semanticSelectionId === 'string'
+                  ? semanticSelectionId
+                  : `${selectionIdAssetId}/node/${sourceIndex}`,
+              }
+            : options.selectionIdAssetId
             ? {
                 selectionId: `${selectionIdAssetId}/node/${sourceIndex}`,
               }
@@ -445,6 +530,23 @@ export function buildPreparedGLB(
       },
     };
   });
+  const batchNodeIndices: number[] = [];
+  if (renderBatching) {
+    for (const [index, meshIndex] of batchMetadata.map((batch) => batch.mesh)
+      .entries()) {
+      batchNodeIndices.push(outputNodes.length);
+      outputNodes.push({
+        name: `render-batch-${index}`,
+        matrix: identity(),
+        mesh: meshIndex,
+        extras: {
+          ice3: {
+            id: `${assetId}/render-batch-node/${index}`,
+          },
+        },
+      });
+    }
+  }
 
   const bounds = options.selection
     ? computeSelectionBounds(
@@ -476,6 +578,7 @@ export function buildPreparedGLB(
     ? selectedNodeIndices
         .filter((sourceIndex) => !selectedChildren.has(sourceIndex))
         .map((sourceIndex) => outputIndexBySource.get(sourceIndex)!)
+        .concat(batchNodeIndices)
     : integers(sourceScene.nodes);
   const nodeDepth = (
     index: number,
@@ -549,6 +652,17 @@ export function buildPreparedGLB(
             warningCount: 0,
             errorCount: 0,
           },
+          ...(renderBatching
+            ? {
+                batching: {
+                  version: '1.0',
+                  semanticIds: renderBatching.semanticIds,
+                  semanticNodeIds: renderBatching.semanticNodeIds,
+                  semanticSelectionIds: renderBatching.semanticSelectionIds,
+                  batches: batchMetadata,
+                },
+              }
+            : {}),
         },
       },
     },

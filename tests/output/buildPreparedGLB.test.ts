@@ -189,6 +189,72 @@ test('combines mesh override and normal mesh paths in one Tile', () => {
     ]);
 });
 
+test('writes static render batches without changing semantic nodes', () => {
+  const source = createPartitionSource();
+  source.json.nodes = (source.json.nodes as Array<Record<string, unknown>>)
+    .map((node, index) => ({
+      ...node,
+      extras: {
+        ice3: {
+          id: `source/node/${index}`,
+          selectionId: `source/node/${index}`,
+        },
+      },
+    }));
+  const built = buildPreparedGLB(source, {
+    assetId: 'batched',
+    edges: false,
+    renderBatching: {
+      mode: 'static',
+      maxTrianglesPerBatch: 100,
+      maxBytesPerBatch: 1_000_000,
+    },
+  });
+  const document = readDocument(built.bytes) as {
+    accessors: Array<Record<string, unknown>>;
+    meshes: Array<{
+      primitives: Array<{
+        attributes: Record<string, number>;
+        mode: number;
+      }>;
+    }>;
+    nodes: Array<{
+      mesh?: number;
+      extras: { ice3: Record<string, unknown> };
+    }>;
+    asset: {
+      extras: {
+        ice3: {
+          batching: {
+            semanticSelectionIds: string[];
+            batches: unknown[];
+          };
+        };
+      };
+    };
+  };
+
+  expect(document.meshes).toHaveLength(1);
+  expect(document.meshes[0]!.primitives[0]!.attributes._ICE3_SEMANTIC_INDEX)
+    .toEqual(expect.any(Number));
+  expect(document.nodes.filter((node) => node.mesh !== undefined)).toHaveLength(1);
+  expect(document.nodes
+    .filter((node) => node.mesh === undefined)
+    .map((node) => node.extras.ice3.selectionId)).toEqual([
+      'source/node/0',
+      'source/node/1',
+      'source/node/2',
+      'source/node/3',
+    ]);
+  expect(document.asset.extras.ice3.batching.semanticSelectionIds).toEqual([
+    'source/node/0',
+    'source/node/1',
+    'source/node/2',
+    'source/node/3',
+  ]);
+  expect(document.asset.extras.ice3.batching.batches).toHaveLength(1);
+});
+
 test('reports contract bounds from replaced mesh geometry', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const built = buildPreparedGLB(source, {

@@ -29,6 +29,13 @@ export {
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
 export {
+  buildRenderBatches,
+  type ICEBuildRenderBatchesOptions,
+  type ICEBuildRenderBatchesResult,
+  type ICEToolRenderBatch,
+  type ICEToolRenderBatchMetadata,
+} from './output/buildRenderBatches.js';
+export {
   collectNodeWorldMatrices,
   multiplyMatrices,
   transformBounds,
