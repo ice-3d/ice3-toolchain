@@ -40,3 +40,29 @@ test('removes the workspace root when disposed', async () => {
   expect(existsSync(root)).toBe(false);
   await rm(parent, { recursive: true, force: true });
 });
+
+test.each([1024, 1])(
+  'round-trips vertex colors with maxMemoryBytes=%i',
+  async (maxMemoryBytes) => {
+    const workspace = await createGeometryWorkspace({ maxMemoryBytes });
+    const colors = new Float32Array([
+      1, 0, 0,
+      0, 1, 0,
+      0, 0, 1,
+    ]);
+    await workspace.write('color-unit', {
+      positions: new Float32Array([
+        0, 0, 0,
+        1, 0, 0,
+        0, 1, 0,
+      ]),
+      indices: new Uint32Array([0, 1, 2]),
+      colors,
+    });
+
+    const loaded = await workspace.read('color-unit');
+
+    expect([...loaded.colors!]).toEqual([...colors]);
+    await workspace.dispose();
+  },
+);
