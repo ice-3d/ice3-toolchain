@@ -6,12 +6,16 @@ import { validateSource } from '../scene/validateSource.js';
 import { prepareMesh } from '../scene/prepareMesh.js';
 import { collectNodeWorldMatrices } from '../scene/nodeMatrices.js';
 import type { ICEMatrix4Tuple } from '../scene/bakeMatrix.js';
+import { allocateAdaptiveLod } from '../lod/allocateAdaptiveLod.js';
 import { allocateLodTargets } from '../lod/allocateLodTargets.js';
+import { classifyAdaptiveUnits } from '../lod/classifyAdaptiveUnits.js';
 import {
   createGeometryWorkspace,
   type ICEGeometryWorkspace,
 } from '../lod/createGeometryWorkspace.js';
+import { createLodUnitCurve } from '../lod/createLodUnitCurve.js';
 import { simplifyGeometry } from '../lod/simplifyGeometry.js';
+import type { ICELodUnitCurve } from '../lod/types.js';
 import { analyzePartitionUnits } from './analyzePartitionUnits.js';
 import { createPartitionPlan } from './createPartitionPlan.js';
 import {
@@ -24,6 +28,7 @@ import type {
   ICEPartitionFile,
   ICEPartitionOptions,
   ICEPartitionPlanNode,
+  ICEPartitionUnit,
 } from './types.js';
 
 export interface ICEPartitionResult {
@@ -44,6 +49,12 @@ export interface ICEPartitionResult {
     readonly oversizedCoarseChunks: number;
     readonly coarseTriangleRatio: number;
     readonly coarseByteRatio: number;
+    readonly allocationMode: 'proportional' | 'adaptive';
+    readonly adaptiveUnitCount: number;
+    readonly minimumUnitTriangleRatio: number;
+    readonly maximumUnitTriangleRatio: number;
+    readonly maximumErrorMeters: number;
+    readonly curveSampleCount: number;
   };
   readonly warnings: readonly string[];
 }
@@ -107,6 +118,10 @@ export async function partitionAsset(
       preservedCoarseUnits: new Set<string>(),
       overBudgetCoarseNodes: 0,
       worldMatrices: collectNodeWorldMatrices(source),
+      lodCurveCache: new Map(),
+      adaptiveUnitIds: new Set(),
+      adaptiveRatios: [],
+      maximumAdaptiveErrorMeters: 0,
     };
     const built = await buildNode(
       source,
@@ -198,6 +213,21 @@ export async function partitionAsset(
           ? 0
           : coarseTriangles / triangleCount,
         coarseByteRatio: fineBytes === 0 ? 0 : coarseBytes / fineBytes,
+        allocationMode: options.lod?.allocation ?? 'proportional',
+        adaptiveUnitCount: state.adaptiveUnitIds.size,
+        minimumUnitTriangleRatio: Math.min(
+          ...(state.adaptiveRatios.length > 0
+            ? state.adaptiveRatios
+            : [0]),
+        ),
+        maximumUnitTriangleRatio: Math.max(
+          0,
+          ...state.adaptiveRatios,
+        ),
+        maximumErrorMeters: state.maximumAdaptiveErrorMeters,
+        curveSampleCount: options.lod?.allocation === 'adaptive'
+          ? options.lod.curveSamples ?? 8
+          : 0,
       },
       warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
     };
@@ -217,6 +247,28 @@ interface ICBuildState {
   readonly preservedCoarseUnits: Set<string>;
   overBudgetCoarseNodes: number;
   readonly worldMatrices: readonly ICEMatrix4Tuple[];
+  readonly lodCurveCache: Map<string, Promise<ICELodUnitCurve>>;
+  readonly adaptiveUnitIds: Set<string>;
+  readonly adaptiveRatios: number[];
+  maximumAdaptiveErrorMeters: number;
+}
+
+interface ICoarseAdaptiveMetrics {
+  readonly unitIds: readonly string[];
+  readonly ratios: readonly number[];
+  readonly maximumErrorMeters: number;
+}
+
+interface ICoarseSelection {
+  readonly overrides: ReadonlyMap<string, {
+    readonly positions: Float32Array;
+    readonly indices: Uint32Array;
+    readonly colors?: Float32Array;
+  }>;
+  readonly maximumError: number;
+  readonly preservedUnits: readonly string[];
+  readonly allocatedTriangles: number;
+  readonly adaptiveMetrics?: ICoarseAdaptiveMetrics;
 }
 
 async function buildNode(
@@ -381,6 +433,17 @@ async function buildCoarseNode(
       state.preservedCoarseUnits.add(unitId);
     }
     if (built.overBudget) state.overBudgetCoarseNodes += 1;
+    if (built.adaptiveMetrics) {
+      const { unitIds, ratios, maximumErrorMeters } = built.adaptiveMetrics;
+      state.adaptiveRatios.push(...ratios);
+      state.maximumAdaptiveErrorMeters = Math.max(
+        state.maximumAdaptiveErrorMeters,
+        maximumErrorMeters,
+      );
+      for (const unitId of classifyAdaptiveUnits(unitIds, ratios)) {
+        state.adaptiveUnitIds.add(unitId);
+      }
+    }
     return {
       coarseUri: built.coarseUri!,
       coarseTriangleCount: built.coarseTriangleCount!,
@@ -443,7 +506,69 @@ async function buildSingleCoarseNode(
 > & {
   readonly preservedUnits: readonly string[];
   readonly overBudget: boolean;
+  readonly adaptiveMetrics?: ICoarseAdaptiveMetrics;
 }> {
+  const lod = options.lod!;
+  const selection = lod.allocation === 'adaptive'
+    ? await selectAdaptiveCoarseGeometry(
+        source,
+        options,
+        node,
+        state,
+        workspace,
+        normalized,
+      )
+    : await selectProportionalCoarseGeometry(
+        source,
+        options,
+        node,
+        state,
+        workspace,
+        normalized,
+      );
+  const built = buildPreparedGLB(source, {
+    assetId: `${options.assetId.trim()}:lod:${partitionId}`,
+    selectionIdAssetId: options.assetId.trim(),
+    geometryOverrides: selection.overrides,
+    ...(options.creaseAngleDegrees === undefined
+      ? {}
+      : { creaseAngleDegrees: options.creaseAngleDegrees }),
+    edges: options.edges !== false,
+    ...(options.budget === undefined ? {} : { budget: options.budget }),
+    selection: {
+      nodeIndices: node.units.flatMap((unit) => unit.nodeIndices),
+      flattenWorldTransforms: true,
+    },
+  });
+  if (built.budget.status === 'error') {
+    throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: coarse partition exceeds budget');
+  }
+  const overBudget = (
+    selection.allocatedTriangles > lod.maxTrianglesPerProxy
+    || built.stats.triangleCount > lod.maxTrianglesPerProxy
+  );
+  return {
+    coarseUri: `coarse/${partitionId}.glb`,
+    coarseTriangleCount: built.stats.triangleCount,
+    coarseError: selection.maximumError,
+    coarseBytes: built.bytes,
+    coarseStats: built.stats,
+    preservedUnits: selection.preservedUnits,
+    overBudget,
+    ...(selection.adaptiveMetrics
+      ? { adaptiveMetrics: selection.adaptiveMetrics }
+      : {}),
+  };
+}
+
+async function selectProportionalCoarseGeometry(
+  source: ICESourceDocument,
+  options: ICEPartitionOptions,
+  node: ICEPartitionPlanNode,
+  state: ICBuildState,
+  workspace: ICEGeometryWorkspace,
+  normalized: ReadonlyMap<string, ICNormalizedPrimitive>,
+): Promise<ICoarseSelection> {
   const lod = options.lod!;
   const targets = allocateLodTargets(node.units, lod);
   const overrides = new Map<string, {
@@ -515,37 +640,139 @@ async function buildSingleCoarseNode(
       preservedUnits.push(unit.nodeIndices.join(','));
     }
   }
-  const built = buildPreparedGLB(source, {
-    assetId: `${options.assetId.trim()}:lod:${partitionId}`,
-    selectionIdAssetId: options.assetId.trim(),
-    geometryOverrides: overrides,
-    ...(options.creaseAngleDegrees === undefined
-      ? {}
-      : { creaseAngleDegrees: options.creaseAngleDegrees }),
-    edges: options.edges !== false,
-    ...(options.budget === undefined ? {} : { budget: options.budget }),
-    selection: {
-      nodeIndices: node.units.flatMap((unit) => unit.nodeIndices),
-      flattenWorldTransforms: true,
-    },
-  });
-  if (built.budget.status === 'error') {
-    throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: coarse partition exceeds budget');
-  }
-  const overBudget = (
-    targets.reduce((sum, target) => sum + target.targetTriangles, 0)
-      > lod.maxTrianglesPerProxy
-    || built.stats.triangleCount > lod.maxTrianglesPerProxy
-  );
   return {
-    coarseUri: `coarse/${partitionId}.glb`,
-    coarseTriangleCount: built.stats.triangleCount,
-    coarseError: maximumError,
-    coarseBytes: built.bytes,
-    coarseStats: built.stats,
+    overrides,
+    maximumError,
     preservedUnits,
-    overBudget,
+    allocatedTriangles: targets.reduce(
+      (total, target) => total + target.targetTriangles,
+      0,
+    ),
   };
+}
+
+async function selectAdaptiveCoarseGeometry(
+  source: ICESourceDocument,
+  options: ICEPartitionOptions,
+  node: ICEPartitionPlanNode,
+  state: ICBuildState,
+  workspace: ICEGeometryWorkspace,
+  normalized: ReadonlyMap<string, ICNormalizedPrimitive>,
+): Promise<ICoarseSelection> {
+  const lod = options.lod!;
+  const curves = await Promise.all(node.units.map((unit) => (
+    loadUnitCurve(source, unit, options, state, workspace, normalized)
+  )));
+  const proportionalBudget = allocateLodTargets(node.units, lod).reduce(
+    (total, target) => total + target.targetTriangles,
+    0,
+  );
+  const allocation = allocateAdaptiveLod({
+    curves,
+    maxTriangles: Math.min(
+      lod.maxTrianglesPerProxy,
+      proportionalBudget,
+    ),
+    nodeDiagonalMeters: boundsDiagonal(node.bounds),
+  });
+  const selectionByUnit = new Map(
+    allocation.selections.map((selection) => (
+      [selection.unitId, selection] as const
+    )),
+  );
+  const overrides = new Map<string, {
+    readonly positions: Float32Array;
+    readonly indices: Uint32Array;
+    readonly colors?: Float32Array;
+  }>();
+  const preservedUnits: string[] = [];
+  const unitIds: string[] = [];
+  const ratios: number[] = [];
+  for (const unit of node.units) {
+    const unitId = unit.nodeIndices.join(',');
+    const unitSelection = selectionByUnit.get(unitId);
+    if (!unitSelection) {
+      throw new Error('ICE3_TOOL_LOD_INVALID: adaptive selection is missing');
+    }
+    unitIds.push(unitId);
+    ratios.push(
+      unitSelection.actualTriangles / Math.max(1, unit.triangleCount),
+    );
+    if (unitSelection.preservedSource) preservedUnits.push(unitId);
+    for (const primitive of unitSelection.primitives) {
+      const geometry = await workspace.read(primitive.geometryKey);
+      overrides.set(primitive.sourceKey, {
+        positions: geometry.positions,
+        indices: geometry.indices,
+        ...(geometry.colors ? { colors: geometry.colors } : {}),
+      });
+    }
+  }
+  return {
+    overrides,
+    maximumError: allocation.maximumErrorMeters,
+    preservedUnits,
+    allocatedTriangles: allocation.allocatedTriangles,
+    adaptiveMetrics: {
+      unitIds,
+      ratios,
+      maximumErrorMeters: allocation.maximumErrorMeters,
+    },
+  };
+}
+
+function loadUnitCurve(
+  source: ICESourceDocument,
+  unit: ICEPartitionUnit,
+  options: ICEPartitionOptions,
+  state: ICBuildState,
+  workspace: ICEGeometryWorkspace,
+  normalized: ReadonlyMap<string, ICNormalizedPrimitive>,
+): Promise<ICELodUnitCurve> {
+  const unitId = unit.nodeIndices.join(',');
+  const cached = state.lodCurveCache.get(unitId);
+  if (cached) return cached;
+  const primitives = unit.meshIndices.flatMap((meshIndex) => (
+    meshPrimitives(source, meshIndex).flatMap((primitive) => {
+      const normalizedPrimitive = normalized.get(
+        `${meshIndex}:${primitive.index}`,
+      );
+      return normalizedPrimitive
+        ? [{
+            sourceKey: normalizedPrimitive.key,
+            workspaceKey: normalizedPrimitive.key,
+            triangleCount: normalizedPrimitive.triangleCount,
+          }]
+        : [];
+    })
+  ));
+  const pending = createLodUnitCurve({
+    unitId,
+    sourceTriangles: unit.triangleCount,
+    primitives,
+    workspace,
+    minimumTriangles: options.lod!.minTrianglesPerUnit,
+    sampleCount: options.lod!.curveSamples ?? 8,
+    worldScale: maximumWorldScale(state.worldMatrices, unit.nodeIndices),
+  });
+  state.lodCurveCache.set(unitId, pending);
+  pending.catch(() => {
+    if (state.lodCurveCache.get(unitId) === pending) {
+      state.lodCurveCache.delete(unitId);
+    }
+  });
+  return pending;
+}
+
+function boundsDiagonal(bounds: ICEBounds): number {
+  return Math.max(
+    Number.EPSILON,
+    Math.hypot(
+      bounds.max[0] - bounds.min[0],
+      bounds.max[1] - bounds.min[1],
+      bounds.max[2] - bounds.min[2],
+    ),
+  );
 }
 
 async function normalizeLodGeometry(
@@ -582,9 +809,24 @@ async function normalizeLodGeometry(
         },
       );
       const key = `${meshIndex}:${primitive.index}`;
+      const colorData = attributes?.COLOR_0 === undefined
+        ? undefined
+        : readAccessor(source, Number(attributes.COLOR_0));
+      if (
+        colorData
+        && (
+          colorData.kind !== 'float32'
+          || (colorData.components !== 3 && colorData.components !== 4)
+        )
+      ) {
+        throw new Error(
+          'ICE3_TOOL_LOD_INVALID: vertex colors must be float VEC3 or VEC4',
+        );
+      }
       await workspace.write(key, {
         positions: prepared.positions,
         indices: new Uint32Array(prepared.indices),
+        ...(colorData ? { colors: colorData.values } : {}),
       });
       normalized.set(key, {
         key,

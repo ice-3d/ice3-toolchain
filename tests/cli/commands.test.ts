@@ -339,3 +339,66 @@ test.each([
   ])).toBe(1);
   expect(existsSync(output)).toBe(false);
 });
+
+test.each([
+  [['--lod-allocation', 'adaptive'], 'adaptive'],
+  [['--lod-allocation', 'proportional'], 'proportional'],
+])('partition accepts allocation mode %j', async (arguments_, expected) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  const printed: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    printed.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'adaptive-demo',
+    '--lod',
+    ...arguments_,
+    '--json',
+  ])).toBe(0);
+
+  const result = JSON.parse(printed.at(-1)!) as {
+    stats: { allocationMode: string };
+  };
+  expect(result.stats.allocationMode).toBe(expected);
+});
+
+test.each([
+  [['--lod-allocation', 'unknown'], /must be proportional or adaptive/],
+  [['--lod-curve-samples', '3'], /must be between 4 and 32/],
+  [['--lod-curve-samples', '33'], /must be between 4 and 32/],
+  [['--lod-curve-samples', '4.5'], /must be a positive integer/],
+])('partition rejects invalid adaptive options %j', async (
+  arguments_,
+  expectedError,
+) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const errors: string[] = [];
+  vi.spyOn(console, 'error').mockImplementation((value) => {
+    errors.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    join(directory, 'dist'),
+    '--asset-id',
+    'adaptive-demo',
+    '--lod',
+    ...arguments_,
+  ])).toBe(1);
+  expect(errors.at(-1)).toMatch(expectedError);
+});
