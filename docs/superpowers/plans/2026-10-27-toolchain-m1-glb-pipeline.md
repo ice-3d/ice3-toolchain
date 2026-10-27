@@ -485,7 +485,7 @@ Accept triangle, triangle-strip, and triangle-fan modes. Emit indexed triangles.
 
 - [ ] **Step 5: Implement crease-edge generation**
 
-Unity-quantize positions before welding adjacency. Count triangle-edge occurrences and compute adjacent face normals. Emit an edge when:
+Uniformly quantize positions before welding adjacency. Count triangle-edge occurrences and compute adjacent face normals. Emit an edge when:
 
 - it belongs to one triangle;
 - its two adjacent face normals differ by at least `creaseAngleDegrees`;
