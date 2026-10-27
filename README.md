@@ -135,6 +135,18 @@ surface deviation is at most `0.05`, volume inflation is at most `2.0`, and the
 device has at least eight times fewer triangles. Accepted proxies compete with
 QEM samples in the same LOD budget; rejected candidates fall back to QEM.
 
+Proxy replacement operates only on source mesh geometry. Node transforms, node
+IDs, and semantic selection IDs remain unchanged, and proxy and QEM devices can
+coexist in one coarse Tile. The default-off mode preserves existing output;
+`auto` is intended for offline preprocessing and never moves fitting or mesh
+replacement into the browser runtime.
+
+Partition statistics report accepted OBB and cylinder units, rejected units,
+selected proxy contents, selected proxy triangles, local saved triangles, and
+maximum proxy error. Saved triangles describe the local device benefit before
+the adaptive allocator may spend the released budget on other devices; compare
+final coarse totals separately.
+
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.
