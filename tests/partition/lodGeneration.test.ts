@@ -5,6 +5,28 @@ import { validatePreparedGLB } from '../../packages/toolchain-core/src/output/va
 import { createAdaptiveLodPartitionSource } from './createAdaptiveLodSource.js';
 import { createLodPartitionSource } from './createLodPartitionSource.js';
 
+const boxBounds = (
+  box: readonly number[],
+): { min: number[]; max: number[] } => {
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (const x of [-1, 1]) {
+    for (const y of [-1, 1]) {
+      for (const z of [-1, 1]) {
+        for (let axis = 0; axis < 3; axis += 1) {
+          const value = box[axis]!
+            + x * box[3 + axis]!
+            + y * box[6 + axis]!
+            + z * box[9 + axis]!;
+          min[axis] = Math.min(min[axis]!, value);
+          max[axis] = Math.max(max[axis]!, value);
+        }
+      }
+    }
+  }
+  return { min, max };
+};
+
 const readDocument = (bytes: Uint8Array) => {
   const buffer = Buffer.from(bytes);
   const jsonLength = buffer.readUInt32LE(12);
@@ -258,6 +280,21 @@ test('allocates semantic proxy meshes in adaptive lod', async () => {
   expect(nodes.every((node) => (
     node.extras.ice3.selectionId?.startsWith('semantic-proxy-demo/node/')
   ))).toBe(true);
+  const rootTile = result.tileset.root as {
+    boundingVolume: { box: number[] };
+  };
+  const contract = readDocument(root.bytes) as unknown as {
+    asset: { extras: { ice3: { bounds: { min: number[]; max: number[] } } } };
+  };
+  const tileBounds = boxBounds(rootTile.boundingVolume.box);
+  for (let axis = 0; axis < 3; axis += 1) {
+    expect(tileBounds.min[axis]).toBeLessThanOrEqual(
+      contract.asset.extras.ice3.bounds.min[axis]! + 1e-5,
+    );
+    expect(tileBounds.max[axis]).toBeGreaterThanOrEqual(
+      contract.asset.extras.ice3.bounds.max[axis]! - 1e-5,
+    );
+  }
 });
 
 test('rejects semantic proxy auto outside adaptive allocation', async () => {
