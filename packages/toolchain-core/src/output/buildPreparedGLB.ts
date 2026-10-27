@@ -8,6 +8,7 @@ import { validateSource } from '../scene/validateSource.js';
 export interface ICEBuildOptions {
   readonly assetId: string;
   readonly creaseAngleDegrees?: number;
+  readonly edges?: boolean;
 }
 
 export interface ICEPreparedGLB {
@@ -171,6 +172,7 @@ export function buildPreparedGLB(
         {
           id: `${assetId}/geometry/${meshIndex}/${primitiveIndex}`,
           mode: Number(primitive.mode ?? 4) as 4 | 5 | 6,
+          generateEdges: options.edges !== false,
         },
       );
       const positionView = append(new Uint8Array(prepared.positions.buffer));

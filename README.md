@@ -35,6 +35,9 @@ node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --asset-id prepared-cube
 ```
 
+For a very large model where generated edges would dominate draw calls, use
+`--skip-edges` to produce a geometry-only preview.
+
 Validate a prepared profile:
 
 ```bash

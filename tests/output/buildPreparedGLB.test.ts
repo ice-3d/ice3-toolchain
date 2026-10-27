@@ -35,3 +35,19 @@ test('rejects unsupported source features before packing', async () => {
     /ICE3_TOOL_SOURCE_UNSUPPORTED/,
   );
 });
+
+test('can omit generated edges for large-model preview', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  const built = buildPreparedGLB(source, {
+    assetId: 'sample',
+    edges: false,
+  });
+
+  expect(built.stats.edgeSegmentCount).toBe(0);
+  const bytes = Buffer.from(built.bytes);
+  const jsonLength = bytes.readUInt32LE(12);
+  const json = JSON.parse(
+    bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+  ) as { meshes: { primitives: unknown[] }[] };
+  expect(json.meshes[0]!.primitives).toHaveLength(1);
+});

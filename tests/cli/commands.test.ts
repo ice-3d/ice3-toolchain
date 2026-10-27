@@ -140,3 +140,30 @@ test('inspect decodes an ordinary compressed source GLB', async () => {
   expect(report.errors).toEqual([]);
   expect(report.stats.triangleCount).toBe(1);
 });
+
+test('build accepts a no-edge preview option', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-'));
+  directories.push(directory);
+  const output = join(directory, 'preview.glb');
+
+  const code = await runCli([
+    'build',
+    'tests/fixtures/minimal.gltf',
+    '--output',
+    output,
+    '--asset-id',
+    'sample',
+    '--skip-edges',
+  ]);
+
+  expect(code).toBe(0);
+  const messages: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    messages.push(String(value));
+  });
+  await runCli(['inspect', output, '--json']);
+  const report = JSON.parse(messages.at(-1)!) as {
+    stats: { edgeSegmentCount: number };
+  };
+  expect(report.stats.edgeSegmentCount).toBe(0);
+});

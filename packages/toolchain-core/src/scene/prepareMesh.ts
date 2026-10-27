@@ -12,6 +12,7 @@ export interface ICEPreparedGeometry {
 export interface ICEPrepareMeshOptions {
   readonly id?: string;
   readonly mode?: 4 | 5 | 6;
+  readonly generateEdges?: boolean;
 }
 
 interface EdgeRecord {
@@ -70,14 +71,16 @@ export function prepareMesh(
     }
   }
 
-  const creaseCosine = Math.cos(clamp(creaseAngleDegrees, 0, 180) * Math.PI / 180);
   const emitted: number[] = [];
-  for (const edge of edges.values()) {
-    const crease = edge.normals.some((normal) => (
-      dot(edge.normals[0]!, normal) <= creaseCosine + 1e-6
-    ));
-    if (edge.count === 1 || crease) {
-      emitted.push(edge.starts[0], edge.starts[1]);
+  if (options.generateEdges !== false) {
+    const creaseCosine = Math.cos(clamp(creaseAngleDegrees, 0, 180) * Math.PI / 180);
+    for (const edge of edges.values()) {
+      const crease = edge.normals.some((normal) => (
+        dot(edge.normals[0]!, normal) <= creaseCosine + 1e-6
+      ));
+      if (edge.count === 1 || crease) {
+        emitted.push(edge.starts[0], edge.starts[1]);
+      }
     }
   }
 

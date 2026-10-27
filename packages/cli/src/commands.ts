@@ -49,7 +49,11 @@ async function buildCommand(args: ParsedArguments): Promise<void> {
   }
   const assetId = args.values.get('--asset-id') ?? defaultAssetId(outputPath);
   const creaseAngleDegrees = Number(args.values.get('--crease-angle') ?? 30);
-  const built = buildPreparedGLB(source, { assetId, creaseAngleDegrees });
+  const built = buildPreparedGLB(source, {
+    assetId,
+    creaseAngleDegrees,
+    edges: !args.flags.has('--skip-edges'),
+  });
   const validation = validatePreparedGLB(built.bytes);
   if (validation.errors.length > 0) {
     throw new Error(`ICE3_TOOL_OUTPUT_INVALID: ${validation.errors.join(', ')}`);
@@ -96,6 +100,7 @@ async function inspectCommand(args: ParsedArguments): Promise<void> {
     stats = buildPreparedGLB(source, {
       assetId: args.values.get('--asset-id') ?? defaultAssetId(sourcePath),
       creaseAngleDegrees: Number(args.values.get('--crease-angle') ?? 30),
+      edges: !args.flags.has('--skip-edges'),
     }).stats;
   }
   printResult(args, {
