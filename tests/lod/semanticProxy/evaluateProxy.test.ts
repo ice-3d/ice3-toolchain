@@ -42,3 +42,42 @@ test('evaluates large vertex sets without argument spreading', () => {
   expect(evaluations).toHaveLength(1);
   expect(Number.isFinite(evaluations[0]!.normalizedMaximumDeviation)).toBe(true);
 });
+
+test('rejects an obb for a highly elongated device', () => {
+  const positions = new Float32Array([
+    0, 0, 0,
+    20, 0, 0,
+    0, 1, 0,
+    20, 1, 0,
+    0, 0, 1,
+    20, 0, 1,
+    0, 1, 1,
+    20, 1, 1,
+  ]);
+  const evaluations = evaluateProxyCandidates({
+    vertices: positions,
+    centroids: new Float32Array([10, 0.5, 0.5]),
+    areas: new Float32Array([1]),
+    bounds: { min: [0, 0, 0], max: [20, 1, 1] },
+  }, [{
+    id: 'obb',
+    kind: 'obb',
+    positions,
+    indices: new Uint32Array([
+      0, 2, 1, 1, 2, 3,
+      4, 5, 6, 5, 7, 6,
+      0, 1, 4, 1, 5, 4,
+      2, 6, 3, 3, 6, 7,
+      0, 4, 2, 2, 4, 6,
+      1, 3, 5, 3, 7, 5,
+    ]),
+    triangleCount: 12,
+    volume: 20,
+    axisStable: true,
+  }], 160);
+
+  expect(evaluations[0]).toMatchObject({
+    accepted: false,
+    rejectionReason: 'obb_aspect_ratio',
+  });
+});

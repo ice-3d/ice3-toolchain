@@ -28,6 +28,7 @@ export function evaluateProxyCandidates(
       * extent(samples.bounds.min[1], samples.bounds.max[1])
       * extent(samples.bounds.min[2], samples.bounds.max[2]),
   );
+  const aspectRatio = sourceAspectRatio(samples);
   return candidates.map((candidate) => {
     const maximumDeviation = maximumFitDeviation(
       samples,
@@ -39,13 +40,16 @@ export function evaluateProxyCandidates(
       : maximumDeviation / localDiagonal;
     const volumeInflation = candidate.volume / aabbVolume;
     const reduction = sourceTriangles / Math.max(1, candidate.triangleCount);
-    const rejectionReason = normalizedMaximumDeviation > 0.05
-      ? 'surface_deviation'
-      : volumeInflation > 2
-        ? 'volume_inflation'
-        : reduction < 8
-          ? 'triangle_reduction'
-          : undefined;
+    const rejectionReason = candidate.kind === 'obb'
+      && aspectRatio > MAX_OBB_ASPECT_RATIO
+      ? 'obb_aspect_ratio'
+      : normalizedMaximumDeviation > 0.05
+        ? 'surface_deviation'
+        : volumeInflation > 2
+          ? 'volume_inflation'
+          : reduction < 8
+            ? 'triangle_reduction'
+            : undefined;
     return {
       candidate,
       normalizedMaximumDeviation,
@@ -54,6 +58,18 @@ export function evaluateProxyCandidates(
       ...(rejectionReason ? { rejectionReason } : {}),
     };
   });
+}
+
+const MAX_OBB_ASPECT_RATIO = 8;
+
+function sourceAspectRatio(samples: ICESemanticProxyFitSamples): number {
+  const extents = [0, 1, 2]
+    .map((axis) => extent(
+      samples.bounds.min[axis]!,
+      samples.bounds.max[axis]!,
+    ))
+    .sort((left, right) => right - left);
+  return extents[0]! / Math.max(Number.EPSILON, extents[1]!);
 }
 
 export function sortAcceptedProxyCandidates(
