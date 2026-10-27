@@ -129,6 +129,12 @@ export function buildPreparedGLB(
         maxBytesPerBatch:
           options.renderBatching.maxBytesPerBatch ?? 33_554_432,
         selectionIdAssetId,
+        ...(options.geometryOverrides
+          ? { geometryOverrides: options.geometryOverrides }
+          : {}),
+        ...(options.meshOverrides
+          ? { meshOverrides: options.meshOverrides }
+          : {}),
       })
     : undefined;
   const outputMaterials: JSONRecord[] = [];

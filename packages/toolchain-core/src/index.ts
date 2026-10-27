@@ -150,5 +150,6 @@ export type {
   ICEPartitionUnit,
   ICELodBuildOptions,
   ICELodAllocationMode,
+  ICRenderBatchMode,
   ICESemanticProxyMode,
 } from './partition/types.js';

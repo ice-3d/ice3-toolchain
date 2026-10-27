@@ -10,6 +10,25 @@ export interface ICEBuildRenderBatchesOptions {
   readonly maxTrianglesPerBatch: number;
   readonly maxBytesPerBatch: number;
   readonly selectionIdAssetId?: string;
+  readonly geometryOverrides?: ReadonlyMap<
+    string,
+    ICEBuildRenderBatchesGeometryOverride
+  >;
+  readonly meshOverrides?: ReadonlyMap<
+    number,
+    ICEBuildRenderBatchesMeshOverride
+  >;
+}
+
+export interface ICEBuildRenderBatchesGeometryOverride {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
+}
+
+export interface ICEBuildRenderBatchesMeshOverride
+  extends ICEBuildRenderBatchesGeometryOverride {
+  readonly materialIndex?: number;
 }
 
 export interface ICEToolRenderBatch {
@@ -59,7 +78,13 @@ interface BatchDraft {
   bytes: number;
 }
 
-type Vector = readonly [number, number, number];
+interface EffectiveBatchPrimitive {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
+  readonly materialIndex?: number;
+  readonly mode: 4;
+}
 
 export function buildRenderBatches(
   source: ICESourceDocument,
@@ -109,52 +134,38 @@ export function buildRenderBatches(
     semanticSelectionIds.push(selectionId);
   }
 
-  const batches: ICEToolRenderBatch[] = [];
+  const draftsByKey = new Map<string, BatchDraft[]>();
+  const activeDrafts = new Map<string, BatchDraft>();
   let inputPrimitiveCount = 0;
-  let drafts: BatchDraft[] = [];
   for (const nodeIndex of selected) {
     const node = nodes[nodeIndex]!;
     if (node.mesh === undefined) continue;
-    const mesh = meshes[Number(node.mesh)];
+    const meshIndex = Number(node.mesh);
+    const mesh = meshes[meshIndex];
     if (!mesh) continue;
     const semanticIndex = semanticIndexByNode.get(nodeIndex)!;
-    for (const primitive of records(mesh.primitives)) {
-      if (Number(primitive.mode ?? 4) !== 4) continue;
+    const meshOverride = options.meshOverrides?.get(meshIndex);
+    const primitives: EffectiveBatchPrimitive[] = meshOverride
+      ? [{
+          positions: meshOverride.positions,
+          indices: meshOverride.indices,
+          ...(meshOverride.colors ? { colors: meshOverride.colors } : {}),
+          ...(meshOverride.materialIndex === undefined
+            ? {}
+            : { materialIndex: meshOverride.materialIndex }),
+          mode: 4,
+        }]
+      : collectEffectivePrimitives(source, mesh, meshIndex, options);
+    for (const primitive of primitives) {
       inputPrimitiveCount += 1;
-      const attributes = record(primitive.attributes);
-      const positionData = readAccessor(source, Number(attributes?.POSITION));
-      const indexData = readAccessor(source, Number(primitive.indices));
-      if (
-        positionData.kind !== 'float32'
-        || positionData.components !== 3
-        || indexData.components !== 1
-      ) {
-        throw new Error('ICE3_TOOL_RENDER_BATCH_INVALID: geometry accessors are invalid');
-      }
-      const mode = Number(primitive.mode ?? 4) as 4;
+      validateBatchGeometry(primitive);
       const prepared = prepareMesh(
-        positionData.values,
-        new Uint32Array(indexData.values),
+        primitive.positions,
+        primitive.indices,
         30,
-        { mode, generateEdges: false },
+        { mode: primitive.mode, generateEdges: false },
       );
-      const colorData = attributes?.COLOR_0 === undefined
-        ? undefined
-        : readAccessor(source, Number(attributes.COLOR_0));
-      if (
-        colorData
-        && (
-          colorData.kind !== 'float32'
-          || (colorData.components !== 3 && colorData.components !== 4)
-          || colorData.values.length / colorData.components
-            !== prepared.positions.length / 3
-        )
-      ) {
-        throw new Error('ICE3_TOOL_RENDER_BATCH_INVALID: vertex colors are invalid');
-      }
-      const sourceMaterialIndex = primitive.material === undefined
-        ? undefined
-        : Number(primitive.material);
+      const sourceMaterialIndex = primitive.materialIndex;
       if (
         sourceMaterialIndex !== undefined
         && (!Number.isInteger(sourceMaterialIndex)
@@ -163,48 +174,59 @@ export function buildRenderBatches(
       ) {
         throw new Error('ICE3_TOOL_RENDER_BATCH_INVALID: material index is invalid');
       }
-      let draft: BatchDraft | undefined;
+      const hasColors = primitive.colors !== undefined;
+      const key = draftKey(sourceMaterialIndex, hasColors);
       let vertexMap = new Map<number, number>();
       for (let offset = 0; offset < prepared.indices.length; offset += 3) {
-        if (
-          !draft
-          || !fitsBatch(draft, prepared.indices.subarray(offset, offset + 3), vertexMap, options)
-        ) {
-          if (draft) drafts.push(draft);
-          draft = createDraft(sourceMaterialIndex, Boolean(colorData));
+        let draft = activeDrafts.get(key);
+        if (!draft) {
+          draft = createDraft(sourceMaterialIndex, hasColors);
+          activeDrafts.set(key, draft);
+        }
+        if (!triangleFits(
+          draft,
+          prepared.indices,
+          offset,
+          vertexMap,
+          options,
+        )) {
+          sealDraft(draftsByKey, key, draft);
+          draft = createDraft(sourceMaterialIndex, hasColors);
+          activeDrafts.set(key, draft);
           vertexMap = new Map();
         }
-        const triangle = prepared.indices.subarray(offset, offset + 3);
-        const transformed = [...triangle].map((vertexIndex) => {
+        for (let corner = offset; corner < offset + 3; corner += 1) {
+          const vertexIndex = prepared.indices[corner]!;
           const existing = vertexMap.get(vertexIndex);
-          if (existing !== undefined) return existing;
-          const newIndex = draft!.positions.length / 3;
+          if (existing !== undefined) {
+            draft.indices.push(existing);
+            continue;
+          }
+          const newIndex = draft.positions.length / 3;
           vertexMap.set(vertexIndex, newIndex);
-          const point = transformPoint(
+          appendTransformedVertex(
+            draft,
             worldMatrices[nodeIndex]!,
             prepared.positions,
             vertexIndex,
+            semanticIndex,
+            primitive.colors,
           );
-          draft!.positions.push(...point);
-          draft!.semanticIndices.push(semanticIndex);
-          if (colorData) {
-            const components = colorData.components;
-            draft!.colors.push(
-              colorData.values[vertexIndex * components]!,
-              colorData.values[vertexIndex * components + 1]!,
-              colorData.values[vertexIndex * components + 2]!,
-            );
-          }
-          return newIndex;
-        });
-        draft.indices.push(...transformed);
+          draft.indices.push(newIndex);
+        }
         draft.triangleCount += 1;
         draft.bytes = draftSize(draft);
       }
-      if (draft) drafts.push(draft);
     }
   }
-  batches.push(...finalizeDrafts(drafts, options));
+  for (const draft of activeDrafts.values()) {
+    sealDraft(
+      draftsByKey,
+      draftKey(draft.sourceMaterialIndex, draft.hasColors),
+      draft,
+    );
+  }
+  const batches = finalizeDrafts(draftsByKey);
   return {
     batches,
     semanticIds,
@@ -213,6 +235,69 @@ export function buildRenderBatches(
     inputPrimitiveCount,
     outputBatchCount: batches.length,
   };
+}
+
+function collectEffectivePrimitives(
+  source: ICESourceDocument,
+  mesh: Record<string, unknown>,
+  meshIndex: number,
+  options: ICEBuildRenderBatchesOptions,
+): EffectiveBatchPrimitive[] {
+  const output: EffectiveBatchPrimitive[] = [];
+  for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
+    if (Number(primitive.mode ?? 4) !== 4) continue;
+    const attributes = record(primitive.attributes);
+    const override = options.geometryOverrides?.get(
+      `${meshIndex}:${primitiveIndex}`,
+    );
+    const positionData = override
+      ? undefined
+      : readAccessor(source, Number(attributes?.POSITION));
+    if (
+      positionData
+      && (positionData.kind !== 'float32' || positionData.components !== 3)
+    ) {
+      throw new Error(
+        'ICE3_TOOL_RENDER_BATCH_INVALID: geometry accessors are invalid',
+      );
+    }
+    const indexData = override || primitive.indices === undefined
+      ? undefined
+      : readAccessor(source, Number(primitive.indices));
+    if (indexData && indexData.components !== 1) {
+      throw new Error(
+        'ICE3_TOOL_RENDER_BATCH_INVALID: geometry accessors are invalid',
+      );
+    }
+    let colors = override?.colors;
+    if (!colors && attributes?.COLOR_0 !== undefined) {
+      const colorData = readAccessor(source, Number(attributes.COLOR_0));
+      if (
+        colorData.kind !== 'float32'
+        || (colorData.components !== 3 && colorData.components !== 4)
+      ) {
+        throw new Error(
+          'ICE3_TOOL_RENDER_BATCH_INVALID: vertex colors are invalid',
+        );
+      }
+      colors = colorData.values;
+    }
+    const positions = override?.positions ?? positionData!.values;
+    const indices = override?.indices
+      ?? (indexData
+        ? new Uint32Array(indexData.values)
+        : sequentialIndices(positions.length / 3));
+    output.push({
+      positions,
+      indices,
+      ...(colors ? { colors } : {}),
+      ...(primitive.material === undefined
+        ? {}
+        : { materialIndex: Number(primitive.material) }),
+      mode: 4,
+    });
+  }
+  return output;
 }
 
 function createDraft(
@@ -231,15 +316,63 @@ function createDraft(
   };
 }
 
-function fitsBatch(
+function validateBatchGeometry(options: {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
+  readonly materialIndex?: number;
+  readonly mode: 4;
+}): void {
+  if (options.positions.length % 3 !== 0 || options.indices.length % 3 !== 0) {
+    throw new Error(
+      'ICE3_TOOL_RENDER_BATCH_INVALID: geometry accessors are invalid',
+    );
+  }
+  const vertexCount = options.positions.length / 3;
+  for (let index = 0; index < options.indices.length; index += 1) {
+    const vertexIndex = options.indices[index]!;
+    if (
+      !Number.isInteger(vertexIndex)
+      || vertexIndex < 0
+      || vertexIndex >= vertexCount
+    ) {
+      throw new Error(
+        'ICE3_TOOL_RENDER_BATCH_INVALID: geometry accessors are invalid',
+      );
+    }
+  }
+  if (options.colors) {
+    const components = options.colors.length / (options.positions.length / 3);
+    if (
+      (components !== 3 && components !== 4)
+      || options.colors.length / components !== options.positions.length / 3
+    ) {
+      throw new Error(
+        'ICE3_TOOL_RENDER_BATCH_INVALID: vertex colors are invalid',
+      );
+    }
+  }
+}
+
+function sequentialIndices(count: number): Uint32Array {
+  const indices = new Uint32Array(count);
+  for (let index = 0; index < count; index += 1) {
+    indices[index] = index;
+  }
+  return indices;
+}
+
+function triangleFits(
   draft: BatchDraft,
-  triangle: Uint16Array | Uint32Array,
+  indices: Uint16Array | Uint32Array,
+  offset: number,
   vertexMap: ReadonlyMap<number, number>,
   options: ICEBuildRenderBatchesOptions,
 ): boolean {
   if (draft.triangleCount + 1 > options.maxTrianglesPerBatch) return false;
   let newVertices = 0;
-  for (const index of triangle) {
+  for (let corner = offset; corner < offset + 3; corner += 1) {
+    const index = indices[corner]!;
     if (!vertexMap.has(index)) newVertices += 1;
   }
   return draft.bytes
@@ -254,40 +387,23 @@ function draftSize(draft: BatchDraft): number {
     + draft.colors.length * 4;
 }
 
+function sealDraft(
+  draftsByKey: Map<string, BatchDraft[]>,
+  key: string,
+  draft: BatchDraft,
+): void {
+  const drafts = draftsByKey.get(key) ?? [];
+  drafts.push(draft);
+  draftsByKey.set(key, drafts);
+}
+
 function finalizeDrafts(
-  drafts: readonly BatchDraft[],
-  options: ICEBuildRenderBatchesOptions,
+  draftsByKey: ReadonlyMap<string, readonly BatchDraft[]>,
 ): ICEToolRenderBatch[] {
-  const merged: BatchDraft[] = [];
-  const byKey = new Map<string, BatchDraft[]>();
-  for (const fragment of drafts) {
-    const entries = byKey.get(draftKey(fragment)) ?? [];
-    entries.push(fragment);
-    byKey.set(draftKey(fragment), entries);
-  }
-  for (const key of [...byKey.keys()].sort()) {
-    for (const fragment of byKey.get(key)!) {
-      const previous = merged.at(-1);
-      if (
-        previous
-        && draftKey(previous) === key
-        && previous.triangleCount + fragment.triangleCount
-          <= options.maxTrianglesPerBatch
-        && previous.bytes + fragment.bytes <= options.maxBytesPerBatch
-      ) {
-        const offset = previous.positions.length / 3;
-        previous.positions.push(...fragment.positions);
-        previous.indices.push(...fragment.indices.map((index) => index + offset));
-        previous.semanticIndices.push(...fragment.semanticIndices);
-        previous.colors.push(...fragment.colors);
-        previous.triangleCount += fragment.triangleCount;
-        previous.bytes = draftSize(previous);
-      } else {
-        merged.push({ ...fragment });
-      }
-    }
-  }
-  return merged.map((draft, index) => {
+  const sortedDrafts = [...draftsByKey.keys()]
+    .sort()
+    .flatMap((key) => draftsByKey.get(key)!);
+  return sortedDrafts.map((draft, index) => {
     const bounds = boundsFromValues(draft.positions);
     return {
       id: `batch:${index}`,
@@ -304,8 +420,38 @@ function finalizeDrafts(
   });
 }
 
-function draftKey(draft: BatchDraft): string {
-  return `${draft.sourceMaterialIndex ?? 'default'}:${draft.hasColors ? 1 : 0}`;
+function appendTransformedVertex(
+  draft: BatchDraft,
+  matrix: ICEMatrix4Tuple,
+  positions: Float32Array,
+  vertexIndex: number,
+  semanticIndex: number,
+  colors?: Float32Array,
+): void {
+  const x = positions[vertexIndex * 3]!;
+  const y = positions[vertexIndex * 3 + 1]!;
+  const z = positions[vertexIndex * 3 + 2]!;
+  draft.positions.push(
+    matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
+    matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
+    matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
+  );
+  draft.semanticIndices.push(semanticIndex);
+  if (colors) {
+    const components = colors.length / (positions.length / 3);
+    draft.colors.push(
+      colors[vertexIndex * components]!,
+      colors[vertexIndex * components + 1]!,
+      colors[vertexIndex * components + 2]!,
+    );
+  }
+}
+
+function draftKey(
+  sourceMaterialIndex: number | undefined,
+  hasColors: boolean,
+): string {
+  return `${sourceMaterialIndex ?? 'default'}:${hasColors ? 1 : 0}`;
 }
 
 function boundsFromValues(values: readonly number[]): ICEBounds {
@@ -318,21 +464,6 @@ function boundsFromValues(values: readonly number[]): ICEBounds {
     }
   }
   return { min, max };
-}
-
-function transformPoint(
-  matrix: ICEMatrix4Tuple,
-  positions: Float32Array,
-  index: number,
-): Vector {
-  const x = positions[index * 3]!;
-  const y = positions[index * 3 + 1]!;
-  const z = positions[index * 3 + 2]!;
-  return [
-    matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12],
-    matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13],
-    matrix[2] * x + matrix[6] * y + matrix[10] * z + matrix[14],
-  ];
 }
 
 function validateOptions(options: ICEBuildRenderBatchesOptions): void {

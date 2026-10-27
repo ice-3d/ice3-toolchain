@@ -105,6 +105,12 @@ Use `--coarse-chunk-max-bytes` to override the default 32 MiB coarse chunk
 limit; when omitted it follows `--max-bytes`. Oversized indivisible devices
 remain intact and are reported.
 
+Use `--render-batch off|static` to generate deterministic world-space render
+batches. `static` groups compatible triangles by material inside each emitted
+Prepared GLB while retaining semantic node identities; the default is `off`.
+Static batching can be combined with either non-LOD partitioning or
+`--lod --lod-allocation proportional|adaptive`.
+
 Select the coarse-model allocation strategy with
 `--lod-allocation proportional|adaptive`. The default is `proportional`;
 `adaptive` generates deterministic per-device error curves and spends each
