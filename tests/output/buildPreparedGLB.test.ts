@@ -226,6 +226,7 @@ test('writes static render batches without changing semantic nodes', () => {
       extras: {
         ice3: {
           batching: {
+            semanticNodeIds: string[];
             semanticSelectionIds: string[];
             batches: unknown[];
           };
@@ -252,6 +253,11 @@ test('writes static render batches without changing semantic nodes', () => {
     'source/node/2',
     'source/node/3',
   ]);
+  expect(document.asset.extras.ice3.batching.semanticNodeIds).toEqual(
+    document.nodes
+      .filter((node) => node.mesh === undefined)
+      .map((node) => node.extras.ice3.id),
+  );
   expect(document.asset.extras.ice3.batching.batches).toHaveLength(1);
 });
 

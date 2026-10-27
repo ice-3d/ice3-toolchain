@@ -129,6 +129,7 @@ export function buildPreparedGLB(
         maxBytesPerBatch:
           options.renderBatching.maxBytesPerBatch ?? 33_554_432,
         selectionIdAssetId,
+        nodeIdPrefix: `${assetId}/node`,
         ...(options.geometryOverrides
           ? { geometryOverrides: options.geometryOverrides }
           : {}),

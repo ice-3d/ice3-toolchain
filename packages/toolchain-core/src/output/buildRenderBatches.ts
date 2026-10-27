@@ -10,6 +10,7 @@ export interface ICEBuildRenderBatchesOptions {
   readonly maxTrianglesPerBatch: number;
   readonly maxBytesPerBatch: number;
   readonly selectionIdAssetId?: string;
+  readonly nodeIdPrefix?: string;
   readonly geometryOverrides?: ReadonlyMap<
     string,
     ICEBuildRenderBatchesGeometryOverride
@@ -131,7 +132,9 @@ export function buildRenderBatches(
       : `${options.selectionIdAssetId ?? 'asset'}/node/${nodeIndex}`;
     semanticIndexByNode.set(nodeIndex, semanticIds.length);
     semanticIds.push(id);
-    semanticNodeIds.push(id);
+    semanticNodeIds.push(
+      options.nodeIdPrefix ? `${options.nodeIdPrefix}/${nodeIndex}` : id,
+    );
     semanticSelectionIds.push(selectionId);
   }
 
