@@ -24,6 +24,7 @@ import {
 
 export interface ICEBuildOptions {
   readonly assetId: string;
+  readonly selectionIdAssetId?: string;
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
   readonly budget?: ICEBudgetProfile;
@@ -73,6 +74,7 @@ export function buildPreparedGLB(
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
   }
   const creaseAngleDegrees = options.creaseAngleDegrees ?? 30;
+  const selectionIdAssetId = options.selectionIdAssetId?.trim() ?? assetId;
   const sourceNodes = records(source.json.nodes);
   const sourceMeshes = records(source.json.meshes);
   const sourceScene = records(source.json.scenes)[Number(source.json.scene ?? 0)];
@@ -340,7 +342,16 @@ export function buildPreparedGLB(
               .map((child) => outputIndexBySource.get(child)!),
           }),
       ...(sourceMesh === undefined ? {} : { mesh: sourceMesh }),
-      extras: { ice3: { id: `${assetId}/node/${sourceIndex}` } },
+      extras: {
+        ice3: {
+          id: `${assetId}/node/${sourceIndex}`,
+          ...(options.selectionIdAssetId
+            ? {
+                selectionId: `${selectionIdAssetId}/node/${sourceIndex}`,
+              }
+            : {}),
+        },
+      },
     };
   });
 

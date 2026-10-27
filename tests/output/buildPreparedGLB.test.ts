@@ -3,6 +3,7 @@ import { readSource } from '../../packages/toolchain-core/src/source/readSource.
 import { buildPreparedGLB } from '../../packages/toolchain-core/src/output/buildPreparedGLB.js';
 import type { ICESourceDocument } from '../../packages/toolchain-core/src/source/readSource.js';
 import { BUDGET_PROFILES } from '../../packages/toolchain-core/src/output/evaluateAssetBudget.js';
+import { createPartitionSource } from '../partition/createPartitionSource.js';
 
 const readProfile = (bytes: Uint8Array): Record<string, unknown> => {
   const buffer = Buffer.from(bytes);
@@ -39,6 +40,29 @@ test('builds byte-identical prepared GLB output', async () => {
     edgeSegmentCount: 3,
     materialCount: 5,
     selectionGroupCount: 1,
+  });
+});
+
+test('writes a LOD namespace while preserving selection identity', () => {
+  const built = buildPreparedGLB(createPartitionSource(), {
+    assetId: 'overview',
+    selectionIdAssetId: 'source-asset',
+    selection: {
+      nodeIndices: [0],
+      flattenWorldTransforms: true,
+    },
+  });
+  const buffer = Buffer.from(built.bytes);
+  const jsonLength = buffer.readUInt32LE(12);
+  const document = JSON.parse(
+    buffer.subarray(20, 20 + jsonLength).toString('utf8').replace(/ +$/g, ''),
+  ) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3).toEqual({
+    id: 'overview/node/0',
+    selectionId: 'source-asset/node/0',
   });
 });
 
