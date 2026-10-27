@@ -534,10 +534,14 @@ function validateTilesetResult(
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
     const tile = value as {
       content?: { uri?: unknown };
+      contents?: Array<{ uri?: unknown }>;
       children?: unknown[];
     };
     if (typeof tile.content?.uri === 'string') {
       contentUris.push(tile.content.uri);
+    }
+    for (const content of tile.contents ?? []) {
+      if (typeof content.uri === 'string') contentUris.push(content.uri);
     }
     for (const child of tile.children ?? []) visit(child);
   };

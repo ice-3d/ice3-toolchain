@@ -357,6 +357,38 @@ test('partition writes static render batches and reports their reduction', async
   expect(result.stats.renderBatchDrawReduction).toBeGreaterThan(0);
 });
 
+test('partition accepts standard chunked coarse contents', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'batch-lod-demo',
+    '--max-triangles',
+    '3',
+    '--render-batch',
+    'static',
+    '--lod',
+    '--coarse-chunk-max-bytes',
+    '3000',
+    '--json',
+  ])).toBe(0);
+
+  const tileset = JSON.parse(
+    readFileSync(join(output, 'tileset.json'), 'utf8'),
+  ) as {
+    root: { contents?: Array<{ uri: string }> };
+  };
+  expect(tileset.root.contents?.length).toBeGreaterThan(1);
+});
+
 test.each([
   [['--lod-ratio', '0']],
   [['--lod-ratio', '1']],
