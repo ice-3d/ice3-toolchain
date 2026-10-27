@@ -49,3 +49,11 @@ export {
   type ICEAssetReportInput,
 } from './output/createAssetReport.js';
 export { validatePreparedGLB } from './output/validatePreparedGLB.js';
+export {
+  analyzePartitionUnits,
+} from './partition/analyzePartitionUnits.js';
+export type {
+  ICEBounds,
+  ICEPartitionAnalysis,
+  ICEPartitionUnit,
+} from './partition/types.js';
