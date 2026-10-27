@@ -1,0 +1,1 @@
+{"command":"inspect","source":"fixtures/prepared-cube.glb","errors":[],"warnings":[],"stats":{"nodeCount":1,"meshCount":1,"triangleCount":12,"edgeSegmentCount":12}}

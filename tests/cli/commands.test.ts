@@ -94,3 +94,29 @@ test('validate accepts a generated profile', async () => {
 
   expect(await runCli(['validate', output])).toBe(0);
 });
+
+test('inspect reports a prepared ICE3 profile', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-'));
+  directories.push(directory);
+  const output = join(directory, 'prepared.glb');
+  await runCli([
+    'build',
+    'tests/fixtures/minimal.gltf',
+    '--output',
+    output,
+    '--asset-id',
+    'sample',
+  ]);
+  const messages: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    messages.push(String(value));
+  });
+
+  expect(await runCli(['inspect', output, '--json'])).toBe(0);
+  const report = JSON.parse(messages.at(-1)!) as {
+    errors: string[];
+    stats: { triangleCount: number };
+  };
+  expect(report.errors).toEqual([]);
+  expect(report.stats.triangleCount).toBe(1);
+});

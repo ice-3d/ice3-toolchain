@@ -74,6 +74,24 @@ async function buildCommand(args: ParsedArguments): Promise<void> {
 
 async function inspectCommand(args: ParsedArguments): Promise<void> {
   const sourcePath = requiredPositional(args, 0, 'source');
+  const sourceBytes = await readFile(sourcePath);
+  if (
+    sourceBytes.byteLength >= 4
+    && sourceBytes.readUInt32LE(0) === 0x46546c67
+  ) {
+    const report = validatePreparedGLB(sourceBytes);
+    printResult(args, {
+      command: 'inspect',
+      source: sourcePath,
+      errors: report.errors,
+      warnings: report.warnings,
+      stats: readProfileStats(sourceBytes),
+    });
+    if (report.errors.length > 0) {
+      throw new Error(`ICE3_TOOL_PROFILE_INVALID: ${report.errors.join(', ')}`);
+    }
+    return;
+  }
   const source = await readSource(sourcePath);
   const report = validateSource(source);
   let stats = { nodeCount: 0, meshCount: 0, triangleCount: 0, edgeSegmentCount: 0 };
@@ -93,6 +111,34 @@ async function inspectCommand(args: ParsedArguments): Promise<void> {
   if (report.errors.length > 0) {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
   }
+}
+
+function readProfileStats(bytes: Uint8Array): {
+  nodeCount: number;
+  meshCount: number;
+  triangleCount: number;
+  edgeSegmentCount: number;
+} {
+  const buffer = Buffer.from(bytes);
+  const jsonLength = buffer.readUInt32LE(12);
+  const json = JSON.parse(
+    buffer.subarray(20, 20 + jsonLength).toString('utf8').replace(/ +$/g, ''),
+  ) as {
+    asset?: {
+      extras?: {
+        ice3?: {
+          stats?: Record<string, number>;
+        };
+      };
+    };
+  };
+  const stats = json.asset?.extras?.ice3?.stats ?? {};
+  return {
+    nodeCount: Number(stats.nodeCount ?? 0),
+    meshCount: Number(stats.meshCount ?? 0),
+    triangleCount: Number(stats.triangleCount ?? 0),
+    edgeSegmentCount: Number(stats.edgeSegmentCount ?? 0),
+  };
 }
 
 async function validateCommand(args: ParsedArguments): Promise<void> {

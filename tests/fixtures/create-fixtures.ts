@@ -88,3 +88,54 @@ truncated.writeUInt32LE(24, 8);
 truncated.writeUInt32LE(64, 12);
 truncated.writeUInt32LE(0x4e4f534a, 16);
 writeFileSync(resolve(directory, 'truncated.glb'), truncated);
+
+const cubePositions = new Float32Array([
+  -1, -1, 1,
+  1, -1, 1,
+  1, 1, 1,
+  -1, 1, 1,
+  -1, -1, -1,
+  1, -1, -1,
+  1, 1, -1,
+  -1, 1, -1,
+]);
+const cubeIndices = new Uint16Array([
+  0, 1, 2, 0, 2, 3,
+  5, 4, 7, 5, 7, 6,
+  4, 0, 3, 4, 3, 7,
+  1, 5, 6, 1, 6, 2,
+  3, 2, 6, 3, 6, 7,
+  4, 5, 1, 4, 1, 0,
+]);
+const cubeBinary = Buffer.alloc(96 + 72);
+Buffer.from(cubePositions.buffer).copy(cubeBinary, 0);
+Buffer.from(cubeIndices.buffer).copy(cubeBinary, 96);
+writeFileSync(resolve(directory, 'cube.bin'), cubeBinary);
+writeFileSync(
+  resolve(directory, 'cube.gltf'),
+  JSON.stringify({
+    ...document,
+    nodes: [{ mesh: 0, name: 'prepared-cube' }],
+    buffers: [{ uri: 'cube.bin', byteLength: 168 }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 96 },
+      { buffer: 0, byteOffset: 96, byteLength: 72 },
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 8,
+        type: 'VEC3',
+        min: [-1, -1, -1],
+        max: [1, 1, 1],
+      },
+      {
+        bufferView: 1,
+        componentType: 5123,
+        count: 36,
+        type: 'SCALAR',
+      },
+    ],
+  }, null, 2),
+);
