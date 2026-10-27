@@ -33,4 +33,13 @@ export {
   type ICEAssetMetrics,
   type ICEAssetPreparation,
 } from './output/assetContract.js';
+export {
+  BUDGET_PROFILES,
+  evaluateAssetBudget,
+  validateBudgetProfile,
+  type ICEBudgetCheck,
+  type ICEBudgetLimit,
+  type ICEBudgetProfile,
+  type ICEBudgetResult,
+} from './output/evaluateAssetBudget.js';
 export { validatePreparedGLB } from './output/validatePreparedGLB.js';
