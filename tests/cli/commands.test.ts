@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, expect, test, vi } from 'node-test';
 import { runCli } from '../../packages/cli/src/commands.js';
+import { createCompressedFixture } from '../fixtures/createCompressedFixture.js';
 
 const directories: string[] = [];
 
@@ -113,6 +114,25 @@ test('inspect reports a prepared ICE3 profile', async () => {
   });
 
   expect(await runCli(['inspect', output, '--json'])).toBe(0);
+  const report = JSON.parse(messages.at(-1)!) as {
+    errors: string[];
+    stats: { triangleCount: number };
+  };
+  expect(report.errors).toEqual([]);
+  expect(report.stats.triangleCount).toBe(1);
+});
+
+test('inspect decodes an ordinary compressed source GLB', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-'));
+  directories.push(directory);
+  const source = join(directory, 'compressed.glb');
+  await createCompressedFixture(source);
+  const messages: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    messages.push(String(value));
+  });
+
+  expect(await runCli(['inspect', source, '--json'])).toBe(0);
   const report = JSON.parse(messages.at(-1)!) as {
     errors: string[];
     stats: { triangleCount: number };

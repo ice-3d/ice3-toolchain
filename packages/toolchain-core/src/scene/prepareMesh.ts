@@ -27,7 +27,7 @@ export function prepareMesh(
   options: ICEPrepareMeshOptions = {},
 ): ICEPreparedGeometry {
   if (positions.length === 0 || positions.length % 3 !== 0) {
-    throw geometryError('positions must contain a non-empty multiple of three values');
+    throw geometryError('positions must contain a non-empty multiple of 3 values');
   }
   if (positions.some((value) => !Number.isFinite(value))) {
     throw geometryError('positions must be finite');
@@ -103,12 +103,12 @@ function triangulate(
   }
   if (mode === 4) {
     if (indices.length % 3 !== 0) {
-      throw geometryError('triangle index count must be a multiple of three');
+      throw geometryError('triangle index count must be a multiple of 3');
     }
     return [...indices];
   }
   if (indices.length < 3) {
-    throw geometryError('strip and fan modes require at least three indices');
+    throw geometryError('strip and fan modes require at least 3 indices');
   }
   const output: number[] = [];
   if (mode === 5) {

@@ -48,11 +48,18 @@ partial output.
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.
+- Required mesh-compression extensions are decoded during preprocessing.
+- Unreferenced textures, images, and samplers are removed from the prepared
+  output. Source materials that still reference textures are rejected until a
+  later texture milestone supplies an explicit conversion policy.
+- Optional material extensions outside the geometry-focused profile are
+  discarded during preprocessing.
 - Output is a standard single-JSON/single-BIN GLB with the
   `ice3-prepared` profile in `asset.extras.ice3`.
 - M1 supports triangle and generated line primitives, node matrices, flat base
   colors, and crease-edge overlays.
-- Animations, skins, Morph targets, textures, cameras, lights, sparse
-  accessors, external output resources, and required extensions are rejected.
+- Animations, skins, Morph targets, referenced textures, cameras, lights,
+  sparse accessors, external output resources, and unsupported required
+  extensions are rejected after preprocessing.
 - The browser runtime receives only prepared GLB and never imports this
   repository or a source-format adapter.

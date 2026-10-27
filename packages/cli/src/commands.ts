@@ -75,10 +75,7 @@ async function buildCommand(args: ParsedArguments): Promise<void> {
 async function inspectCommand(args: ParsedArguments): Promise<void> {
   const sourcePath = requiredPositional(args, 0, 'source');
   const sourceBytes = await readFile(sourcePath);
-  if (
-    sourceBytes.byteLength >= 4
-    && sourceBytes.readUInt32LE(0) === 0x46546c67
-  ) {
+  if (hasPreparedProfile(sourceBytes)) {
     const report = validatePreparedGLB(sourceBytes);
     printResult(args, {
       command: 'inspect',
@@ -110,6 +107,27 @@ async function inspectCommand(args: ParsedArguments): Promise<void> {
   });
   if (report.errors.length > 0) {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${report.errors.join(', ')}`);
+  }
+}
+
+function hasPreparedProfile(bytes: Uint8Array): boolean {
+  const buffer = Buffer.from(bytes);
+  if (
+    buffer.byteLength < 20
+    || buffer.readUInt32LE(0) !== 0x46546c67
+  ) {
+    return false;
+  }
+  try {
+    const jsonLength = buffer.readUInt32LE(12);
+    const json = JSON.parse(
+      buffer.subarray(20, 20 + jsonLength).toString('utf8').replace(/ +$/g, ''),
+    ) as {
+      asset?: { extras?: { ice3?: { profile?: string } } };
+    };
+    return json.asset?.extras?.ice3?.profile === 'ice3-prepared';
+  } catch {
+    return false;
   }
 }
 

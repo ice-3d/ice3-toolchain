@@ -34,6 +34,16 @@ export function validateSource(document: ICESourceDocument): ICESourceReport {
   if (Array.isArray(json.extensionsRequired) && json.extensionsRequired.length > 0) {
     errors.add('ICE3_TOOL_UNSUPPORTED_EXTENSION');
   }
+  const required = new Set(
+    Array.isArray(json.extensionsRequired) ? json.extensionsRequired : [],
+  );
+  for (const extension of Array.isArray(json.extensionsUsed)
+    ? json.extensionsUsed
+    : []) {
+    if (!required.has(extension)) {
+      warnings.add(`ICE3_TOOL_IGNORED_EXTENSION:${String(extension)}`);
+    }
+  }
   if (accessors.some((accessor) => accessor.sparse !== undefined)) {
     errors.add('ICE3_TOOL_UNSUPPORTED_SPARSE_ACCESSOR');
   }

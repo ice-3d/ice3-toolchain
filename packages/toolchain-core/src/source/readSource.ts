@@ -1,5 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import {
+  decodeCompressedSource,
+  requiresMeshDecompression,
+} from './decodeCompressedSource.js';
 
 const GLB_MAGIC = 0x46546c67;
 const JSON_CHUNK = 0x4e4f534a;
@@ -13,9 +17,16 @@ export interface ICESourceDocument {
 
 export async function readSource(path: string): Promise<ICESourceDocument> {
   const absolutePath = resolve(path);
-  const bytes = await readFile(absolutePath);
-  if (bytes.byteLength >= 4 && bytes.readUInt32LE(0) === GLB_MAGIC) {
-    return readGLB(bytes, dirname(absolutePath));
+  let bytes: Uint8Array = await readFile(absolutePath);
+  if (requiresMeshDecompression(bytes)) {
+    bytes = await decodeCompressedSource(absolutePath);
+  }
+  if (
+    bytes.byteLength >= 4
+    && new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      .getUint32(0, true) === GLB_MAGIC
+  ) {
+    return readGLB(Buffer.from(bytes), dirname(absolutePath));
   }
   return readJSON(bytes, dirname(absolutePath));
 }
