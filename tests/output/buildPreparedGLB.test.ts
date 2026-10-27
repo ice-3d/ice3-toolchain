@@ -15,6 +15,14 @@ const readProfile = (bytes: Uint8Array): Record<string, unknown> => {
   return (asset.extras as Record<string, unknown>).ice3 as Record<string, unknown>;
 };
 
+const readDocument = (bytes: Uint8Array): Record<string, any> => {
+  const buffer = Buffer.from(bytes);
+  const length = buffer.readUInt32LE(12);
+  return JSON.parse(
+    buffer.subarray(20, 20 + length).toString('utf8').trimEnd(),
+  ) as Record<string, any>;
+};
+
 test('builds byte-identical prepared GLB output', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const first = buildPreparedGLB(source, { assetId: 'sample' });
@@ -117,6 +125,151 @@ test('treats normalized geometry overrides as triangle lists', () => {
   });
 
   expect(built.stats.triangleCount).toBe(2);
+});
+
+test('replaces source mesh geometry without changing nodes', () => {
+  const source = createPartitionSource();
+  const built = buildPreparedGLB(source, {
+    assetId: 'proxy-test',
+    selectionIdAssetId: 'source-asset',
+    edges: false,
+    meshOverrides: new Map([[
+      0,
+      {
+        positions: new Float32Array([
+          -1, -1, -1,
+          1, -1, -1,
+          -1, 1, 1,
+        ]),
+        indices: new Uint32Array([0, 1, 2, 0, 2, 1]),
+        materialIndex: 0,
+      },
+    ]]),
+  });
+  const document = readDocument(built.bytes) as {
+    meshes: Array<{ primitives: Array<Record<string, unknown>> }>;
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.meshes[0]!.primitives).toHaveLength(1);
+  expect(built.stats.triangleCount).toBe(5);
+  expect(document.nodes[0]!.extras.ice3.selectionId)
+    .toBe('source-asset/node/0');
+  expect(built.metrics.edgeSegmentCount).toBe(0);
+});
+
+test('combines mesh override and normal mesh paths in one Tile', () => {
+  const source = createPartitionSource();
+  const built = buildPreparedGLB(source, {
+    assetId: 'mixed-proxy-test',
+    selectionIdAssetId: 'source-asset',
+    edges: false,
+    meshOverrides: new Map([[
+      0,
+      {
+        positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+        indices: new Uint32Array([0, 1, 2]),
+      },
+    ]]),
+  });
+  const document = readDocument(built.bytes) as {
+    meshes: Array<{ primitives: Array<Record<string, unknown>> }>;
+    nodes: Array<{ mesh: number; extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.meshes).toHaveLength(4);
+  expect(document.meshes[0]!.primitives).toHaveLength(1);
+  expect(document.meshes[1]!.primitives).toHaveLength(1);
+  expect(document.nodes.map((node) => node.extras.ice3.selectionId))
+    .toEqual([
+      'source-asset/node/0',
+      'source-asset/node/1',
+      'source-asset/node/2',
+      'source-asset/node/3',
+    ]);
+});
+
+test('reports contract bounds from replaced mesh geometry', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+  const built = buildPreparedGLB(source, {
+    assetId: 'proxy-bounds',
+    edges: false,
+    meshOverrides: new Map([[0, {
+      positions: new Float32Array([0, 0, 0, 4, 0, 0, 0, 1, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+    }]]),
+  });
+  const selected = buildPreparedGLB(source, {
+    assetId: 'proxy-bounds-selected',
+    edges: false,
+    selection: {
+      nodeIndices: [0],
+      flattenWorldTransforms: true,
+    },
+    meshOverrides: new Map([[0, {
+      positions: new Float32Array([0, 0, 0, 4, 0, 0, 0, 1, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+    }]]),
+  });
+  const document = readDocument(built.bytes) as {
+    asset: {
+      extras: {
+        ice3: {
+          bounds: {
+            min: number[];
+            max: number[];
+          };
+        };
+      };
+    };
+  };
+
+  expect(document.asset.extras.ice3.bounds.max[0]).toBe(4);
+  expect(readDocument(selected.bytes).asset.extras.ice3.bounds.max[0]).toBe(4);
+});
+
+test('reuses one replaced mesh across node instances', () => {
+  const source = createPartitionSource(true);
+  const built = buildPreparedGLB(source, {
+    assetId: 'shared-proxy',
+    selectionIdAssetId: 'source-asset',
+    edges: false,
+    meshOverrides: new Map([[0, {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+    }]]),
+  });
+  const document = readDocument(built.bytes) as {
+    meshes: unknown[];
+    nodes: Array<{
+      mesh: number;
+      matrix: number[];
+      extras: { ice3: { selectionId: string } };
+    }>;
+  };
+
+  expect(document.meshes).toHaveLength(1);
+  expect(document.nodes.map((node) => node.mesh)).toEqual([0, 0, 0, 0]);
+  expect(document.nodes.map((node) => node.matrix[12])).toEqual([0, 10, 20, 30]);
+  expect(document.nodes.map((node) => node.extras.ice3.selectionId))
+    .toEqual([
+      'source-asset/node/0',
+      'source-asset/node/1',
+      'source-asset/node/2',
+      'source-asset/node/3',
+    ]);
+});
+
+test('rejects invalid selected mesh override geometry', async () => {
+  const source = await readSource('tests/fixtures/minimal.gltf');
+
+  expect(() => buildPreparedGLB(source, {
+    assetId: 'invalid-proxy',
+    meshOverrides: new Map([[0, {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+      indices: new Uint32Array([0, 1, 9]),
+    }]]),
+  })).toThrow(/ICE3_TOOL_INVALID_GEOMETRY/);
 });
 
 test('writes an ICE3 profile header and one BIN chunk', async () => {

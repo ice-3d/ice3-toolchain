@@ -15,7 +15,10 @@ const curve = (
     actualTriangles,
     errorMeters,
     preservedSource: false,
-    primitives: [],
+    replacement: {
+      kind: 'primitives',
+      primitives: [],
+    },
   })),
 });
 

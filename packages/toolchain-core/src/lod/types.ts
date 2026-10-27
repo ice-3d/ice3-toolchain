@@ -3,10 +3,25 @@ export interface ICELodCurvePrimitive {
   readonly geometryKey: string;
 }
 
+export interface ICELodPrimitiveReplacement {
+  readonly kind: 'primitives';
+  readonly primitives: readonly ICELodCurvePrimitive[];
+}
+
+export interface ICELodMeshReplacement {
+  readonly kind: 'mesh';
+  readonly proxy: import('./semanticProxy/types.js').ICESemanticProxy;
+}
+
+export type ICELodSampleReplacement =
+  | ICELodPrimitiveReplacement
+  | ICELodMeshReplacement;
+
 export interface ICELodUnitPrimitive {
   readonly sourceKey: string;
   readonly workspaceKey: string;
   readonly triangleCount: number;
+  readonly materialIndex?: number;
 }
 
 export interface ICELodCurveSample {
@@ -14,7 +29,7 @@ export interface ICELodCurveSample {
   readonly actualTriangles: number;
   readonly errorMeters: number;
   readonly preservedSource: boolean;
-  readonly primitives: readonly ICELodCurvePrimitive[];
+  readonly replacement: ICELodSampleReplacement;
 }
 
 export interface ICELodUnitCurve {
@@ -35,7 +50,7 @@ export interface ICELodAllocationSelection {
   readonly actualTriangles: number;
   readonly errorMeters: number;
   readonly preservedSource: boolean;
-  readonly primitives: ICELodCurveSample['primitives'];
+  readonly replacement: ICELodCurveSample['replacement'];
 }
 
 export interface ICELodAllocation {

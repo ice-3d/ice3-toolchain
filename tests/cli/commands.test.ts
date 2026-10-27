@@ -402,3 +402,95 @@ test.each([
   ])).toBe(1);
   expect(errors.at(-1)).toMatch(expectedError);
 });
+
+test.each([
+  ['auto', 'adaptive'],
+  ['off', 'adaptive'],
+])('partition accepts semantic proxy mode %s with adaptive lod', async (
+  semanticProxy,
+  allocation,
+) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const printed: string[] = [];
+  vi.spyOn(console, 'log').mockImplementation((value) => {
+    printed.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    join(directory, 'dist'),
+    '--asset-id',
+    'proxy-demo',
+    '--lod',
+    '--lod-allocation',
+    allocation,
+    '--semantic-proxy',
+    semanticProxy,
+    '--json',
+  ])).toBe(0);
+  const result = JSON.parse(printed.at(-1)!) as {
+    stats: {
+      semanticProxyAcceptedUnits: number;
+      semanticProxySelectedContents: number;
+    };
+  };
+  expect(result.stats.semanticProxyAcceptedUnits).toBe(0);
+  expect(result.stats.semanticProxySelectedContents).toBe(0);
+});
+
+test.each([
+  [
+    ['--semantic-proxy', 'auto'],
+    /--semantic-proxy requires --lod/,
+  ],
+  [
+    [
+      '--lod',
+      '--lod-allocation',
+      'proportional',
+      '--semantic-proxy',
+      'auto',
+    ],
+    /auto requires --lod-allocation adaptive/,
+  ],
+  [
+    [
+      '--lod',
+      '--lod-allocation',
+      'adaptive',
+      '--semantic-proxy',
+      'unknown',
+    ],
+    /must be auto or off/,
+  ],
+])('partition rejects invalid semantic proxy options %j', async (
+  arguments_,
+  expectedError,
+) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
+  directories.push(directory);
+  const source = join(directory, 'source.gltf');
+  writePartitionGLTF(source);
+  const output = join(directory, 'dist');
+  const errors: string[] = [];
+  vi.spyOn(console, 'error').mockImplementation((value) => {
+    errors.push(String(value));
+  });
+
+  expect(await runCli([
+    'partition',
+    source,
+    '--output',
+    output,
+    '--asset-id',
+    'proxy-demo',
+    ...arguments_,
+  ])).toBe(1);
+  expect(errors.at(-1)).toMatch(expectedError);
+  expect(existsSync(output)).toBe(false);
+});

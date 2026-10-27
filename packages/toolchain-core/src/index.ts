@@ -25,6 +25,7 @@ export {
   type ICEBuildOptions,
   type ICEBuildSelection,
   type ICEGeometryOverride,
+  type ICEPreparedMeshOverride,
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
 export {
@@ -90,6 +91,9 @@ export {
   type ICELodAllocationSelection,
   type ICELodCurvePrimitive,
   type ICELodCurveSample,
+  type ICELodMeshReplacement,
+  type ICELodPrimitiveReplacement,
+  type ICELodSampleReplacement,
   type ICELodUnitCurve,
   type ICELodUnitPrimitive,
 } from './lod/allocateAdaptiveLod.js';
@@ -101,6 +105,27 @@ export {
   createLodUnitCurve,
   type ICELodUnitCurveOptions,
 } from './lod/createLodUnitCurve.js';
+export {
+  collectFitSamples,
+} from './lod/semanticProxy/collectFitSamples.js';
+export type {
+  ICESemanticProxy,
+  ICESemanticProxyFitSamples,
+  ICESemanticProxyKind,
+} from './lod/semanticProxy/types.js';
+export {
+  fitProxyGeometry,
+  type ICESemanticProxyFitResult,
+  type ICESemanticProxyGeometryCandidate,
+} from './lod/semanticProxy/fitProxyGeometry.js';
+export {
+  createSemanticProxy,
+  type ICESemanticProxyCreateOptions,
+  type ICESemanticProxyCreateResult,
+} from './lod/semanticProxy/createSemanticProxy.js';
+export type {
+  ICESemanticProxyEvaluation,
+} from './lod/semanticProxy/evaluateProxy.js';
 export {
   createCoarseChunkPlan,
   type ICECoarseChunk,
@@ -118,4 +143,5 @@ export type {
   ICEPartitionUnit,
   ICELodBuildOptions,
   ICELodAllocationMode,
+  ICESemanticProxyMode,
 } from './partition/types.js';

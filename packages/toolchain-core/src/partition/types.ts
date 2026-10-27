@@ -34,9 +34,11 @@ export interface ICEPartitionOptions {
 }
 
 export type ICELodAllocationMode = 'proportional' | 'adaptive';
+export type ICESemanticProxyMode = 'off' | 'auto';
 
 export interface ICELodBuildOptions {
   readonly allocation?: ICELodAllocationMode;
+  readonly semanticProxy?: ICESemanticProxyMode;
   readonly curveSamples?: number;
   readonly ratio: number;
   readonly maxTrianglesPerProxy: number;

@@ -1,6 +1,7 @@
 import type { ICEGeometryWorkspace } from './createGeometryWorkspace.js';
 import { createLodSampleSchedule } from './createLodSampleSchedule.js';
 import { simplifyGeometry } from './simplifyGeometry.js';
+import type { ICESemanticProxy } from './semanticProxy/types.js';
 import type {
   ICELodCurvePrimitive,
   ICELodCurveSample,
@@ -16,6 +17,7 @@ export interface ICELodUnitCurveOptions {
   readonly minimumTriangles: number;
   readonly sampleCount: number;
   readonly worldScale: number;
+  readonly proxy?: ICESemanticProxy;
 }
 
 export async function createLodUnitCurve(
@@ -31,6 +33,18 @@ export async function createLodUnitCurve(
     sampleCount: options.sampleCount,
   });
   const samples: ICELodCurveSample[] = [];
+  if (options.proxy) {
+    pushParetoSample(samples, {
+      targetTriangles: options.proxy.triangleCount,
+      actualTriangles: options.proxy.triangleCount,
+      errorMeters: options.proxy.errorMeters,
+      preservedSource: false,
+      replacement: {
+        kind: 'mesh',
+        proxy: options.proxy,
+      },
+    });
+  }
 
   for (const [sampleIndex, targetTriangles] of schedule.entries()) {
     const primitives: ICELodCurvePrimitive[] = [];
@@ -85,7 +99,10 @@ export async function createLodUnitCurve(
       actualTriangles,
       errorMeters,
       preservedSource,
-      primitives,
+      replacement: {
+        kind: 'primitives',
+        primitives,
+      },
     });
   }
   if (samples.length === 0) {
@@ -103,23 +120,32 @@ function pushParetoSample(
   samples: ICELodCurveSample[],
   next: ICELodCurveSample,
 ): void {
-  while (
-    samples.length > 0
-    && next.actualTriangles <= samples.at(-1)!.actualTriangles
-    && next.errorMeters <= samples.at(-1)!.errorMeters
-  ) {
-    samples.pop();
-  }
-  const previous = samples.at(-1);
-  if (
-    !previous
-    || (
-      next.actualTriangles > previous.actualTriangles
-      && next.errorMeters < previous.errorMeters
+  const dominated = samples.some((sample) => (
+    sample.actualTriangles <= next.actualTriangles
+    && sample.errorMeters <= next.errorMeters
+    && (
+      sample.actualTriangles < next.actualTriangles
+      || sample.errorMeters < next.errorMeters
     )
-  ) {
-    samples.push(next);
+  ));
+  if (dominated) return;
+  for (let index = samples.length - 1; index >= 0; index -= 1) {
+    const sample = samples[index]!;
+    if (
+      next.actualTriangles <= sample.actualTriangles
+      && next.errorMeters <= sample.errorMeters
+    ) {
+      samples.splice(index, 1);
+    }
   }
+  const insertAt = samples.findIndex((sample) => (
+    sample.actualTriangles > next.actualTriangles
+    || (
+      sample.actualTriangles === next.actualTriangles
+      && sample.errorMeters > next.errorMeters
+    )
+  ));
+  samples.splice(insertAt < 0 ? samples.length : insertAt, 0, next);
 }
 
 function validateOptions(options: ICELodUnitCurveOptions): void {
