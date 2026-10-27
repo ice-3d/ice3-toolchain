@@ -25,6 +25,7 @@ export {
   type ICEBuildOptions,
   type ICEBuildSelection,
   type ICEGeometryOverride,
+  type ICEPreparedMeshOverride,
   type ICEPreparedGLB,
 } from './output/buildPreparedGLB.js';
 export {

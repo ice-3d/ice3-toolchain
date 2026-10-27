@@ -26,6 +26,7 @@ export interface ICEBuildOptions {
   readonly assetId: string;
   readonly selectionIdAssetId?: string;
   readonly geometryOverrides?: ReadonlyMap<string, ICEGeometryOverride>;
+  readonly meshOverrides?: ReadonlyMap<number, ICEPreparedMeshOverride>;
   readonly creaseAngleDegrees?: number;
   readonly edges?: boolean;
   readonly budget?: ICEBudgetProfile;
@@ -35,6 +36,13 @@ export interface ICEBuildOptions {
 export interface ICEGeometryOverride {
   readonly positions: Float32Array;
   readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
+}
+
+export interface ICEPreparedMeshOverride {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
+  readonly materialIndex?: number;
   readonly colors?: Float32Array;
 }
 
@@ -193,12 +201,139 @@ export function buildPreparedGLB(
     return bufferViews.length - 1;
   };
 
+  const appendPrimitive = (options_: {
+    readonly positions: Float32Array;
+    readonly indices: Uint32Array;
+    readonly sourceMaterial: number;
+    readonly colors?: Float32Array;
+    readonly mode: 4 | 5 | 6;
+    readonly id: string;
+    readonly primitives: JSONRecord[];
+  }): void => {
+    if (
+      !Number.isInteger(options_.sourceMaterial)
+      || options_.sourceMaterial < 0
+      || options_.sourceMaterial > materialEntries.length
+    ) {
+      throw new Error('ICE3_TOOL_INVALID_GEOMETRY: material index is invalid');
+    }
+    const prepared = prepareMesh(
+      options_.positions,
+      options_.indices,
+      creaseAngleDegrees,
+      {
+        id: options_.id,
+        mode: options_.mode,
+        generateEdges: options.edges !== false,
+      },
+    );
+    const positionView = append(new Uint8Array(prepared.positions.buffer));
+    let colorAccessorIndex: number | undefined;
+    if (options_.colors) {
+      const components = options_.colors.length
+        / (prepared.positions.length / 3);
+      if (
+        (components !== 3 && components !== 4)
+        || options_.colors.length / components !== prepared.positions.length / 3
+      ) {
+        throw new Error('ICE3_TOOL_INVALID_GEOMETRY: COLOR_0 must match POSITION');
+      }
+      const base = linearMaterialColors[options_.sourceMaterial] ?? [1, 1, 1, 1];
+      const displayColors = new Float32Array(prepared.positions.length);
+      for (let vertex = 0; vertex < displayColors.length / 3; vertex += 1) {
+        for (let channel = 0; channel < 3; channel += 1) {
+          displayColors[vertex * 3 + channel] = linearToSrgb(
+            base[channel]!
+              * options_.colors[vertex * components + channel]!,
+          );
+        }
+      }
+      const colorView = append(new Uint8Array(displayColors.buffer));
+      colorAccessorIndex = accessors.length;
+      accessors.push({
+        bufferView: colorView,
+        componentType: 5126,
+        count: displayColors.length / 3,
+        type: 'VEC3',
+      });
+    }
+    const triangleView = append(new Uint8Array(prepared.indices.buffer));
+    const edgeView = append(new Uint8Array(prepared.edgeIndices.buffer));
+    const positionAccessorIndex = accessors.length;
+    accessors.push({
+      bufferView: positionView,
+      componentType: 5126,
+      count: prepared.positions.length / 3,
+      type: 'VEC3',
+      min: prepared.bounds.min,
+      max: prepared.bounds.max,
+    });
+    const triangleAccessorIndex = accessors.length;
+    accessors.push({
+      bufferView: triangleView,
+      componentType: prepared.indices instanceof Uint16Array ? 5123 : 5125,
+      count: prepared.indices.length,
+      type: 'SCALAR',
+    });
+    const edgeAccessorIndex = accessors.length;
+    accessors.push({
+      bufferView: edgeView,
+      componentType: prepared.edgeIndices instanceof Uint16Array ? 5123 : 5125,
+      count: prepared.edgeIndices.length,
+      type: 'SCALAR',
+    });
+    options_.primitives.push({
+      attributes: {
+        POSITION: positionAccessorIndex,
+        ...(colorAccessorIndex === undefined
+          ? {}
+          : { COLOR_0: colorAccessorIndex }),
+      },
+      indices: triangleAccessorIndex,
+      material: colorAccessorIndex === undefined
+        ? baseMaterialIndices[options_.sourceMaterial]!
+        : vertexColorMaterialIndex,
+      mode: 4,
+    });
+    if (prepared.edgeIndices.length > 0) {
+      options_.primitives.push({
+        attributes: { POSITION: positionAccessorIndex },
+        indices: edgeAccessorIndex,
+        material: edgeMaterialIndices[options_.sourceMaterial]!,
+        mode: 1,
+        extras: { ice3: { role: 'edges', widthPx: 3 } },
+      });
+    }
+    triangleCount += prepared.indices.length / 3;
+    edgeSegmentCount += prepared.edgeIndices.length / 2;
+  };
+
   for (const [meshIndex, mesh] of sourceMeshes.entries()) {
     const primitives: JSONRecord[] = [];
     const nodeOwners = sourceNodes
       .map((node, index) => Number(node.mesh) === meshIndex ? index : -1)
       .filter((index) => index >= 0 && selectedNodes.has(index));
     if (nodeOwners.length === 0) continue;
+    const meshOverride = options.meshOverrides?.get(meshIndex);
+    if (meshOverride) {
+      appendPrimitive({
+        positions: meshOverride.positions,
+        indices: meshOverride.indices,
+        sourceMaterial: meshOverride.materialIndex ?? materialEntries.length,
+        ...(meshOverride.colors ? { colors: meshOverride.colors } : {}),
+        mode: 4,
+        id: `${assetId}/geometry/${meshIndex}/proxy`,
+        primitives,
+      });
+      for (const owner of nodeOwners) selectionNodes.add(owner);
+      primitiveCount += primitives.length;
+      sourceMeshToOutputMesh.set(meshIndex, outputMeshes.length);
+      outputMeshes.push({
+        primitives,
+        extras: { ice3: { id: `${assetId}/mesh/${meshIndex}` } },
+      });
+      continue;
+    }
     for (const [primitiveIndex, primitive] of records(mesh.primitives).entries()) {
       if (Number(primitive.mode ?? 4) === 1) {
         continue;
@@ -218,28 +353,18 @@ export function buildPreparedGLB(
       const override = options.geometryOverrides?.get(
         `${meshIndex}:${primitiveIndex}`,
       );
-      const prepared = prepareMesh(
-        override?.positions ?? positionData.values,
-        override?.indices ?? new Uint32Array(indexData.values),
-        creaseAngleDegrees,
-        {
-          id: `${assetId}/geometry/${meshIndex}/${primitiveIndex}`,
-          mode: override
-            ? 4
-            : Number(primitive.mode ?? 4) as 4 | 5 | 6,
-          generateEdges: options.edges !== false,
-        },
-      );
-      const positionView = append(new Uint8Array(prepared.positions.buffer));
       const sourceMaterial = primitive.material === undefined
         ? materialEntries.length
         : Number(primitive.material);
       const colorAccessor = attributes?.COLOR_0;
-      let colorAccessorIndex: number | undefined;
+      let colors: Float32Array | undefined;
       if (colorAccessor !== undefined) {
+        const overrideVertexCount = (
+          override?.positions ?? positionData.values
+        ).length / 3;
         const colorData = override?.colors
           ? {
-              components: override.colors.length / (prepared.positions.length / 3),
+              components: override.colors.length / overrideVertexCount,
               values: override.colors,
             }
           : readAccessor(source, Number(colorAccessor));
@@ -251,79 +376,22 @@ export function buildPreparedGLB(
               || colorData.kind !== 'float32'
             )
           )
-          || (colorData.components !== 3 && colorData.components !== 4)
-          || colorData.values.length / colorData.components
-            !== prepared.positions.length / 3
         ) {
           throw new Error('ICE3_TOOL_INVALID_GEOMETRY: COLOR_0 must match POSITION');
         }
-        const base = linearMaterialColors[sourceMaterial] ?? [1, 1, 1, 1];
-        const displayColors = new Float32Array(prepared.positions.length);
-        for (let vertex = 0; vertex < displayColors.length / 3; vertex += 1) {
-          for (let channel = 0; channel < 3; channel += 1) {
-            displayColors[vertex * 3 + channel] = linearToSrgb(
-              base[channel]! * colorData.values[vertex * colorData.components + channel]!,
-            );
-          }
-        }
-        const colorView = append(new Uint8Array(displayColors.buffer));
-        colorAccessorIndex = accessors.length;
-        accessors.push({
-          bufferView: colorView,
-          componentType: 5126,
-          count: displayColors.length / 3,
-          type: 'VEC3',
-        });
+        colors = Float32Array.from(colorData.values);
       }
-      const triangleView = append(new Uint8Array(prepared.indices.buffer));
-      const edgeView = append(new Uint8Array(prepared.edgeIndices.buffer));
-      const positionAccessorIndex = accessors.length;
-      accessors.push({
-        bufferView: positionView,
-        componentType: 5126,
-        count: prepared.positions.length / 3,
-        type: 'VEC3',
-        min: prepared.bounds.min,
-        max: prepared.bounds.max,
+      appendPrimitive({
+        positions: override?.positions ?? positionData.values,
+        indices: override?.indices ?? new Uint32Array(indexData.values),
+        sourceMaterial,
+        ...(colors ? { colors } : {}),
+        mode: override
+          ? 4
+          : Number(primitive.mode ?? 4) as 4 | 5 | 6,
+        id: `${assetId}/geometry/${meshIndex}/${primitiveIndex}`,
+        primitives,
       });
-      const triangleAccessorIndex = accessors.length;
-      accessors.push({
-        bufferView: triangleView,
-        componentType: prepared.indices instanceof Uint16Array ? 5123 : 5125,
-        count: prepared.indices.length,
-        type: 'SCALAR',
-      });
-      const edgeAccessorIndex = accessors.length;
-      accessors.push({
-        bufferView: edgeView,
-        componentType: prepared.edgeIndices instanceof Uint16Array ? 5123 : 5125,
-        count: prepared.edgeIndices.length,
-        type: 'SCALAR',
-      });
-      primitives.push({
-        attributes: {
-          POSITION: positionAccessorIndex,
-          ...(colorAccessorIndex === undefined
-            ? {}
-            : { COLOR_0: colorAccessorIndex }),
-        },
-        indices: triangleAccessorIndex,
-        material: colorAccessorIndex === undefined
-          ? baseMaterialIndices[sourceMaterial]!
-          : vertexColorMaterialIndex,
-        mode: 4,
-      });
-      if (prepared.edgeIndices.length > 0) {
-        primitives.push({
-          attributes: { POSITION: positionAccessorIndex },
-          indices: edgeAccessorIndex,
-          material: edgeMaterialIndices[sourceMaterial]!,
-          mode: 1,
-          extras: { ice3: { role: 'edges', widthPx: 3 } },
-        });
-      }
-      triangleCount += prepared.indices.length / 3;
-      edgeSegmentCount += prepared.edgeIndices.length / 2;
       for (const owner of nodeOwners) {
         selectionNodes.add(owner);
       }
