@@ -11,3 +11,12 @@ export {
   validateSource,
   type ICESourceReport,
 } from './scene/validateSource.js';
+export {
+  bakeLocalMatrix,
+  type ICEMatrix4Tuple,
+} from './scene/bakeMatrix.js';
+export {
+  prepareMesh,
+  type ICEPrepareMeshOptions,
+  type ICEPreparedGeometry,
+} from './scene/prepareMesh.js';
