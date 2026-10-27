@@ -120,23 +120,32 @@ function pushParetoSample(
   samples: ICELodCurveSample[],
   next: ICELodCurveSample,
 ): void {
-  while (
-    samples.length > 0
-    && next.actualTriangles <= samples.at(-1)!.actualTriangles
-    && next.errorMeters <= samples.at(-1)!.errorMeters
-  ) {
-    samples.pop();
-  }
-  const previous = samples.at(-1);
-  if (
-    !previous
-    || (
-      next.actualTriangles > previous.actualTriangles
-      && next.errorMeters < previous.errorMeters
+  const dominated = samples.some((sample) => (
+    sample.actualTriangles <= next.actualTriangles
+    && sample.errorMeters <= next.errorMeters
+    && (
+      sample.actualTriangles < next.actualTriangles
+      || sample.errorMeters < next.errorMeters
     )
-  ) {
-    samples.push(next);
+  ));
+  if (dominated) return;
+  for (let index = samples.length - 1; index >= 0; index -= 1) {
+    const sample = samples[index]!;
+    if (
+      next.actualTriangles <= sample.actualTriangles
+      && next.errorMeters <= sample.errorMeters
+    ) {
+      samples.splice(index, 1);
+    }
   }
+  const insertAt = samples.findIndex((sample) => (
+    sample.actualTriangles > next.actualTriangles
+    || (
+      sample.actualTriangles === next.actualTriangles
+      && sample.errorMeters > next.errorMeters
+    )
+  ));
+  samples.splice(insertAt < 0 ? samples.length : insertAt, 0, next);
 }
 
 function validateOptions(options: ICELodUnitCurveOptions): void {

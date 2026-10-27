@@ -259,3 +259,17 @@ test('allocates semantic proxy meshes in adaptive lod', async () => {
     node.extras.ice3.selectionId?.startsWith('semantic-proxy-demo/node/')
   ))).toBe(true);
 });
+
+test('rejects semantic proxy auto outside adaptive allocation', async () => {
+  await expect(partitionAsset(createLodPartitionSource(), {
+    assetId: 'invalid-proxy-mode',
+    maxTriangles: 16,
+    lod: {
+      allocation: 'proportional',
+      semanticProxy: 'auto',
+      ratio: 0.15,
+      maxTrianglesPerProxy: 64,
+      minTrianglesPerUnit: 8,
+    },
+  })).rejects.toThrow(/requires adaptive/);
+});

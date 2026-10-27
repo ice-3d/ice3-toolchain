@@ -453,8 +453,15 @@ export function buildPreparedGLB(
         sourceMeshes,
         selectedNodeIndices,
         worldMatrices!,
+        options.meshOverrides,
       )
-    : computeAssetBounds(source, sourceNodes, sourceMeshes, outputNodes);
+    : computeAssetBounds(
+        source,
+        sourceNodes,
+        sourceMeshes,
+        outputNodes,
+        options.meshOverrides,
+      );
   const rawBinary = Buffer.concat(binaryParts);
   const paddedLength = Math.ceil(rawBinary.length / 4) * 4;
   const binary = Buffer.alloc(paddedLength);
@@ -695,6 +702,7 @@ function computeAssetBounds(
   nodes: readonly JSONRecord[],
   meshes: readonly JSONRecord[],
   outputNodes: readonly JSONRecord[],
+  meshOverrides?: ReadonlyMap<number, ICEPreparedMeshOverride>,
 ): { min: [number, number, number]; max: [number, number, number] } {
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
@@ -703,7 +711,12 @@ function computeAssetBounds(
     const world = multiplyMatrices(parent, local);
     const meshIndex = nodes[index]?.mesh;
     if (meshIndex !== undefined) {
+      const meshOverride = meshOverrides?.get(Number(meshIndex));
+      if (meshOverride) {
+        extendTransformedBounds(min, max, overrideBounds(meshOverride), world);
+      }
       for (const primitive of records(meshes[Number(meshIndex)]?.primitives)) {
+        if (meshOverride) break;
         if (Number(primitive.mode ?? 4) === 1) continue;
         const accessorIndex = Number(record(primitive.attributes)?.POSITION);
         const data = readAccessor(source, accessorIndex);
@@ -826,6 +839,7 @@ function computeSelectionBounds(
   meshes: readonly JSONRecord[],
   nodeIndices: readonly number[],
   worldMatrices: readonly ICEMatrix4Tuple[],
+  meshOverrides?: ReadonlyMap<number, ICEPreparedMeshOverride>,
 ): { min: [number, number, number]; max: [number, number, number] } {
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
@@ -833,7 +847,19 @@ function computeSelectionBounds(
   for (const nodeIndex of nodeIndices) {
     const meshIndex = nodes[nodeIndex]?.mesh;
     if (meshIndex === undefined) continue;
+    const meshOverride = meshOverrides?.get(Number(meshIndex));
+    if (meshOverride) {
+      const world = transformBounds(
+        overrideBounds(meshOverride),
+        worldMatrices[nodeIndex]!,
+      );
+      for (let axis = 0; axis < 3; axis += 1) {
+        min[axis] = Math.min(min[axis]!, world.min[axis]!);
+        max[axis] = Math.max(max[axis]!, world.max[axis]!);
+      }
+    }
     for (const primitive of records(meshes[Number(meshIndex)]?.primitives)) {
+      if (meshOverride) break;
       if (Number(primitive.mode ?? 4) === 1) continue;
       const accessorIndex = Number(record(primitive.attributes)?.POSITION);
       const accessor = accessors[accessorIndex];
@@ -849,6 +875,34 @@ function computeSelectionBounds(
     min: min.every(Number.isFinite) ? min : [0, 0, 0],
     max: max.every(Number.isFinite) ? max : [0, 0, 0],
   };
+}
+
+function extendTransformedBounds(
+  min: [number, number, number],
+  max: [number, number, number],
+  local: ReturnType<typeof overrideBounds>,
+  world: ICEMatrix4Tuple,
+): void {
+  const transformed = transformBounds(local, world);
+  for (let axis = 0; axis < 3; axis += 1) {
+    min[axis] = Math.min(min[axis]!, transformed.min[axis]!);
+    max[axis] = Math.max(max[axis]!, transformed.max[axis]!);
+  }
+}
+
+function overrideBounds(
+  override: Pick<ICEGeometryOverride, 'positions'>,
+): { min: [number, number, number]; max: [number, number, number] } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (let offset = 0; offset < override.positions.length; offset += 3) {
+    for (let axis = 0; axis < 3; axis += 1) {
+      const value = override.positions[offset + axis]!;
+      min[axis] = Math.min(min[axis]!, value);
+      max[axis] = Math.max(max[axis]!, value);
+    }
+  }
+  return { min, max };
 }
 
 function sourceAccessorBounds(

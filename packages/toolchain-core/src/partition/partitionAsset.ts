@@ -117,6 +117,24 @@ export async function partitionAsset(
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   validatePositive(maxTriangles, 'maxTriangles');
   validatePositive(maxBytes, 'maxBytes');
+  const semanticProxy = options.lod?.semanticProxy;
+  if (
+    semanticProxy !== undefined
+    && semanticProxy !== 'off'
+    && semanticProxy !== 'auto'
+  ) {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: semanticProxy must be auto or off',
+    );
+  }
+  if (
+    semanticProxy === 'auto'
+    && options.lod?.allocation !== 'adaptive'
+  ) {
+    throw new Error(
+      'ICE3_TOOL_PARTITION_OPTIONS_INVALID: semanticProxy auto requires adaptive allocation',
+    );
+  }
   const sourceReport = validateSource(source);
   if (sourceReport.errors.length > 0) {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);

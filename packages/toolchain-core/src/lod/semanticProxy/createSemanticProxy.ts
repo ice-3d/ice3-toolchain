@@ -142,27 +142,89 @@ function averageColors(
   let weight = 0;
   for (let index = 0; index < primitives.length; index += 1) {
     const geometry = geometries[index]!;
-    const colors = geometry.colors!;
-    const vertexCount = geometry.positions.length / 3;
-    const components = colors.length / vertexCount;
-    if (components !== 3 && components !== 4) {
-      throw new Error('ICE3_TOOL_PROXY_FIT_INVALID: vertex color count is invalid');
-    }
-    const sum = [0, 0, 0];
-    for (let vertex = 0; vertex < vertexCount; vertex += 1) {
-      for (let channel = 0; channel < 3; channel += 1) {
-        sum[channel] = sum[channel]!
-          + colors[vertex * components + channel]!;
-      }
-    }
+    const average = averagePrimitiveColor(geometry);
     const primitiveWeight = primitives[index]!.triangleCount;
     for (let channel = 0; channel < 3; channel += 1) {
       total[channel] = total[channel]!
-        + primitiveWeight * sum[channel]! / vertexCount;
+        + primitiveWeight * average[channel]!;
     }
     weight += primitiveWeight;
   }
   return new Float32Array(total.map((value) => value / weight));
+}
+
+function averagePrimitiveColor(geometry: {
+  readonly positions: Float32Array;
+  readonly indices: Uint32Array;
+  readonly colors?: Float32Array;
+}): readonly [number, number, number] {
+  const colors = geometry.colors!;
+  const vertexCount = geometry.positions.length / 3;
+  const components = colors.length / vertexCount;
+  if (
+    (components !== 3 && components !== 4)
+    || !Number.isInteger(components)
+    || colors.some((value) => !Number.isFinite(value))
+  ) {
+    throw new Error('ICE3_TOOL_PROXY_FIT_INVALID: vertex color count is invalid');
+  }
+  const total = [0, 0, 0];
+  let totalArea = 0;
+  for (let offset = 0; offset < geometry.indices.length; offset += 3) {
+    const triangle = [
+      geometry.indices[offset]!,
+      geometry.indices[offset + 1]!,
+      geometry.indices[offset + 2]!,
+    ] as const;
+    const a = point(geometry.positions, triangle[0]);
+    const b = point(geometry.positions, triangle[1]);
+    const c = point(geometry.positions, triangle[2]);
+    const ab = subtract(b, a);
+    const ac = subtract(c, a);
+    const area = Math.hypot(
+      ab[1]! * ac[2]! - ab[2]! * ac[1]!,
+      ab[2]! * ac[0]! - ab[0]! * ac[2]!,
+      ab[0]! * ac[1]! - ab[1]! * ac[0]!,
+    ) / 2;
+    if (area <= 1e-12) continue;
+    for (let channel = 0; channel < 3; channel += 1) {
+      const triangleColor = triangle.reduce((sum, vertex) => (
+        sum + colors[vertex * components + channel]!
+      ), 0) / 3;
+      total[channel] = total[channel]! + area * triangleColor;
+    }
+    totalArea += area;
+  }
+  if (totalArea <= 0) {
+    throw new Error('ICE3_TOOL_PROXY_FIT_INVALID: vertex color geometry is degenerate');
+  }
+  return total.map((value) => value / totalArea) as unknown as [
+    number,
+    number,
+    number,
+  ];
+}
+
+function point(
+  positions: Float32Array,
+  index: number,
+): readonly [number, number, number] {
+  return [
+    positions[index * 3]!,
+    positions[index * 3 + 1]!,
+    positions[index * 3 + 2]!,
+  ];
+}
+
+function subtract(
+  left: readonly [number, number, number],
+  right: readonly [number, number, number],
+): readonly [number, number, number] {
+  return [
+    left[0] - right[0],
+    left[1] - right[1],
+    left[2] - right[2],
+  ];
 }
 
 function diagonal(samples: ICESemanticProxyFitSamples): number {

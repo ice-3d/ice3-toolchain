@@ -255,3 +255,32 @@ test('retains an averaged color when every primitive has vertex colors', async (
     .toEqual([0.25, 0.5, 0.5]);
   await workspace.dispose();
 });
+
+test('weights proxy colors by triangle surface area', async () => {
+  const workspace = await createGeometryWorkspace({ maxMemoryBytes: 1024 });
+  const source = symmetricBox();
+  const colors = new Float32Array(source.vertexCount * 3);
+  for (let vertex = 0; vertex < source.vertexCount; vertex += 1) {
+    colors[vertex * 3] = vertex * 7 % 13 / 13;
+    colors[vertex * 3 + 1] = vertex * 11 % 17 / 17;
+    colors[vertex * 3 + 2] = vertex * 5 % 19 / 19;
+  }
+  await workspace.write('0:0', { ...source, colors });
+  const result = await createSemanticProxy({
+    meshIndex: 0,
+    sourceTriangles: source.triangleCount,
+    primitives: [{
+      sourceKey: '0:0',
+      workspaceKey: '0:0',
+      triangleCount: source.triangleCount,
+      materialIndex: 0,
+    }],
+    workspace,
+    worldScale: 1,
+  });
+
+  expect([...(result.proxy?.colors?.slice(0, 3) ?? [])].map(
+    (value) => Number(value.toFixed(4)),
+  )).toEqual([0.4642, 0.4849, 0.4701]);
+  await workspace.dispose();
+});
