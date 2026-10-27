@@ -4,7 +4,8 @@ type JSONRecord = Record<string, unknown>;
 
 export interface ICEFinishedTile {
   readonly bounds: ICEBounds;
-  readonly contentUri: string;
+  readonly contentUris?: readonly string[];
+  readonly contentUri?: string;
   readonly partitionId: string;
   readonly geometricError: number;
   readonly children: readonly ICEFinishedTile[];
@@ -59,17 +60,29 @@ function createTile(assetId: string, input: ICEFinishedTile): JSONRecord {
     geometricError: input.geometricError,
     refine: 'REPLACE',
   };
-  if (input.contentUri) {
-    if (/^(?:[a-z][a-z0-9+.-]*:|\/)/i.test(input.contentUri)) {
+  const contentUris = input.contentUris
+    ?? (input.contentUri ? [input.contentUri] : []);
+  if (input.contentUris && input.contentUri) {
+    throw new Error(
+      'ICE3_TOOL_TILESET_INVALID: contentUri and contentUris cannot both be set',
+    );
+  }
+  for (const uri of contentUris) {
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/)/i.test(uri)) {
       throw new Error(
         'ICE3_TOOL_TILESET_INVALID: content URI must be relative',
       );
     }
-    tile.content = { uri: input.contentUri };
-  } else if (isLeaf) {
+  }
+  if (contentUris.length === 0 && isLeaf) {
     throw new Error(
       'ICE3_TOOL_TILESET_INVALID: leaf content URI must not be empty',
     );
+  }
+  if (contentUris.length === 1) {
+    tile.content = { uri: contentUris[0] };
+  } else if (contentUris.length > 1) {
+    tile.contents = contentUris.map((uri) => ({ uri }));
   }
   if (!isLeaf) {
     tile.children = [...input.children]
