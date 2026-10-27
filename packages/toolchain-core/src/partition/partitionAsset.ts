@@ -532,16 +532,22 @@ function createFinishedTree(
         bounds: tree.bounds,
         contentUri: tree.contentUri!,
         partitionId: tree.partitionId,
+        geometricError: 0,
         children: [],
       },
     };
   }
+  const children = tree.children.map((child) => createFinishedTree(child).tile);
   return {
     tile: {
       bounds: tree.bounds,
       contentUri: tree.coarseUri ?? '',
       partitionId: tree.partitionId,
-      children: tree.children.map((child) => createFinishedTree(child).tile),
+      geometricError: Math.max(
+        tree.coarseError ?? 0,
+        ...children.map((child) => child.geometricError),
+      ),
+      children,
     },
   };
 }

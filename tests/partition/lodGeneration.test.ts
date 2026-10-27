@@ -37,6 +37,7 @@ test('generates coarse and fine content in one hierarchical result', async () =>
   expect(result.stats.maxCoarseBytes).toBeGreaterThan(0);
   expect(result.tileset.root).toMatchObject({
     content: { uri: expect.stringMatching(/^coarse\//) },
+    geometricError: expect.any(Number),
     children: expect.any(Array),
   });
   expect(coarse.every((file) => (

@@ -12,6 +12,7 @@ const leaf: ICEFinishedTile = {
   bounds: { min: [0, 0, 0], max: [2, 1, 4] },
   contentUri: 'parts/part-000.glb',
   partitionId: 'part-000',
+  geometricError: 0,
   children: [],
 };
 
@@ -36,12 +37,14 @@ test('writes a parent culling box that contains both child boxes', () => {
     bounds: { min: [0, 0, 0], max: [4, 2, 2] },
     contentUri: '',
     partitionId: 'group-root',
+    geometricError: 3.5,
     children: [
       leaf,
       {
         bounds: { min: [2, 0, 0], max: [4, 2, 2] },
         contentUri: 'parts/part-001.glb',
         partitionId: 'part-001',
+        geometricError: 0,
         children: [],
       },
     ],
@@ -59,11 +62,46 @@ test('writes a parent culling box that contains both child boxes', () => {
     0, 0, 1,
     0, 1, 0,
   ]);
-  expect(root.geometricError).toBeCloseTo(Math.hypot(4, 2, 2));
+  expect(root.geometricError).toBe(3.5);
   expect(root.children.map((child) => child.content.uri)).toEqual([
     'parts/part-000.glb',
     'parts/part-001.glb',
   ]);
+});
+
+test('uses explicit errors and parent content without inventing defaults', () => {
+  const child = {
+    ...leaf,
+    geometricError: 0,
+  };
+  const parent = {
+    bounds: { min: [0, 0, 0], max: [4, 2, 2] } as const,
+    contentUri: 'coarse/group-root.glb',
+    partitionId: 'group-root',
+    geometricError: 3.5,
+    children: [child],
+  } satisfies ICEFinishedTile;
+  const document = createTilesetDocument('factory', parent) as {
+    root: {
+      geometricError: number;
+      content: { uri: string };
+      children: Array<{ geometricError: number }>;
+    };
+  };
+
+  expect(document.root.geometricError).toBe(3.5);
+  expect(document.root.content.uri).toBe('coarse/group-root.glb');
+  expect(document.root.children[0]!.geometricError).toBe(0);
+});
+
+test('rejects a parent error lower than a child error', () => {
+  expect(() => createTilesetDocument('factory', {
+    bounds: { min: [0, 0, 0], max: [4, 2, 2] },
+    contentUri: 'coarse/group-root.glb',
+    partitionId: 'group-root',
+    geometricError: 1,
+    children: [{ ...leaf, geometricError: 2 }],
+  })).toThrow(/ICE3_TOOL_TILESET_INVALID/);
 });
 
 test('validates against the official OGC schema bundle', () => {
