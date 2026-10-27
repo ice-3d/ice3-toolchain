@@ -38,6 +38,7 @@ export interface ICELodBuildOptions {
   readonly maxTrianglesPerProxy: number;
   readonly minTrianglesPerUnit: number;
   readonly maxMemoryBytes?: number;
+  readonly coarseChunkMaxBytes?: number;
 }
 
 export interface ICEPartitionFile {

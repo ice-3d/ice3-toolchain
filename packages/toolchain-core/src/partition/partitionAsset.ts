@@ -39,6 +39,11 @@ export interface ICEPartitionResult {
     readonly maxCoarseBytes: number;
     readonly preservedCoarseUnits: number;
     readonly overBudgetCoarseNodes: number;
+    readonly coarseContentCount: number;
+    readonly maxCoarseChunkBytes: number;
+    readonly oversizedCoarseChunks: number;
+    readonly coarseTriangleRatio: number;
+    readonly coarseByteRatio: number;
   };
   readonly warnings: readonly string[];
 }
@@ -51,6 +56,10 @@ interface BuiltTree {
   readonly children: readonly BuiltTree[];
   readonly contentUri?: string;
   readonly coarseUri?: string;
+  readonly coarseContents?: readonly {
+    readonly uri: string;
+    readonly bytes: Uint8Array;
+  }[];
   readonly coarseTriangleCount?: number;
   readonly coarseError?: number;
   readonly bytes?: Uint8Array;
@@ -151,6 +160,22 @@ export async function partitionAsset(
       );
     }
     const coarseTrees = collectCoarseTrees(built);
+    const coarseChunkBytes = coarseTrees.flatMap(coarseTreeChunkBytes);
+    const coarseBytes = coarseChunkBytes.reduce(
+      (total, bytes) => total + bytes,
+      0,
+    );
+    const fineBytes = leaves.reduce(
+      (total, leaf) => total + leaf.bytes!.byteLength,
+      0,
+    );
+    const coarseTriangles = coarseTrees.reduce(
+      (total, tree) => total + (tree.coarseTriangleCount ?? 0),
+      0,
+    );
+    const chunkLimit = options.lod?.coarseChunkMaxBytes
+      ?? options.maxBytes
+      ?? DEFAULT_MAX_BYTES;
     return {
       files,
       tileset,
@@ -159,20 +184,20 @@ export async function partitionAsset(
         triangleCount,
         nodeCount,
         maxPartBytes,
-        coarseTriangleCount: coarseTrees.reduce(
-          (total, tree) => total + (tree.coarseTriangleCount ?? 0),
-          0,
-        ),
-        coarseBytes: coarseTrees.reduce(
-          (total, tree) => total + (tree.coarseBytes?.byteLength ?? 0),
-          0,
-        ),
-        maxCoarseBytes: Math.max(
-          0,
-          ...coarseTrees.map((tree) => tree.coarseBytes?.byteLength ?? 0),
-        ),
+        coarseTriangleCount: coarseTriangles,
+        coarseBytes,
+        maxCoarseBytes: Math.max(0, ...coarseChunkBytes),
         preservedCoarseUnits: state.preservedCoarseUnits.size,
         overBudgetCoarseNodes: state.overBudgetCoarseNodes,
+        coarseContentCount: coarseChunkBytes.length,
+        maxCoarseChunkBytes: Math.max(0, ...coarseChunkBytes),
+        oversizedCoarseChunks: coarseChunkBytes.filter(
+          (bytes) => bytes > chunkLimit,
+        ).length,
+        coarseTriangleRatio: triangleCount === 0
+          ? 0
+          : coarseTriangles / triangleCount,
+        coarseByteRatio: fineBytes === 0 ? 0 : coarseBytes / fineBytes,
       },
       warnings: [...new Set(leaves.flatMap((leaf) => leaf.warnings))],
     };
@@ -327,6 +352,74 @@ async function buildNode(
 }
 
 async function buildCoarseNode(
+  source: ICESourceDocument,
+  options: ICEPartitionOptions,
+  node: ICEPartitionPlanNode,
+  partitionId: string,
+  state: ICBuildState,
+  workspace: ICEGeometryWorkspace,
+  normalized: ReadonlyMap<string, ICNormalizedPrimitive>,
+): Promise<Pick<
+  BuiltTree,
+  'coarseUri' | 'coarseContents' | 'coarseTriangleCount' | 'coarseError' | 'coarseBytes' | 'coarseStats'
+>> {
+  const lod = options.lod!;
+  const limit = lod.coarseChunkMaxBytes
+    ?? options.maxBytes
+    ?? DEFAULT_MAX_BYTES;
+  const built = await buildSingleCoarseNode(
+    source,
+    options,
+    node,
+    partitionId,
+    state,
+    workspace,
+    normalized,
+  );
+  if (built.coarseBytes!.byteLength <= limit || node.units.length === 1) {
+    return built;
+  }
+  const middle = Math.ceil(node.units.length / 2);
+  const split = [
+    node.units.slice(0, middle),
+    node.units.slice(middle),
+  ] as const;
+  const children = await Promise.all(split.map((units, index) => (
+    buildCoarseNode(
+      source,
+      options,
+      {
+        bounds: node.bounds,
+        triangleCount: units.reduce(
+          (total, unit) => total + unit.triangleCount,
+          0,
+        ),
+        units,
+        children: [],
+      },
+      `${partitionId}/part-${String(index).padStart(3, '0')}`,
+      state,
+      workspace,
+      normalized,
+    )
+  )));
+  const coarseContents = children.flatMap((child) => [
+    ...(child.coarseUri && child.coarseBytes
+      ? [{ uri: child.coarseUri, bytes: child.coarseBytes }]
+      : []),
+    ...(child.coarseContents ?? []),
+  ]);
+  return {
+    coarseContents,
+    coarseTriangleCount: children.reduce(
+      (total, child) => total + (child.coarseTriangleCount ?? 0),
+      0,
+    ),
+    coarseError: Math.max(...children.map((child) => child.coarseError ?? 0)),
+  };
+}
+
+async function buildSingleCoarseNode(
   source: ICESourceDocument,
   options: ICEPartitionOptions,
   node: ICEPartitionPlanNode,
@@ -530,12 +623,15 @@ function collectFiles(tree: BuiltTree, files: ICEPartitionFile[]): void {
   if (tree.coarseUri && tree.coarseBytes) {
     files.push({ path: tree.coarseUri, bytes: tree.coarseBytes });
   }
+  for (const content of tree.coarseContents ?? []) {
+    files.push({ path: content.uri, bytes: content.bytes });
+  }
   for (const child of tree.children) collectFiles(child, files);
 }
 
 function collectCoarseTrees(tree: BuiltTree): BuiltTree[] {
   return [
-    ...(tree.coarseBytes ? [tree] : []),
+    ...(tree.coarseBytes || tree.coarseContents?.length ? [tree] : []),
     ...tree.children.flatMap(collectCoarseTrees),
   ];
 }
@@ -555,10 +651,16 @@ function createFinishedTree(
     };
   }
   const children = tree.children.map((child) => createFinishedTree(child).tile);
+  const contentUris = [
+    ...(tree.coarseUri ? [tree.coarseUri] : []),
+    ...(tree.coarseContents?.map((content) => content.uri) ?? []),
+  ];
   return {
     tile: {
       bounds: tree.bounds,
-      contentUri: tree.coarseUri ?? '',
+      ...(contentUris.length === 1
+        ? { contentUri: contentUris[0]! }
+        : { contentUris }),
       partitionId: tree.partitionId,
       geometricError: Math.max(
         tree.coarseError ?? 0,
@@ -567,6 +669,21 @@ function createFinishedTree(
       children,
     },
   };
+}
+
+function coarseTreeBytes(tree: BuiltTree): number {
+  return (tree.coarseBytes?.byteLength ?? 0)
+    + (tree.coarseContents?.reduce(
+      (total, content) => total + content.bytes.byteLength,
+      0,
+    ) ?? 0);
+}
+
+function coarseTreeChunkBytes(tree: BuiltTree): number[] {
+  return [
+    ...(tree.coarseBytes ? [tree.coarseBytes.byteLength] : []),
+    ...(tree.coarseContents?.map((content) => content.bytes.byteLength) ?? []),
+  ];
 }
 
 function records(value: unknown): Record<string, unknown>[] {

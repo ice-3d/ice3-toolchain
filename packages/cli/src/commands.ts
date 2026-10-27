@@ -98,10 +98,15 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
             'ICE3_TOOL_PARTITION_OPTIONS_INVALID: --lod-min-unit-triangles must not exceed --lod-max-triangles',
           );
         }
+        const coarseChunkMaxBytes = positiveInteger(
+          args.values.get('--coarse-chunk-max-bytes') ?? String(maxBytes),
+          '--coarse-chunk-max-bytes',
+        );
         return {
           ratio,
           maxTrianglesPerProxy,
           minTrianglesPerUnit,
+          coarseChunkMaxBytes,
         };
       })()
     : undefined;
@@ -387,6 +392,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--lod-ratio',
     '--lod-max-triangles',
     '--lod-min-unit-triangles',
+    '--coarse-chunk-max-bytes',
   ]);
   const knownFlags = new Set([
     '--json',
