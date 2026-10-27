@@ -20,3 +20,9 @@ export {
   type ICEPrepareMeshOptions,
   type ICEPreparedGeometry,
 } from './scene/prepareMesh.js';
+export {
+  buildPreparedGLB,
+  type ICEBuildOptions,
+  type ICEPreparedGLB,
+} from './output/buildPreparedGLB.js';
+export { validatePreparedGLB } from './output/validatePreparedGLB.js';
