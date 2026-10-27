@@ -60,6 +60,20 @@ export async function simplifyGeometry(
       1,
       ['LockBorder', 'ErrorClamped'],
     );
+    if (simplifiedIndices.length > targetTriangles * 3 * 1.2) {
+      const [sloppyIndices, sloppyError] = MeshoptSimplifier.simplifySloppy(
+        welded.indices,
+        welded.positions,
+        3,
+        null,
+        targetTriangles * 3,
+        1,
+      );
+      if (sloppyIndices.length >= 3) {
+        simplifiedIndices = sloppyIndices;
+        relativeError = Math.max(relativeError, sloppyError);
+      }
+    }
   } catch {
     return preserveSource(
       positions,

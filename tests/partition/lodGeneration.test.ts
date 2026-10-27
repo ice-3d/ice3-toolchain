@@ -56,7 +56,7 @@ test('generates coarse and fine content in one hierarchical result', async () =>
   ))).toBe(true);
 });
 
-test('reports a coarse proxy that exceeds its target after simplification', async () => {
+test('uses conservative collapse to reach a strict coarse target', async () => {
   const result = await partitionAsset(createLodPartitionSource(), {
     assetId: 'lod-demo',
     maxTriangles: 8,
@@ -67,7 +67,7 @@ test('reports a coarse proxy that exceeds its target after simplification', asyn
     },
   });
 
-  expect(result.stats.overBudgetCoarseNodes).toBeGreaterThan(0);
+  expect(result.stats.overBudgetCoarseNodes).toBe(0);
 });
 
 test('splits oversized internal content into standard chunks', async () => {
