@@ -408,10 +408,6 @@ async function buildCoarseNode(
       state.preservedCoarseUnits.add(unit.nodeIndices.join(','));
     }
   }
-  if (targets.reduce((sum, target) => sum + target.targetTriangles, 0)
-    > lod.maxTrianglesPerProxy) {
-    state.overBudgetCoarseNodes += 1;
-  }
   const built = buildPreparedGLB(source, {
     assetId: `${options.assetId.trim()}:lod:${partitionId}`,
     selectionIdAssetId: options.assetId.trim(),
@@ -428,6 +424,11 @@ async function buildCoarseNode(
   });
   if (built.budget.status === 'error') {
     throw new Error('ICE3_TOOL_BUDGET_EXCEEDED: coarse partition exceeds budget');
+  }
+  if (targets.reduce((sum, target) => sum + target.targetTriangles, 0)
+    > lod.maxTrianglesPerProxy
+    || built.stats.triangleCount > lod.maxTrianglesPerProxy) {
+    state.overBudgetCoarseNodes += 1;
   }
   return {
     coarseUri: `coarse/${partitionId}.glb`,
