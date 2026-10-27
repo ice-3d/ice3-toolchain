@@ -8,6 +8,7 @@ import { collectNodeWorldMatrices } from '../scene/nodeMatrices.js';
 import type { ICEMatrix4Tuple } from '../scene/bakeMatrix.js';
 import { allocateAdaptiveLod } from '../lod/allocateAdaptiveLod.js';
 import { allocateLodTargets } from '../lod/allocateLodTargets.js';
+import { classifyAdaptiveUnits } from '../lod/classifyAdaptiveUnits.js';
 import {
   createGeometryWorkspace,
   type ICEGeometryWorkspace,
@@ -439,11 +440,8 @@ async function buildCoarseNode(
         state.maximumAdaptiveErrorMeters,
         maximumErrorMeters,
       );
-      if (
-        ratios.length > 1
-        && Math.max(...ratios) - Math.min(...ratios) > 0.01
-      ) {
-        for (const unitId of unitIds) state.adaptiveUnitIds.add(unitId);
+      for (const unitId of classifyAdaptiveUnits(unitIds, ratios)) {
+        state.adaptiveUnitIds.add(unitId);
       }
     }
     return {
