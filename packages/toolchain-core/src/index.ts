@@ -84,6 +84,15 @@ export {
   type ICELodUnitTarget,
 } from './lod/allocateLodTargets.js';
 export {
+  allocateAdaptiveLod,
+  type ICELodAllocation,
+  type ICELodAllocationInput,
+  type ICELodAllocationSelection,
+  type ICELodCurvePrimitive,
+  type ICELodCurveSample,
+  type ICELodUnitCurve,
+} from './lod/allocateAdaptiveLod.js';
+export {
   createLodSampleSchedule,
   type ICELodSampleScheduleOptions,
 } from './lod/createLodSampleSchedule.js';
