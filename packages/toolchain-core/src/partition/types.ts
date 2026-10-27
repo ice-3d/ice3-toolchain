@@ -22,3 +22,17 @@ export interface ICEPartitionPlanNode {
   readonly units: readonly ICEPartitionUnit[];
   readonly children: readonly ICEPartitionPlanNode[];
 }
+
+export interface ICEPartitionOptions {
+  readonly assetId: string;
+  readonly maxTriangles?: number;
+  readonly maxBytes?: number;
+  readonly creaseAngleDegrees?: number;
+  readonly edges?: boolean;
+  readonly budget?: import('../output/evaluateAssetBudget.js').ICEBudgetProfile;
+}
+
+export interface ICEPartitionFile {
+  readonly path: string;
+  readonly bytes: Uint8Array;
+}

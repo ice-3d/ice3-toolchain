@@ -67,8 +67,14 @@ export {
   type ICEFinishedTile,
   type ICETilesetDocument,
 } from './partition/tileset.js';
+export {
+  partitionAsset,
+  type ICEPartitionResult,
+} from './partition/partitionAsset.js';
 export type {
   ICEBounds,
   ICEPartitionAnalysis,
+  ICEPartitionFile,
+  ICEPartitionOptions,
   ICEPartitionUnit,
 } from './partition/types.js';
