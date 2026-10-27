@@ -113,6 +113,21 @@ Tile's triangle budget where marginal error reduction is largest.
 device in adaptive mode and defaults to `8`. Adaptive sampling remains offline
 and changes neither the Prepared GLB profile nor the Tileset schema.
 
+Adaptive mode first keeps the monotonic part of each device curve: actual
+triangle count must rise while world-space error falls. It starts from each
+device's minimum sample and allocates the node budget to the greatest
+normalized marginal error reduction. The node budget is the lower of
+`--lod-max-triangles` and the proportional mode's target total for that node,
+so both strategies compare under the same nominal work. If device minimums
+cannot fit that budget, the build fails instead of emitting an over-budget
+partial result.
+
+Each semantic-device curve is generated once and cached for the lifetime of the
+partition build. Normalized and sampled geometry share the bounded temporary
+workspace, including original vertex colors; excess geometry spills to unique
+temporary files. The workspace and incomplete output directory are removed on
+success, failure, or cancellation.
+
 ## Scope
 
 - Input is glTF 2.0 JSON or GLB.
