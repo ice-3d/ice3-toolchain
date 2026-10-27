@@ -110,6 +110,11 @@ export type {
   ICESemanticProxyKind,
 } from './lod/semanticProxy/types.js';
 export {
+  fitProxyGeometry,
+  type ICESemanticProxyFitResult,
+  type ICESemanticProxyGeometryCandidate,
+} from './lod/semanticProxy/fitProxyGeometry.js';
+export {
   createCoarseChunkPlan,
   type ICECoarseChunk,
   type ICECoarseChunkUnit,
