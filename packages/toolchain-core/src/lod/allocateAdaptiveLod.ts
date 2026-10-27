@@ -109,4 +109,5 @@ export type {
   ICELodCurvePrimitive,
   ICELodCurveSample,
   ICELodUnitCurve,
+  ICELodUnitPrimitive,
 } from './types.js';

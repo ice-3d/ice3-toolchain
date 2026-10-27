@@ -91,11 +91,16 @@ export {
   type ICELodCurvePrimitive,
   type ICELodCurveSample,
   type ICELodUnitCurve,
+  type ICELodUnitPrimitive,
 } from './lod/allocateAdaptiveLod.js';
 export {
   createLodSampleSchedule,
   type ICELodSampleScheduleOptions,
 } from './lod/createLodSampleSchedule.js';
+export {
+  createLodUnitCurve,
+  type ICELodUnitCurveOptions,
+} from './lod/createLodUnitCurve.js';
 export {
   createCoarseChunkPlan,
   type ICECoarseChunk,

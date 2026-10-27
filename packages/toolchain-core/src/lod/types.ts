@@ -3,6 +3,12 @@ export interface ICELodCurvePrimitive {
   readonly geometryKey: string;
 }
 
+export interface ICELodUnitPrimitive {
+  readonly sourceKey: string;
+  readonly workspaceKey: string;
+  readonly triangleCount: number;
+}
+
 export interface ICELodCurveSample {
   readonly targetTriangles: number;
   readonly actualTriangles: number;
