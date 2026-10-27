@@ -4,6 +4,10 @@ ICE3 Toolchain performs all source-model parsing, normalization, triangle
 preparation, crease-edge generation, and deterministic GLB packing outside the
 browser runtime.
 
+Cross-repository formats, shared metrics, budgets, compatibility rules, and
+diagnostic codes are defined by the canonical
+[Asset Preparation Contract v1](../ice3-doc/docs/contracts/asset-preparation-contract-v1.md).
+
 ## Requirements
 
 - Node.js 24 LTS or 26+
