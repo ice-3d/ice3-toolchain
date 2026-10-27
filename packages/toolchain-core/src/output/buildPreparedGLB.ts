@@ -76,9 +76,12 @@ export function buildPreparedGLB(
   const outputMaterials: JSONRecord[] = [];
   const baseMaterialIndices: number[] = [];
   const edgeMaterialIndices: number[] = [];
+  const linearMaterialColors: number[][] = [];
   for (const [index, material] of materialEntries.entries()) {
     const pbr = record(material.pbrMetallicRoughness);
-    const baseColor = rgbaToHex(numbers(pbr?.baseColorFactor, 4) ?? [0.5, 0.5, 0.5, 1]);
+    const linearColor = numbers(pbr?.baseColorFactor, 4) ?? [0.5, 0.5, 0.5, 1];
+    linearMaterialColors[index] = [...linearColor];
+    const displayColor = linearColor.slice(0, 3).map(linearToSrgb);
     const extras = record(material.extras);
     const iceExtras = record(extras?.ice3);
     const edgeColor = typeof iceExtras?.edgeColor === 'string'
@@ -88,7 +91,7 @@ export function buildPreparedGLB(
     outputMaterials.push({
       name: typeof material.name === 'string' ? material.name : `material-${index}`,
       pbrMetallicRoughness: {
-        baseColorFactor: hexToRgba(baseColor),
+        baseColorFactor: [...displayColor, 1],
         metallicFactor: 0,
         roughnessFactor: 1,
       },
@@ -106,10 +109,12 @@ export function buildPreparedGLB(
     });
   }
   baseMaterialIndices.push(outputMaterials.length);
+  linearMaterialColors.push([0.5, 0.5, 0.5, 1]);
+  const defaultDisplayColor = [0.5, 0.5, 0.5].map(linearToSrgb);
   outputMaterials.push({
     name: 'default',
     pbrMetallicRoughness: {
-      baseColorFactor: [0.5, 0.5, 0.5, 1],
+      baseColorFactor: [...defaultDisplayColor, 1],
       metallicFactor: 0,
       roughnessFactor: 1,
     },
@@ -124,6 +129,16 @@ export function buildPreparedGLB(
       roughnessFactor: 1,
     },
     extras: { ice3: { id: `${assetId}/material/default/edges` } },
+  });
+  const vertexColorMaterialIndex = outputMaterials.length;
+  outputMaterials.push({
+    name: 'vertex colors',
+    pbrMetallicRoughness: {
+      baseColorFactor: [1, 1, 1, 1],
+      metallicFactor: 0,
+      roughnessFactor: 1,
+    },
+    extras: { ice3: { id: `${assetId}/material/vertex-colors` } },
   });
 
   const binaryParts: Buffer[] = [];
@@ -179,6 +194,36 @@ export function buildPreparedGLB(
       const sourceMaterial = primitive.material === undefined
         ? materialEntries.length
         : Number(primitive.material);
+      const colorAccessor = attributes?.COLOR_0;
+      let colorAccessorIndex: number | undefined;
+      if (colorAccessor !== undefined) {
+        const colorData = readAccessor(source, Number(colorAccessor));
+        if (
+          colorData.kind !== 'float32'
+          || (colorData.components !== 3 && colorData.components !== 4)
+          || colorData.values.length / colorData.components
+            !== positionData.values.length / 3
+        ) {
+          throw new Error('ICE3_TOOL_INVALID_GEOMETRY: COLOR_0 must match POSITION');
+        }
+        const base = linearMaterialColors[sourceMaterial] ?? [1, 1, 1, 1];
+        const displayColors = new Float32Array(positionData.values.length);
+        for (let vertex = 0; vertex < displayColors.length / 3; vertex += 1) {
+          for (let channel = 0; channel < 3; channel += 1) {
+            displayColors[vertex * 3 + channel] = linearToSrgb(
+              base[channel]! * colorData.values[vertex * colorData.components + channel]!,
+            );
+          }
+        }
+        const colorView = append(new Uint8Array(displayColors.buffer));
+        colorAccessorIndex = accessors.length;
+        accessors.push({
+          bufferView: colorView,
+          componentType: 5126,
+          count: displayColors.length / 3,
+          type: 'VEC3',
+        });
+      }
       const triangleView = append(new Uint8Array(prepared.indices.buffer));
       const edgeView = append(new Uint8Array(prepared.edgeIndices.buffer));
       const positionAccessorIndex = accessors.length;
@@ -205,9 +250,16 @@ export function buildPreparedGLB(
         type: 'SCALAR',
       });
       primitives.push({
-        attributes: { POSITION: positionAccessorIndex },
+        attributes: {
+          POSITION: positionAccessorIndex,
+          ...(colorAccessorIndex === undefined
+            ? {}
+            : { COLOR_0: colorAccessorIndex }),
+        },
         indices: triangleAccessorIndex,
-        material: baseMaterialIndices[sourceMaterial]!,
+        material: colorAccessorIndex === undefined
+          ? baseMaterialIndices[sourceMaterial]!
+          : vertexColorMaterialIndex,
         mode: 4,
       });
       if (prepared.edgeIndices.length > 0) {
@@ -259,6 +311,7 @@ export function buildPreparedGLB(
             upAxis: 'y',
             linearUnit: 'meter',
           },
+          colorSpace: 'srgb',
           bounds,
           stats: {
             nodeCount: outputNodes.length,
@@ -400,14 +453,6 @@ function sequential(count: number): Uint32Array {
   return Uint32Array.from({ length: count }, (_value, index) => index);
 }
 
-function rgbaToHex(rgba: readonly number[]): string {
-  return `#${rgba.slice(0, 3).map((value) => (
-    Math.round(Math.min(1, Math.max(0, value)) * 255)
-      .toString(16)
-      .padStart(2, '0')
-  )).join('')}`;
-}
-
 function hexToRgba(hex: string): number[] {
   return [
     Number.parseInt(hex.slice(1, 3), 16) / 255,
@@ -415,6 +460,13 @@ function hexToRgba(hex: string): number[] {
     Number.parseInt(hex.slice(5, 7), 16) / 255,
     1,
   ];
+}
+
+function linearToSrgb(value: number): number {
+  const clamped = Math.min(1, Math.max(0, value));
+  return clamped <= 0.0031308
+    ? clamped * 12.92
+    : 1.055 * clamped ** (1 / 2.4) - 0.055;
 }
 
 function identity(): ICEMatrix4Tuple {

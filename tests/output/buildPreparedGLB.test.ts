@@ -1,6 +1,7 @@
 import { expect, test } from 'node-test';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';
 import { buildPreparedGLB } from '../../packages/toolchain-core/src/output/buildPreparedGLB.js';
+import type { ICESourceDocument } from '../../packages/toolchain-core/src/source/readSource.js';
 
 test('builds byte-identical prepared GLB output', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
@@ -50,4 +51,81 @@ test('can omit generated edges for large-model preview', async () => {
     bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
   ) as { meshes: { primitives: unknown[] }[] };
   expect(json.meshes[0]!.primitives).toHaveLength(1);
+});
+
+test('bakes vertex colors into display-ready profile colors', () => {
+  const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+  const colors = new Float32Array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]);
+  const indices = new Uint16Array([0, 1, 2]);
+  const buffer = Buffer.alloc(80);
+  Buffer.from(positions.buffer).copy(buffer, 0);
+  Buffer.from(colors.buffer).copy(buffer, 36);
+  Buffer.from(indices.buffer).copy(buffer, 72);
+  const source: ICESourceDocument = {
+    baseDirectory: '.',
+    buffers: [new Uint8Array(buffer)],
+    json: {
+      asset: { version: '2.0' },
+      scene: 0,
+      scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0 }],
+      meshes: [{ primitives: [{
+        attributes: { POSITION: 0, COLOR_0: 2 },
+        indices: 1,
+        material: 0,
+      }] }],
+      materials: [{
+        pbrMetallicRoughness: { baseColorFactor: [0.5, 0.5, 0.5, 1] },
+      }],
+      buffers: [{ byteLength: 80 }],
+      bufferViews: [
+        { buffer: 0, byteOffset: 0, byteLength: 36 },
+        { buffer: 0, byteOffset: 72, byteLength: 6 },
+        { buffer: 0, byteOffset: 36, byteLength: 36 },
+      ],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3' },
+        { bufferView: 1, componentType: 5123, count: 3, type: 'SCALAR' },
+        { bufferView: 2, componentType: 5126, count: 3, type: 'VEC3' },
+      ],
+    },
+  };
+
+  const built = buildPreparedGLB(source, { assetId: 'vertex-color', edges: false });
+  const bytes = Buffer.from(built.bytes);
+  const jsonLength = bytes.readUInt32LE(12);
+  const json = JSON.parse(
+    bytes.subarray(20, 20 + jsonLength).toString('utf8').trimEnd(),
+  ) as {
+    accessors: { bufferView: number; componentType: number; count: number; type: string }[];
+    bufferViews: { byteOffset?: number; byteLength: number }[];
+    materials: { pbrMetallicRoughness: { baseColorFactor: number[] } }[];
+    meshes: {
+      primitives: { attributes: Record<string, number>; material: number }[];
+    }[];
+  };
+  const primitive = json.meshes[0]!.primitives[0]!;
+  const colorAccessorIndex = primitive.attributes.COLOR_0!;
+  const colorAccessor = json.accessors[colorAccessorIndex]!;
+  const colorView = json.bufferViews[colorAccessor.bufferView]!;
+  const binaryOffset = 28 + jsonLength + (colorView.byteOffset ?? 0);
+  const actual = new Float32Array(
+    bytes.buffer,
+    bytes.byteOffset + binaryOffset,
+    colorAccessor.count * 3,
+  );
+
+  expect([...actual.slice(0, 3)].map((value) => Number(value.toFixed(3)))).toEqual([
+    0.537,
+    0.537,
+    0.537,
+  ]);
+  expect(
+    json.materials[primitive.material]!.pbrMetallicRoughness.baseColorFactor,
+  ).toEqual([
+    1,
+    1,
+    1,
+    1,
+  ]);
 });

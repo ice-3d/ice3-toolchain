@@ -82,6 +82,14 @@ export function validateSource(document: ICESourceDocument): ICESourceReport {
           errors,
         );
       }
+      if (attributes?.COLOR_0 !== undefined) {
+        requireIndex(
+          attributes.COLOR_0,
+          accessors.length,
+          'ICE3_TOOL_INVALID_ACCESSOR_REFERENCE',
+          errors,
+        );
+      }
       if (primitive.indices !== undefined) {
         requireIndex(
           primitive.indices,

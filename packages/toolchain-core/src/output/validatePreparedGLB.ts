@@ -136,8 +136,11 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       }
       const positionIndex = Number(record(primitive.attributes)?.POSITION);
       const indexIndex = Number(primitive.indices);
+      const colorIndexRaw = record(primitive.attributes)?.COLOR_0;
+      const colorIndex = colorIndexRaw === undefined ? undefined : Number(colorIndexRaw);
       const position = accessors[positionIndex];
       const indices = accessors[indexIndex];
+      const colors = colorIndex === undefined ? undefined : accessors[colorIndex];
       if (
         position?.componentType !== 5126
         || position.type !== 'VEC3'
@@ -146,6 +149,16 @@ export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport {
       ) {
         errors.add(`ICE3_TOOL_INVALID_PRIMITIVE_ACCESSORS:${path}`);
         continue;
+      }
+      if (
+        colorIndex !== undefined
+        && (
+          colors?.componentType !== 5126
+          || colors.type !== 'VEC3'
+          || colors.count !== position.count
+        )
+      ) {
+        errors.add(`ICE3_TOOL_INVALID_VERTEX_COLORS:${path}`);
       }
       const count = Number(indices.count);
       if (
