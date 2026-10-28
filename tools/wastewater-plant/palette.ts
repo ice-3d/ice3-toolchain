@@ -1,0 +1,16 @@
+export const WASTEWATER_PALETTE = Object.freeze({
+  concrete: '#a7afb5',
+  concreteDark: '#717a82',
+  water: '#1f74a8',
+  sludge: '#6c6652',
+  equipment: '#2d8f91',
+  equipmentDark: '#244e5b',
+  airPipe: '#8bc7ea',
+  waterPipe: '#2479b8',
+  sludgePipe: '#8b7651',
+  chemicalPipe: '#d7a63b',
+  safety: '#f2c94c',
+  instrument: '#dce8e9',
+  terrain: '#263138',
+  road: '#4b555b',
+});
