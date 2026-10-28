@@ -289,7 +289,42 @@ test('preserves source selection identity without render batching', () => {
       'equipment/1',
       'equipment/2',
       'equipment/3',
-    ]);
+  ]);
+});
+
+test('preserves equipment business metadata for prepared nodes', () => {
+  const source = createPartitionSource();
+  source.json.nodes = (source.json.nodes as Array<Record<string, unknown>>)
+    .map((node, index) => ({
+      ...node,
+      extras: {
+        ice3: {
+          id: `source/node/${index}`,
+          selectionId: `equipment/${index}`,
+          displayName: `设备 ${index}`,
+          equipmentTag: `EQ-${index}`,
+          area: 'TreatmentArea',
+          ports: ['inlet', 'outlet'],
+          connections: [`pipe-${index}`],
+        },
+      },
+    }));
+
+  const built = buildPreparedGLB(source, {
+    assetId: 'semantic-metadata',
+    edges: false,
+  });
+  const document = readDocument(built.bytes) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3).toMatchObject({
+    displayName: '设备 0',
+    equipmentTag: 'EQ-0',
+    area: 'TreatmentArea',
+    ports: ['inlet', 'outlet'],
+    connections: ['pipe-0'],
+  });
 });
 
 test('reports contract bounds from replaced mesh geometry', async () => {

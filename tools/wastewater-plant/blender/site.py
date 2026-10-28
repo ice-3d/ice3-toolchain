@@ -1,16 +1,20 @@
 import math
 
 import bpy
+from mathutils import Vector
 
 from geometry import (
     add_box,
     add_curve_pipe,
     add_cylinder,
     add_railing,
+    add_sphere,
+    add_stairs,
     add_truss,
     assign_material,
     create_group,
     create_material,
+    join_parts,
     move_to_collection,
     parent_to,
 )
@@ -30,6 +34,12 @@ COLORS = {
     "waterPipe": (0.12, 0.40, 0.58),
     "sludgePipe": (0.35, 0.25, 0.17),
     "airPipe": (0.67, 0.67, 0.62),
+    "mixedLiquorPipe": (0.18, 0.34, 0.24),
+    "chemicalPipe": (0.78, 0.48, 0.12),
+    "biogasPipe": (0.36, 0.42, 0.18),
+    "backwashPipe": (0.12, 0.48, 0.40),
+    "filtratePipe": (0.28, 0.30, 0.36),
+    "treatedPipe": (0.08, 0.44, 0.62),
     "safety": (0.87, 0.52, 0.08),
 }
 
@@ -174,6 +184,37 @@ def _building(
         (x, y - depth * 0.23, height + 0.88),
         0.02,
         materials["steelDark"],
+    ), collection, group)
+    for index in range(max(2, int(width / 4))):
+        rib_x = x - width * 0.4 + width * 0.8 * index / max(
+            int(width / 4) - 1,
+            1,
+        )
+        _adopt(add_box(
+            f"{name}.RoofRib.{index:02d}",
+            (0.10, depth + 0.5, 0.12),
+            (rib_x, y, height + 0.61),
+            0.015,
+            roof,
+        ), collection, group)
+    for side, sy in (("N", y + depth / 2 - 0.2), ("S", y - depth / 2 + 0.2)):
+        _adopt(add_box(
+            f"{name}.Parapet.{side}",
+            (width + 0.8, 0.12, 0.48),
+            (x, sy, height + 0.77),
+            0.02,
+            light,
+        ), collection, group)
+    _adopt(add_stairs(
+        f"{name}.ExternalStairs",
+        (x + width * 0.32, y - depth / 2 - 1.5),
+        1.25,
+        max(2.4, height * 0.75),
+        height,
+        max(8, int(height / 0.24)),
+        materials["safety"],
+        direction=1.0,
+        z_base=0.28,
     ), collection, group)
 
 
@@ -402,57 +443,137 @@ def build_process_pipes(spec):
     root = bpy.data.objects.get("ProcessPipes")
     if root is None:
         root = create_group("ProcessPipes", collection)
-    positions = {
-        item["tag"]: (item["position"][0], -item["position"][2])
+    ports = {
+        f"{item['tag']}:{port['id']}": port
         for item in spec["equipment"]
+        for port in item["ports"]
+    }
+    material_by_medium = {
+        "wastewater": materials["waterPipe"],
+        "primaryEffluent": materials["waterPipe"],
+        "mixedLiquor": materials["mixedLiquorPipe"],
+        "secondaryEffluent": materials["waterPipe"],
+        "returnActivatedSludge": materials["sludgePipe"],
+        "wasteActivatedSludge": materials["sludgePipe"],
+        "sludge": materials["sludgePipe"],
+        "filtrate": materials["filtratePipe"],
+        "chemical": materials["chemicalPipe"],
+        "air": materials["airPipe"],
+        "biogas": materials["biogasPipe"],
+        "backwash": materials["backwashPipe"],
+        "treatedEffluent": materials["treatedPipe"],
+        "utilityWater": materials["waterPipe"],
     }
 
-    tags = [tag for tag in spec["mainFlowTags"] if tag in positions]
-    for index, (start_tag, end_tag) in enumerate(zip(tags, tags[1:])):
-        sx, sy = positions[start_tag]
-        ex, ey = positions[end_tag]
-        height = 1.25 + (index % 3) * 0.18
-        points = (
-            (sx, sy, height),
-            ((sx + ex) / 2, sy - 2.2, height + 0.12),
-            ((sx + ex) / 2, ey - 2.2, height + 0.12),
-            (ex, ey, height),
-        )
-        pipe = add_curve_pipe(
-            f"ProcessPipes.Main.{index:02d}.{start_tag}.{end_tag}",
-            points,
-            0.13,
-            materials["waterPipe"],
-        )
-        move_to_collection(pipe, collection)
-        parent_to(pipe, root)
-        for support_index, support_x in enumerate((0.33, 0.67)):
-            support_y = sy + (ey - sy) * support_index
-            support = add_box(
-                f"ProcessPipes.Support.{index:02d}.{support_index:02d}",
-                (0.16, 0.16, height),
-                (sx + (ex - sx) * support_x, support_y - 2.2, height / 2),
-                0.02,
-                materials["steelDark"],
-            )
-            move_to_collection(support, collection)
-            parent_to(support, root)
+    def to_blender(position):
+        return Vector((position[0], -position[2], position[1]))
 
-    for index, route in enumerate(spec["returnFlows"]):
-        if route["from"] not in positions or route["to"] not in positions:
-            continue
-        sx, sy = positions[route["from"]]
-        ex, ey = positions[route["to"]]
-        material = materials.get(route["material"], materials["sludgePipe"])
-        height = 0.85 + index * 0.12
+    def direction_to_blender(direction):
+        vector = Vector((direction[0], -direction[2], direction[1]))
+        return vector.normalized() if vector.length > 0.0001 else Vector((1, 0, 0))
+
+    for index, route in enumerate(spec["connections"]):
+        start_port = ports[route["from"]]
+        end_port = ports[route["to"]]
+        start = to_blender(start_port["position"])
+        end = to_blender(end_port["position"])
+        start_direction = direction_to_blender(start_port["direction"])
+        end_direction = direction_to_blender(end_port["direction"])
+        radius = max(0.045, route["diameter"] / 2)
+        if route["layout"] == "rack":
+            route_height = max(3.8, start.z, end.z) + 0.25 + (index % 3) * 0.08
+            points = [
+                start,
+                start + start_direction * 0.55,
+                Vector((start.x + start_direction.x * 0.55, start.y + start_direction.y * 0.55, route_height)),
+                Vector(((start.x + end.x) / 2, start.y + start_direction.y * 0.55, route_height)),
+                Vector(((start.x + end.x) / 2, end.y + end_direction.y * 0.55, route_height)),
+                Vector((end.x + end_direction.x * 0.55, end.y + end_direction.y * 0.55, route_height)),
+                end + end_direction * 0.55,
+                end,
+            ]
+        elif route["layout"] == "buried":
+            route_height = 0.65 + (index % 3) * 0.08
+            points = [
+                start,
+                Vector((start.x, start.y, route_height)),
+                Vector((end.x, start.y, route_height)),
+                Vector((end.x, end.y, route_height)),
+                end,
+            ]
+        else:
+            route_height = max(start.z, end.z) + 0.35
+            middle_y = (start.y + end.y) / 2
+            points = [
+                start,
+                start + start_direction * 0.55,
+                Vector((start.x, middle_y, route_height)),
+                Vector((end.x, middle_y, route_height)),
+                end + end_direction * 0.55,
+                end,
+            ]
+        unique_points = []
+        for point in points:
+            if not unique_points or (point - unique_points[-1]).length > 0.015:
+                unique_points.append(point)
         pipe = add_curve_pipe(
-            f"ProcessPipes.Return.{route['id']}",
-            ((sx, sy, height), ((sx + ex) / 2, sy + 2.2, height), (ex, ey, height)),
-            0.105,
-            material,
+            f"Pipe.{route['id']}",
+            tuple(tuple(point) for point in unique_points),
+            radius,
+            material_by_medium[route["medium"]],
         )
-        move_to_collection(pipe, collection)
-        parent_to(pipe, root)
+        pipe_parts = [pipe]
+        pipe_metadata = {
+            "assetId": spec["assetId"],
+            "role": "process-pipe",
+            "connectionId": route["id"],
+            "from": route["from"],
+            "to": route["to"],
+            "medium": route["medium"],
+            "diameter": route["diameter"],
+        }
+        pipe["ice3"] = pipe_metadata
+        for elbow_index, point in enumerate(unique_points[2:-2], start=2):
+            pipe_parts.append(add_sphere(
+                f"Pipe.{route['id']}.Elbow.{elbow_index}",
+                radius * 1.12,
+                tuple(point),
+                material_by_medium[route["medium"]],
+                16,
+                8,
+            ))
+        for endpoint_name, endpoint, direction in (
+            ("Start", start, start_direction),
+            ("End", end, end_direction),
+        ):
+            orientation = Vector((0, 0, 1)).rotation_difference(direction).to_euler()
+            pipe_parts.append(add_cylinder(
+                f"Pipe.{route['id']}.{endpoint_name}.Flange",
+                max(radius * 1.65, 0.09),
+                0.12,
+                tuple(endpoint),
+                24,
+                0.006,
+                materials["steelDark"],
+                orientation,
+            ))
+        joined_pipe = join_parts(pipe_parts, f"Pipe.{route['id']}")
+        joined_pipe["ice3"] = pipe_metadata
+        move_to_collection(joined_pipe, collection)
+        parent_to(joined_pipe, root)
+        if route["layout"] == "rack" and (end.x - start.x) ** 2 + (end.y - start.y) ** 2 > 25:
+            for support_index, fraction in enumerate((0.33, 0.67)):
+                support_x = start.x + (end.x - start.x) * fraction
+                support_y = start.y + (end.y - start.y) * fraction
+                support = add_box(
+                    f"Pipe.{route['id']}.Support.{support_index}",
+                    (0.18, 0.18, route_height),
+                    (support_x, support_y, route_height / 2),
+                    0.02,
+                    materials["steelDark"],
+                )
+                move_to_collection(support, collection)
+                parent_to(support, root)
 
     _adopt(add_truss(
         "PipeRacks.MainCrossover",

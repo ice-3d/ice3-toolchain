@@ -41,3 +41,23 @@ test('writes a valid local Tileset with no external roots', async () => {
   expect(JSON.stringify(document)).not.toContain('http://');
   expect(JSON.stringify(document)).not.toContain('https://');
 });
+
+test('uses geometry contrast instead of universal generated edge outlines', async () => {
+  const source = await readFile(
+    '../ice3-engine/examples/m1/assets/wastewater-plant/'
+      + 'prepared/wastewater-plant.glb',
+  );
+  const headerLength = source.readUInt32LE(12);
+  const json = JSON.parse(
+    source.subarray(20, 20 + headerLength).toString('utf8'),
+  ) as {
+    asset: {
+      extras?: {
+        ice3?: {
+          preparation?: { options?: { edges?: boolean } };
+        };
+      };
+    };
+  };
+  expect(json.asset.extras?.ice3?.preparation?.options?.edges).toBe(false);
+});

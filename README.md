@@ -43,10 +43,10 @@ If publishing the new directory fails, the previous asset directory is
 restored. The generated scene and all equipment identities are entirely
 fictional.
 
-The current scene contains 65 selectable equipment units and about 258k
-source triangles. Fine partitions use a 6000-triangle budget, coarse LOD
-content uses a 24k-triangle total budget, and coarse chunks are capped at
-512 KiB.
+The current scene contains 65 selectable equipment units, 70 modeled process
+connections, and about 1.66M source triangles. Fine partitions use a
+60,000-triangle budget, coarse LOD content uses a 120k-triangle total budget,
+and coarse chunks are capped at 4 MiB.
 
 Inspect a source or prepared asset:
 

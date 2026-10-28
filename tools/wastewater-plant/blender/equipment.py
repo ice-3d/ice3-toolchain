@@ -1,13 +1,16 @@
 import math
 
 import bpy
+from mathutils import Vector
 
 from geometry import (
     add_box,
     add_curve_pipe,
     add_cylinder,
+    add_grating,
     add_ladder,
     add_railing,
+    add_stairs,
     add_truss,
     create_material,
     join_parts,
@@ -40,6 +43,69 @@ def create_equipment_materials():
 def _origin(item):
     x, y, z = item["position"]
     return (x, -z, y)
+
+
+def _axis_rotation(direction):
+    vector = Vector(direction)
+    if vector.length < 0.0001:
+        return (0.0, 0.0, 0.0)
+    return Vector((0.0, 0.0, 1.0)).rotation_difference(vector.normalized()).to_euler()
+
+
+def _port_fixtures(item, materials):
+    parts = []
+    ox, oy, oz = _origin(item)
+    for index, port in enumerate(item.get("ports", [])):
+        px, py, pz = port["position"]
+        dx, dy, dz = port["direction"]
+        direction = Vector((dx, -dz, dy)).normalized()
+        diameter = port["diameter"]
+        location = Vector((px, -pz, py))
+        rotation = _axis_rotation(direction)
+        parts.append(add_cylinder(
+            f"Port.{index}.Stub",
+            diameter * 0.56,
+            0.48,
+            tuple(location + direction * 0.2),
+            20,
+            0.006,
+            materials["steel"],
+            rotation,
+        ))
+        parts.append(add_cylinder(
+            f"Port.{index}.Flange",
+            diameter * 0.91,
+            0.10,
+            tuple(location + direction * 0.42),
+            24,
+            0.004,
+            materials["steelDark"],
+            rotation,
+        ))
+        for bolt in range(8):
+            angle = bolt * math.tau / 8
+            radial = Vector((
+                math.cos(angle) * diameter * 0.73,
+                math.sin(angle) * diameter * 0.73,
+                0,
+            ))
+            if abs(direction.z) > 0.8:
+                radial = Vector((
+                    math.cos(angle) * diameter * 0.73,
+                    0,
+                    math.sin(angle) * diameter * 0.73,
+                ))
+            parts.append(add_cylinder(
+                f"Port.{index}.Bolt.{bolt}",
+                0.018,
+                0.05,
+                tuple(location + direction * 0.48 + radial),
+                8,
+                0.001,
+                materials["steelDark"],
+                rotation,
+            ))
+    return parts
 
 
 def _part(name, size, local_position, origin, material, bevel=0.025, rotation=(0.0, 0.0, 0.0)):
@@ -487,6 +553,44 @@ def build_biological_reactor(item, materials):
                 origin,
                 materials["concreteDark"],
             ))
+        if compartment < 2:
+            parts.extend([
+                _cylinder(
+                    f"Reactor.Mixer.{compartment}.Pedestal",
+                    0.48,
+                    0.32,
+                    (center_x, 0, 3.42),
+                    origin,
+                    materials["steelDark"],
+                    24,
+                ),
+                _cylinder(
+                    f"Reactor.Mixer.{compartment}.Drive",
+                    0.30,
+                    0.62,
+                    (center_x, 0, 3.84),
+                    origin,
+                    materials["equipment"],
+                    24,
+                ),
+                _cylinder(
+                    f"Reactor.Mixer.{compartment}.Shaft",
+                    0.06,
+                    2.1,
+                    (center_x, 0, 2.72),
+                    origin,
+                    materials["steel"],
+                    12,
+                ),
+                _part(
+                    f"Reactor.Mixer.{compartment}.Propeller",
+                    (1.25, 0.14, 0.16),
+                    (center_x, 0, 1.72),
+                    origin,
+                    materials["steelDark"],
+                    rotation=(0.0, 0.0, compartment * 0.8),
+                ),
+            ])
         for row in range(3):
             for column in range(3):
                 parts.append(_cylinder(
@@ -518,6 +622,33 @@ def build_biological_reactor(item, materials):
             materials["safety"],
             origin[2] + 3.16,
         ))
+        parts.extend(_rail_segments(
+            f"Reactor.PerimeterRail.{side}",
+            (-5.7, side * 7.0),
+            (5.7, side * 7.0),
+            3.12,
+            origin,
+            materials["safety"],
+        ))
+    parts.append(add_grating(
+        "Reactor.WalkwayGrating",
+        (origin[0], origin[1]),
+        11.5,
+        1.45,
+        materials["steel"],
+        origin[2] + 3.25,
+    ))
+    parts.append(add_stairs(
+        "Reactor.AccessStairs",
+        (origin[0] + 6.2, origin[1]),
+        1.5,
+        4.5,
+        3.1,
+        14,
+        materials["safety"],
+        direction=1.0,
+        z_base=origin[2],
+    ))
     for index in range(4):
         parts.append(_cylinder(
             f"Reactor.AirValve.{index:02d}",
@@ -655,6 +786,25 @@ def build_circular_clarifier(item, materials):
         3.1,
         materials["safety"],
         origin[2],
+    ))
+    parts.append(add_grating(
+        "Clarifier.BridgeGrating",
+        (origin[0] + 3.0, origin[1]),
+        6.2,
+        1.15,
+        materials["steel"],
+        origin[2] + 3.90,
+    ))
+    parts.append(add_stairs(
+        "Clarifier.AccessStairs",
+        (origin[0] + 8.2, origin[1]),
+        1.35,
+        4.2,
+        3.1,
+        13,
+        materials["safety"],
+        direction=1.0,
+        z_base=origin[2],
     ))
     parts.append(_pipe(
         "Clarifier.Outlet",
@@ -1245,6 +1395,17 @@ def build_digester(item, materials):
         _part("Digester.PlatformRail", (3.2, 0.06, 0.06), (0, 6.05, 10.2), origin, materials["safety"]),
     ])
     parts.append(add_ladder("Digester.Ladder", origin[0] + 5.85, origin[1], 7.9, materials["safety"], origin[2]))
+    parts.append(add_stairs(
+        "Digester.AccessStairs",
+        (origin[0] - 8.5, origin[1] + 2.0),
+        1.45,
+        6.2,
+        7.4,
+        22,
+        materials["safety"],
+        direction=1.0,
+        z_base=origin[2],
+    ))
     return parts
 
 
@@ -1407,6 +1568,7 @@ def build_equipment(item, materials):
         ]
     else:
         parts = builder(item, materials)
+    parts.extend(_port_fixtures(item, materials))
     joined = join_parts(parts, item["tag"])
     for polygon in joined.data.polygons:
         polygon.use_smooth = False

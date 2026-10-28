@@ -3,16 +3,22 @@ import { dirname, resolve } from 'node:path';
 import { WASTEWATER_EQUIPMENT } from './equipment.js';
 import {
   AREA_NAMES,
+  equipmentArea,
   MAIN_FLOW_TAGS,
   RETURN_FLOW_ROUTES,
 } from './layout.js';
-import type { ICEWWTPEquipmentSpec } from './types.js';
+import {
+  equipmentPorts,
+  processConnections,
+  type ICEWWTPConnectionSpec,
+  type ICEWWTPEquipmentSceneSpec,
+} from './topology.js';
 
 export interface ICEWastewaterSceneSpec {
   readonly schemaVersion: 1;
   readonly assetId: 'ice3-virtual-wwtp';
   readonly units: 'meters';
-  readonly equipment: readonly ICEWWTPEquipmentSpec[];
+  readonly equipment: readonly ICEWWTPEquipmentSceneSpec[];
   readonly areas: readonly string[];
   readonly mainFlowTags: readonly string[];
   readonly returnFlows: readonly {
@@ -21,17 +27,34 @@ export interface ICEWastewaterSceneSpec {
     readonly to: string;
     readonly material: string;
   }[];
+  readonly connections: readonly ICEWWTPConnectionSpec[];
 }
 
 export function createWastewaterSceneSpec(): ICEWastewaterSceneSpec {
+  const equipmentWithPorts = Object.freeze(WASTEWATER_EQUIPMENT.map((item) => (
+    Object.freeze({ ...item, ports: equipmentPorts(item) })
+  )));
+  const connections = processConnections(equipmentWithPorts);
+  const equipment = Object.freeze(equipmentWithPorts.map((item) => (
+    Object.freeze({
+      ...item,
+      area: equipmentArea(item),
+      connectionIds: Object.freeze(connections
+        .filter(({ from, to }) => (
+          from.startsWith(`${item.tag}:`) || to.startsWith(`${item.tag}:`)
+        ))
+        .map(({ id }) => id)),
+    })
+  )));
   return Object.freeze({
     schemaVersion: 1,
     assetId: 'ice3-virtual-wwtp',
     units: 'meters',
-    equipment: WASTEWATER_EQUIPMENT,
+    equipment,
     areas: AREA_NAMES,
     mainFlowTags: MAIN_FLOW_TAGS,
     returnFlows: RETURN_FLOW_ROUTES,
+    connections,
   });
 }
 
