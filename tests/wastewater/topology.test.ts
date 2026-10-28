@@ -53,3 +53,34 @@ test('connects every pipeline endpoint to an existing equipment port', () => {
     expect(equipment.connectionIds.length).toBeGreaterThan(0);
   }
 });
+
+test('routes process pipes as orthogonal or short 45-degree runs', () => {
+  const spec = createWastewaterSceneSpec();
+  for (const connection of spec.connections) {
+    expect(connection.routePoints.length).toBeGreaterThanOrEqual(3);
+    const start = connection.routePoints[0]!;
+    const end = connection.routePoints.at(-1)!;
+    const fromPort = spec.equipment
+      .find((item) => connection.from.startsWith(`${item.tag}:`))!
+      .ports.find((port) => connection.from.endsWith(`:${port.id}`))!;
+    const toPort = spec.equipment
+      .find((item) => connection.to.startsWith(`${item.tag}:`))!
+      .ports.find((port) => connection.to.endsWith(`:${port.id}`))!;
+    expect(start).toEqual(fromPort.position);
+    expect(end).toEqual(toPort.position);
+
+    for (let index = 1; index < connection.routePoints.length; index += 1) {
+      const before = connection.routePoints[index - 1]!;
+      const after = connection.routePoints[index]!;
+      const deltas = after.map((value, axis) => (
+        Math.abs(value - before[axis]!)
+      ));
+      const movingAxes = deltas.filter((value) => value > 0.001);
+      expect(movingAxes.length).toBeGreaterThan(0);
+      expect(movingAxes.length).toBeLessThanOrEqual(2);
+      if (movingAxes.length === 2) {
+        expect(Math.abs(movingAxes[0]! - movingAxes[1]!)).toBeLessThan(0.001);
+      }
+    }
+  }
+});

@@ -1,4 +1,5 @@
 import bpy
+from mathutils import Vector
 
 
 def create_material(name, color, roughness=0.82):
@@ -108,6 +109,27 @@ def add_sphere(name, radius, location, material=None, segments=20, rings=10):
     obj.name = name
     assign_material(obj, material)
     return obj
+
+
+def add_pipe_segment(name, start, end, radius, material=None, vertices=20):
+    start = Vector(start)
+    end = Vector(end)
+    axis = end - start
+    if axis.length < 0.001:
+        return None
+    rotation = Vector((0.0, 0.0, 1.0)).rotation_difference(
+        axis.normalized(),
+    ).to_euler()
+    return add_cylinder(
+        name,
+        radius,
+        axis.length,
+        tuple((start + end) / 2),
+        vertices,
+        0.0,
+        material,
+        rotation,
+    )
 
 
 def add_curve_pipe(name, points, radius, material=None, resolution=8):

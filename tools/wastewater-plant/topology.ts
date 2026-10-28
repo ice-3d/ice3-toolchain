@@ -49,6 +49,7 @@ export interface ICEWWTPConnectionSpec {
   readonly diameter: number;
   readonly layout: ICEWWTPPipeLayout;
   readonly label: string;
+  readonly routePoints: readonly (readonly [number, number, number])[];
 }
 
 interface PortLayout {
@@ -256,6 +257,8 @@ function mainFlowEndpoint(
   return endpoint(tag, direction === 'from' ? 'outlet' : 'inlet');
 }
 
+type ConnectionDefinition = Omit<ICEWWTPConnectionSpec, 'routePoints'>;
+
 function connection(
   id: string,
   from: string,
@@ -264,7 +267,7 @@ function connection(
   diameter: number,
   layout: ICEWWTPPipeLayout,
   label: string,
-): ICEWWTPConnectionSpec {
+): ConnectionDefinition {
   return Object.freeze({
     id,
     from: endpoint(from.split(':')[0]!, from.split(':')[1]!),
@@ -279,7 +282,7 @@ function connection(
 export function processConnections(
   equipment: readonly ICEWWTPEquipmentWithPorts[],
 ): readonly ICEWWTPConnectionSpec[] {
-  const result: ICEWWTPConnectionSpec[] = [];
+  const result: ConnectionDefinition[] = [];
   for (let index = 0; index < MAIN_FLOW_TAGS.length - 1; index += 1) {
     const from = MAIN_FLOW_TAGS[index]!;
     const to = MAIN_FLOW_TAGS[index + 1]!;
@@ -304,7 +307,7 @@ export function processConnections(
       `${from} → ${to}`,
     ));
   }
-  const extra: ICEWWTPConnectionSpec[] = [
+  const extra: ConnectionDefinition[] = [
     connection('branch-b-01', 'DW-101:outlet-b', 'AT-201:inlet', 'primaryEffluent', 0.34, 'rack', 'B 线配水'),
     connection('branch-b-02', 'AT-201:outlet', 'AX-201:inlet', 'mixedLiquor', 0.34, 'rack', 'B 线厌氧至缺氧'),
     connection('branch-b-03', 'AX-201:outlet', 'AE-201:inlet', 'mixedLiquor', 0.34, 'rack', 'B 线缺氧至好氧'),
@@ -353,5 +356,86 @@ export function processConnections(
     connection('odor-03', 'FAN-101:discharge', 'GR-101:inlet', 'air', 0.26, 'rack', '除臭排放'),
     connection('gas-01', 'DIG-102:gas-out', 'FLARE-101:gas-in', 'biogas', 0.16, 'rack', '沼气至火炬'),
   ];
-  return Object.freeze([...result, ...extra]);
+  const ports = new Map<string, ICEWWTPPortSpec>(equipment.flatMap((item) => (
+    item.ports.map((itemPort) => (
+      [`${item.tag}:${itemPort.id}`, itemPort] as const
+    ))
+  )));
+  const elevationByMedium: Readonly<Record<ICEWWTPMedium, number>> = {
+    wastewater: 0,
+    primaryEffluent: 0.12,
+    mixedLiquor: 0.24,
+    secondaryEffluent: 0.36,
+    returnActivatedSludge: 0.48,
+    wasteActivatedSludge: 0.60,
+    sludge: 0.72,
+    filtrate: 0.84,
+    chemical: 0.96,
+    air: 1.08,
+    biogas: 1.20,
+    backwash: 1.32,
+    treatedEffluent: 1.44,
+    utilityWater: 1.56,
+  };
+
+  function appendPoint(
+    points: [number, number, number][],
+    point: readonly [number, number, number],
+  ): void {
+    const previous = points.at(-1);
+    if (
+      !previous
+      || Math.hypot(
+        point[0] - previous[0],
+        point[1] - previous[1],
+        point[2] - previous[2],
+      ) > 0.001
+    ) {
+      points.push([...point] as [number, number, number]);
+    }
+  }
+
+  function routePoints(
+    route: ConnectionDefinition,
+    index: number,
+  ): readonly [number, number, number][] {
+    const startPort = ports.get(route.from)!;
+    const endPort = ports.get(route.to)!;
+    const start = startPort.position;
+    const end = endPort.position;
+    const startDirection = startPort.direction;
+    const endDirection = endPort.direction;
+    const startStub = start.map((value, axis) => (
+      value + startDirection[axis]! * 0.9
+    )) as [number, number, number];
+    const endStub = end.map((value, axis) => (
+      value + endDirection[axis]! * 0.9
+    )) as [number, number, number];
+    const elevation = route.layout === 'buried'
+      ? 0.75 + (index % 3) * 0.08
+      : Math.max(3.8, start[1], end[1])
+        + 0.25
+        + elevationByMedium[route.medium]
+        + (index % 3) * 0.04;
+    const points: [number, number, number][] = [];
+    appendPoint(points, start);
+    appendPoint(points, startStub);
+    appendPoint(points, [startStub[0], elevation, startStub[2]]);
+    appendPoint(points, [endStub[0], elevation, startStub[2]]);
+    appendPoint(points, [endStub[0], elevation, endStub[2]]);
+    appendPoint(points, endStub);
+    appendPoint(points, end);
+    return Object.freeze(points);
+  }
+
+  return Object.freeze([
+    ...result.map((route, index) => Object.freeze({
+      ...route,
+      routePoints: routePoints(route, index),
+    })),
+    ...extra.map((route, index) => Object.freeze({
+      ...route,
+      routePoints: routePoints(route, result.length + index),
+    })),
+  ]);
 }
