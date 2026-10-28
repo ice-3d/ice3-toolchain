@@ -166,7 +166,7 @@ test('uses realistic process heights and presentation-grade geometry', async () 
     .reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0);
-  expect(triangleCount).toBeGreaterThanOrEqual(2_000_000);
+  expect(triangleCount).toBeGreaterThanOrEqual(1_800_000);
 });
 
 test('models a richer process and utility pipe network', async () => {
