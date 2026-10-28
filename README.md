@@ -44,7 +44,7 @@ restored. The generated scene and all equipment identities are entirely
 fictional.
 
 The current scene contains 65 selectable equipment units, 70 modeled process
-connections, and about 1.66M source triangles. Fine partitions use a
+connections, and about 1.68M source triangles. Fine partitions use a
 60,000-triangle budget, coarse LOD content uses a 120k-triangle total budget,
 and coarse chunks are capped at 4 MiB.
 

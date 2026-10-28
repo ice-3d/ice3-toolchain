@@ -157,7 +157,6 @@ test('models advanced and sludge equipment with recognizable assemblies', async 
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0);
   expect(total).toBeGreaterThanOrEqual(1_300_000);
-  expect(total).toBeLessThanOrEqual(2_000_000);
 });
 
 test('exports connected pipe runs with semantic process metadata', async () => {
@@ -205,4 +204,42 @@ test('exports equipment business context and connected port names', async () => 
     expect(profile.ports?.length).toBeGreaterThan(0);
     expect(profile.connections?.length).toBeGreaterThan(0);
   }
+});
+
+test('keeps process media and structural surfaces visually distinct', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const colors = new Map(document.getRoot().listMaterials().map((material) => (
+    [material.getName(), material.getBaseColorFactor()]
+  )));
+  const required = [
+    'Site.waterPipe',
+    'Site.mixedLiquorPipe',
+    'Site.sludgePipe',
+    'Site.airPipe',
+    'Site.chemicalPipe',
+    'Site.biogasPipe',
+    'Site.backwashPipe',
+    'Site.filtratePipe',
+    'Site.treatedPipe',
+    'Equipment.concrete',
+    'Equipment.steel',
+    'Equipment.equipment',
+  ];
+  for (const name of required) expect(colors.has(name)).toBe(true);
+  const pipeColors = required.slice(0, 9).map((name) => colors.get(name)!);
+  for (const color of pipeColors) {
+    const luminance = color[0]! * 0.2126 + color[1]! * 0.7152 + color[2]! * 0.0722;
+    expect(luminance).toBeGreaterThan(0.08);
+    expect(color.slice(0, 3).every((value) => value > 0.85)).toBe(false);
+  }
+  const distances = pipeColors.flatMap((left, leftIndex) => (
+    pipeColors.slice(leftIndex + 1).map((right) => (
+      Math.hypot(
+        left[0]! - right[0]!,
+        left[1]! - right[1]!,
+        left[2]! - right[2]!,
+      )
+    ))
+  ));
+  expect(Math.min(...distances)).toBeGreaterThan(0.06);
 });

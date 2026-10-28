@@ -5,8 +5,8 @@ from mathutils import Vector
 
 from geometry import (
     add_box,
-    add_curve_pipe,
     add_cylinder,
+    add_pipe_segment,
     add_railing,
     add_sphere,
     add_stairs,
@@ -21,25 +21,28 @@ from geometry import (
 
 
 COLORS = {
-    "soil": (0.10, 0.12, 0.11),
-    "concrete": (0.42, 0.44, 0.43),
-    "concreteLight": (0.55, 0.56, 0.54),
-    "asphalt": (0.105, 0.115, 0.12),
-    "roadMarking": (0.82, 0.69, 0.24),
-    "steel": (0.29, 0.33, 0.35),
-    "steelDark": (0.16, 0.19, 0.20),
-    "roof": (0.25, 0.28, 0.27),
-    "glass": (0.075, 0.13, 0.15),
-    "door": (0.20, 0.22, 0.21),
-    "waterPipe": (0.12, 0.40, 0.58),
-    "sludgePipe": (0.35, 0.25, 0.17),
-    "airPipe": (0.67, 0.67, 0.62),
-    "mixedLiquorPipe": (0.18, 0.34, 0.24),
-    "chemicalPipe": (0.78, 0.48, 0.12),
-    "biogasPipe": (0.36, 0.42, 0.18),
-    "backwashPipe": (0.12, 0.48, 0.40),
-    "filtratePipe": (0.28, 0.30, 0.36),
-    "treatedPipe": (0.08, 0.44, 0.62),
+    "soil": (0.055, 0.070, 0.085),
+    "concrete": (0.40, 0.43, 0.43),
+    "concreteLight": (0.53, 0.55, 0.53),
+    "concreteWarm": (0.47, 0.38, 0.31),
+    "concreteCool": (0.31, 0.42, 0.46),
+    "concreteBlue": (0.37, 0.44, 0.51),
+    "asphalt": (0.12, 0.14, 0.16),
+    "roadMarking": (0.95, 0.67, 0.10),
+    "steel": (0.22, 0.35, 0.44),
+    "steelDark": (0.08, 0.13, 0.16),
+    "roof": (0.20, 0.27, 0.31),
+    "glass": (0.04, 0.20, 0.25),
+    "door": (0.22, 0.26, 0.27),
+    "waterPipe": (0.10, 0.48, 0.82),
+    "sludgePipe": (0.72, 0.40, 0.16),
+    "airPipe": (0.63, 0.72, 0.72),
+    "mixedLiquorPipe": (0.10, 0.62, 0.48),
+    "chemicalPipe": (0.95, 0.68, 0.08),
+    "biogasPipe": (0.58, 0.72, 0.12),
+    "backwashPipe": (0.08, 0.58, 0.66),
+    "filtratePipe": (0.50, 0.34, 0.70),
+    "treatedPipe": (0.06, 0.58, 0.88),
     "safety": (0.87, 0.52, 0.08),
 }
 
@@ -234,21 +237,21 @@ def build_site(asset_id):
         materials["soil"],
     ), collection, ground)
     site_pad = create_group("SitePads", collection, ground)
-    for index, (x, y, width, depth) in enumerate((
-        (25.0, -45.0, 77.0, 44.0),
-        (117.0, -9.0, 73.0, 61.0),
-        (174.0, -45.0, 47.0, 38.0),
-        (238.0, -45.0, 92.0, 46.0),
-        (106.0, 25.0, 86.0, 29.0),
-        (86.0, 59.0, 115.0, 38.0),
-        (115.0, -84.0, 110.0, 42.0),
+    for index, (x, y, width, depth, material_key) in enumerate((
+        (25.0, -45.0, 77.0, 44.0, "concreteWarm"),
+        (117.0, -9.0, 73.0, 61.0, "concreteCool"),
+        (174.0, -45.0, 47.0, 38.0, "concreteBlue"),
+        (238.0, -45.0, 92.0, 46.0, "concreteBlue"),
+        (106.0, 25.0, 86.0, 29.0, "concrete"),
+        (86.0, 59.0, 115.0, 38.0, "concrete"),
+        (115.0, -84.0, 110.0, 42.0, "concreteWarm"),
     )):
         _adopt(add_box(
             f"SitePads.{index:02d}",
             (width, depth, 0.18),
             (x, y, 0.06),
             0.08,
-            materials["concrete"],
+            materials[material_key],
         ), collection, site_pad)
 
     roads = create_group("RoadNetwork", collection, site)
@@ -480,49 +483,22 @@ def build_process_pipes(spec):
         start_direction = direction_to_blender(start_port["direction"])
         end_direction = direction_to_blender(end_port["direction"])
         radius = max(0.045, route["diameter"] / 2)
-        if route["layout"] == "rack":
-            route_height = max(3.8, start.z, end.z) + 0.25 + (index % 3) * 0.08
-            points = [
-                start,
-                start + start_direction * 0.55,
-                Vector((start.x + start_direction.x * 0.55, start.y + start_direction.y * 0.55, route_height)),
-                Vector(((start.x + end.x) / 2, start.y + start_direction.y * 0.55, route_height)),
-                Vector(((start.x + end.x) / 2, end.y + end_direction.y * 0.55, route_height)),
-                Vector((end.x + end_direction.x * 0.55, end.y + end_direction.y * 0.55, route_height)),
-                end + end_direction * 0.55,
-                end,
-            ]
-        elif route["layout"] == "buried":
-            route_height = 0.65 + (index % 3) * 0.08
-            points = [
-                start,
-                Vector((start.x, start.y, route_height)),
-                Vector((end.x, start.y, route_height)),
-                Vector((end.x, end.y, route_height)),
-                end,
-            ]
-        else:
-            route_height = max(start.z, end.z) + 0.35
-            middle_y = (start.y + end.y) / 2
-            points = [
-                start,
-                start + start_direction * 0.55,
-                Vector((start.x, middle_y, route_height)),
-                Vector((end.x, middle_y, route_height)),
-                end + end_direction * 0.55,
-                end,
-            ]
-        unique_points = []
-        for point in points:
-            if not unique_points or (point - unique_points[-1]).length > 0.015:
-                unique_points.append(point)
-        pipe = add_curve_pipe(
-            f"Pipe.{route['id']}",
-            tuple(tuple(point) for point in unique_points),
-            radius,
-            material_by_medium[route["medium"]],
-        )
-        pipe_parts = [pipe]
+        route_points = [to_blender(point) for point in route["routePoints"]]
+        material = material_by_medium[route["medium"]]
+        pipe_parts = []
+        for segment_index, (segment_start, segment_end) in enumerate(
+            zip(route_points, route_points[1:]),
+        ):
+            segment = add_pipe_segment(
+                f"Pipe.{route['id']}.Segment.{segment_index:02d}",
+                tuple(segment_start),
+                tuple(segment_end),
+                radius,
+                material,
+                20,
+            )
+            if segment is not None:
+                pipe_parts.append(segment)
         pipe_metadata = {
             "assetId": spec["assetId"],
             "role": "process-pipe",
@@ -532,8 +508,7 @@ def build_process_pipes(spec):
             "medium": route["medium"],
             "diameter": route["diameter"],
         }
-        pipe["ice3"] = pipe_metadata
-        for elbow_index, point in enumerate(unique_points[2:-2], start=2):
+        for elbow_index, point in enumerate(route_points[1:-1], start=1):
             pipe_parts.append(add_sphere(
                 f"Pipe.{route['id']}.Elbow.{elbow_index}",
                 radius * 1.12,
@@ -557,18 +532,28 @@ def build_process_pipes(spec):
                 materials["steelDark"],
                 orientation,
             ))
+        if len(pipe_parts) == 0:
+            raise RuntimeError(f"empty pipe route: {route['id']}")
         joined_pipe = join_parts(pipe_parts, f"Pipe.{route['id']}")
         joined_pipe["ice3"] = pipe_metadata
         move_to_collection(joined_pipe, collection)
         parent_to(joined_pipe, root)
-        if route["layout"] == "rack" and (end.x - start.x) ** 2 + (end.y - start.y) ** 2 > 25:
-            for support_index, fraction in enumerate((0.33, 0.67)):
-                support_x = start.x + (end.x - start.x) * fraction
-                support_y = start.y + (end.y - start.y) * fraction
+        if route["layout"] == "rack":
+            for segment_index, (segment_start, segment_end) in enumerate(
+                zip(route_points, route_points[1:]),
+            ):
+                horizontal = (
+                    abs(segment_start.z - segment_end.z) < 0.01
+                    and (segment_end.xy - segment_start.xy).length > 6
+                )
+                if not horizontal:
+                    continue
+                support_x = (segment_start.x + segment_end.x) / 2
+                support_y = (segment_start.y + segment_end.y) / 2
                 support = add_box(
-                    f"Pipe.{route['id']}.Support.{support_index}",
-                    (0.18, 0.18, route_height),
-                    (support_x, support_y, route_height / 2),
+                    f"Pipe.{route['id']}.Support.{segment_index:02d}",
+                    (0.18, 0.18, segment_start.z),
+                    (support_x, support_y, segment_start.z / 2),
                     0.02,
                     materials["steelDark"],
                 )
