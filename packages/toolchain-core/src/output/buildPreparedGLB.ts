@@ -503,7 +503,32 @@ export function buildPreparedGLB(
   );
   const outputNodes = selectedNodeIndices.map((sourceIndex) => {
     const node = sourceNodes[sourceIndex]!;
-    const semanticSelectionId = record(record(node.extras)?.ice3)?.selectionId;
+    const semantic = record(record(node.extras)?.ice3);
+    const semanticSelectionId = semantic?.selectionId;
+    const businessMetadata = {
+      ...(typeof semantic?.displayName === 'string'
+        ? { displayName: semantic.displayName }
+        : {}),
+      ...(typeof semantic?.equipmentTag === 'string'
+        ? { equipmentTag: semantic.equipmentTag }
+        : {}),
+      ...(typeof semantic?.processStage === 'string'
+        ? { processStage: semantic.processStage }
+        : {}),
+      ...(typeof semantic?.area === 'string'
+        ? { area: semantic.area }
+        : {}),
+      ...(Array.isArray(semantic?.ports)
+        ? { ports: semantic.ports.filter((value): value is string => (
+            typeof value === 'string'
+          )) }
+        : {}),
+      ...(Array.isArray(semantic?.connections)
+        ? { connections: semantic.connections.filter((value): value is string => (
+            typeof value === 'string'
+          )) }
+        : {}),
+    };
     const sourceMesh = node.mesh === undefined
       ? undefined
       : sourceMeshToOutputMesh.get(Number(node.mesh));
@@ -535,6 +560,7 @@ export function buildPreparedGLB(
         ice3: {
           id: `${assetId}/node/${sourceIndex}`,
           ...(resolvedSelectionId ? { selectionId: resolvedSelectionId } : {}),
+          ...businessMetadata,
         },
       },
     };

@@ -156,6 +156,53 @@ test('models advanced and sludge equipment with recognizable assemblies', async 
     .reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0);
-  expect(total).toBeGreaterThanOrEqual(150_000);
-  expect(total).toBeLessThanOrEqual(300_000);
+  expect(total).toBeGreaterThanOrEqual(1_300_000);
+  expect(total).toBeLessThanOrEqual(2_000_000);
+});
+
+test('exports connected pipe runs with semantic process metadata', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const pipes = document.getRoot().listNodes().flatMap((node) => {
+    const profile = node.getExtras().ice3 as
+      | {
+          role?: string;
+          connectionId?: string;
+          from?: string;
+          to?: string;
+          medium?: string;
+        }
+      | undefined;
+    return profile?.role === 'process-pipe' ? [{ node, profile }] : [];
+  });
+  expect(pipes.length).toBeGreaterThanOrEqual(70);
+  expect(new Set(pipes.map(({ profile }) => profile.connectionId)).size)
+    .toBe(pipes.length);
+  for (const { node, profile } of pipes) {
+    expect(node.getMesh()).toBeDefined();
+    expect(profile.from).toMatch(/^[^:]+:[a-z-]+$/);
+    expect(profile.to).toMatch(/^[^:]+:[a-z-]+$/);
+    expect(String(profile.medium).length).toBeGreaterThan(0);
+  }
+});
+
+test('exports equipment business context and connected port names', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const equipment = document.getRoot().listNodes().flatMap((node) => {
+    const profile = node.getExtras().ice3 as
+      | {
+          equipmentTag?: string;
+          area?: string;
+          ports?: string[];
+          connections?: string[];
+        }
+      | undefined;
+    return profile?.equipmentTag ? [{ node, profile }] : [];
+  });
+  expect(equipment).toHaveLength(65);
+  for (const { node, profile } of equipment) {
+    expect(node.getName()).toBe(profile.equipmentTag);
+    expect(profile.area?.length).toBeGreaterThan(0);
+    expect(profile.ports?.length).toBeGreaterThan(0);
+    expect(profile.connections?.length).toBeGreaterThan(0);
+  }
 });

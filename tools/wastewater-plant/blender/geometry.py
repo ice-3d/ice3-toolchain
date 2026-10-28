@@ -43,7 +43,7 @@ def create_group(name, collection, parent=None):
     return group
 
 
-def apply_bevel(obj, width=0.04, segments=1):
+def apply_bevel(obj, width=0.04, segments=3):
     if width <= 0:
         return
     modifier = obj.modifiers.new("Edge Chamfer", "BEVEL")
@@ -93,6 +93,19 @@ def add_cylinder(
     obj = bpy.context.object
     obj.name = name
     apply_bevel(obj, min(bevel, radius * 0.12, depth * 0.12))
+    assign_material(obj, material)
+    return obj
+
+
+def add_sphere(name, radius, location, material=None, segments=20, rings=10):
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=segments,
+        ring_count=rings,
+        radius=radius,
+        location=location,
+    )
+    obj = bpy.context.object
+    obj.name = name
     assign_material(obj, material)
     return obj
 
@@ -204,6 +217,76 @@ def add_ladder(name, x, y, height, material=None, z_base=0.0):
             (x, y, z),
             0.002,
             material,
+        ))
+    return join_parts(parts, name)
+
+
+def add_grating(
+    name,
+    center,
+    width,
+    depth,
+    material,
+    z=0.0,
+    spacing=0.16,
+):
+    x, y = center
+    parts = [
+        add_box(f"{name}.Frame.N", (width, 0.08, 0.08), (x, y + depth / 2, z), 0.004, material),
+        add_box(f"{name}.Frame.S", (width, 0.08, 0.08), (x, y - depth / 2, z), 0.004, material),
+        add_box(f"{name}.Frame.W", (0.08, depth, 0.08), (x - width / 2, y, z), 0.004, material),
+        add_box(f"{name}.Frame.E", (0.08, depth, 0.08), (x + width / 2, y, z), 0.004, material),
+    ]
+    count = max(3, int(depth / spacing))
+    for index in range(count):
+        py = y - depth / 2 + (index + 0.5) * depth / count
+        parts.append(add_box(
+            f"{name}.Slat.{index:03d}",
+            (width - 0.08, 0.025, 0.055),
+            (x, py, z + 0.045),
+            0.001,
+            material,
+        ))
+    return join_parts(parts, name)
+
+
+def add_stairs(
+    name,
+    start,
+    width,
+    run,
+    rise,
+    steps,
+    material,
+    direction=1.0,
+    z_base=0.0,
+):
+    x, y = start
+    steps = max(3, steps)
+    tread = run / steps
+    step_rise = rise / steps
+    parts = []
+    for index in range(steps):
+        z = z_base + (index + 1) * step_rise
+        sx = x + direction * (index + 0.5) * tread
+        parts.append(add_box(
+            f"{name}.Tread.{index:02d}",
+            (tread + 0.03, width, 0.07),
+            (sx, y, z),
+            0.008,
+            material,
+        ))
+    start_x = x
+    end_x = x + direction * run
+    for side, sy in (("L", y - width / 2), ("R", y + width / 2)):
+        parts.append(add_railing(
+            f"{name}.Rail.{side}",
+            (start_x, sy),
+            (end_x, sy),
+            1.05,
+            material,
+            z_base,
+            post_spacing=1.4,
         ))
     return join_parts(parts, name)
 

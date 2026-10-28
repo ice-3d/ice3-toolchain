@@ -46,6 +46,9 @@ for item in spec["equipment"]:
         "equipmentTag": item["tag"],
         "processStage": item["stage"],
         "displayName": item["name"],
+        "area": item["area"],
+        "ports": [port["id"] for port in item["ports"]],
+        "connections": item["connectionIds"],
     }
 
 export_glb(args.output)
