@@ -66,3 +66,92 @@ test('separates the two parallel biological treatment trains', () => {
     'BiologicalTrainB',
   ]);
 });
+
+test('builds a detailed plant-wide industrial scene', () => {
+  const { document, equipment } = createWastewaterPlantDocument();
+  const root = document.getRoot();
+  const nodeNames = new Set(root.listNodes().map((node) => node.getName()));
+  const primitiveCount = root.listMeshes().reduce(
+    (total, mesh) => total + mesh.listPrimitives().length,
+    0,
+  );
+  const triangleCount = root.listMeshes().reduce(
+    (total, mesh) => total + mesh.listPrimitives().reduce(
+      (meshTotal, primitive) => (
+        meshTotal + (primitive.getIndices()?.getCount() ?? 0) / 3
+      ),
+      0,
+    ),
+    0,
+  );
+  const ground = root.listNodes().find((node) => node.getName() === 'SiteGround');
+  const points = ground?.getMesh()?.listPrimitives()
+    .flatMap((primitive) => [...primitive.getAttribute('POSITION')!.getArray()!]);
+
+  expect(equipment.length).toBeGreaterThanOrEqual(65);
+  expect(equipment.map((item) => item.tag)).toEqual(
+    expect.arrayContaining(['UV-101', 'DIG-101', 'DIG-102', 'FLARE-101']),
+  );
+  for (const name of [
+    'SiteGround',
+    'RoadNetwork',
+    'HeadworksBuilding',
+    'BlowerBuilding',
+    'DewateringBuilding',
+    'AdministrationBuilding',
+  ]) {
+    expect(nodeNames.has(name)).toBe(true);
+  }
+  expect(points).toBeDefined();
+  expect(Math.min(...(points ?? []).filter((_, index) => index % 3 === 0)))
+    .toBeLessThan(0);
+  expect(Math.max(...(points ?? []).filter((_, index) => index % 3 === 0)))
+    .toBeGreaterThan(280);
+  expect(triangleCount).toBeGreaterThanOrEqual(40_000);
+  expect(primitiveCount).toBeLessThanOrEqual(550);
+});
+
+test('keeps equipment volumes spatially separated', () => {
+  const { document, equipment } = createWastewaterPlantDocument();
+  const nodes = new Map(
+    document.getRoot().listNodes().map((node) => [node.getName(), node]),
+  );
+  const boxes = equipment.map((item) => {
+    const node = nodes.get(item.tag);
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (const primitive of node?.getMesh()?.listPrimitives() ?? []) {
+      const position = primitive.getAttribute('POSITION');
+      if (!position) continue;
+      const low = position.getMin([]);
+      const high = position.getMax([]);
+      for (let axis = 0; axis < 3; axis += 1) {
+        min[axis] = Math.min(
+          min[axis]!,
+          low[axis]! + item.position[axis]!,
+        );
+        max[axis] = Math.max(
+          max[axis]!,
+          high[axis]! + item.position[axis]!,
+        );
+      }
+    }
+    return { tag: item.tag, min, max };
+  });
+  const collisions: string[] = [];
+  for (let left = 0; left < boxes.length; left += 1) {
+    for (let right = left + 1; right < boxes.length; right += 1) {
+      const a = boxes[left]!;
+      const b = boxes[right]!;
+      const overlap = [0, 1, 2].map(
+        (axis) => Math.min(a.max[axis]!, b.max[axis]!)
+          - Math.max(a.min[axis]!, b.min[axis]!),
+      );
+      if (overlap.every((value) => value > 0.15)) {
+        collisions.push(`${a.tag} ↔ ${b.tag}`);
+      }
+    }
+  }
+
+  expect(collisions).toEqual([]);
+});

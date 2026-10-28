@@ -3,8 +3,10 @@ import { expect } from '#test-expect';
 import {
   createBox,
   createCylinder,
+  createFrustum,
   createOpenCylinder,
   createPipeSegment,
+  createRing,
 } from '../../tools/wastewater-plant/primitives.js';
 
 test('creates a finite indexed box with independent face normals', () => {
@@ -33,4 +35,16 @@ test('creates a pipe segment aligned with two finite endpoints', () => {
   expect([...pipe.indices].every((index) => (
     index >= 0 && index < pipe.positions.length / 3
   ))).toBe(true);
+});
+
+test('creates closed frustums and annular rings for process equipment', () => {
+  const frustum = createFrustum(2.4, 0.8, 3.6, 24);
+  const ring = createRing(4.8, 4.4, 0.35, 32);
+
+  expect(frustum.indices.length % 3).toBe(0);
+  expect(ring.indices.length % 3).toBe(0);
+  expect(frustum.positions.length).toBeGreaterThan(0);
+  expect(ring.positions.length).toBeGreaterThan(0);
+  expect([...frustum.positions, ...ring.positions].every(Number.isFinite))
+    .toBe(true);
 });
