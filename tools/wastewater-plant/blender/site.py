@@ -21,29 +21,29 @@ from geometry import (
 
 
 COLORS = {
-    "soil": (0.055, 0.070, 0.085),
-    "concrete": (0.40, 0.43, 0.43),
-    "concreteLight": (0.53, 0.55, 0.53),
-    "concreteWarm": (0.47, 0.38, 0.31),
-    "concreteCool": (0.31, 0.42, 0.46),
-    "concreteBlue": (0.37, 0.44, 0.51),
-    "asphalt": (0.12, 0.14, 0.16),
-    "roadMarking": (0.95, 0.67, 0.10),
-    "steel": (0.22, 0.35, 0.44),
-    "steelDark": (0.08, 0.13, 0.16),
-    "roof": (0.20, 0.27, 0.31),
-    "glass": (0.04, 0.20, 0.25),
-    "door": (0.22, 0.26, 0.27),
-    "waterPipe": (0.10, 0.48, 0.82),
-    "sludgePipe": (0.72, 0.40, 0.16),
-    "airPipe": (0.63, 0.72, 0.72),
-    "mixedLiquorPipe": (0.10, 0.62, 0.48),
-    "chemicalPipe": (0.95, 0.68, 0.08),
-    "biogasPipe": (0.58, 0.72, 0.12),
-    "backwashPipe": (0.08, 0.58, 0.66),
-    "filtratePipe": (0.50, 0.34, 0.70),
-    "treatedPipe": (0.06, 0.58, 0.88),
-    "safety": (0.87, 0.52, 0.08),
+    "soil": (0.070, 0.090, 0.120),
+    "concrete": (0.52, 0.53, 0.48),
+    "concreteLight": (0.68, 0.69, 0.62),
+    "concreteWarm": (0.58, 0.38, 0.18),
+    "concreteCool": (0.16, 0.42, 0.31),
+    "concreteBlue": (0.19, 0.32, 0.58),
+    "asphalt": (0.025, 0.035, 0.055),
+    "roadMarking": (1.00, 0.67, 0.04),
+    "steel": (0.16, 0.38, 0.52),
+    "steelDark": (0.025, 0.065, 0.080),
+    "roof": (0.075, 0.14, 0.20),
+    "glass": (0.02, 0.28, 0.42),
+    "door": (0.64, 0.25, 0.035),
+    "waterPipe": (0.015, 0.33, 0.85),
+    "sludgePipe": (0.80, 0.22, 0.025),
+    "airPipe": (0.68, 0.82, 0.88),
+    "mixedLiquorPipe": (0.015, 0.55, 0.28),
+    "chemicalPipe": (0.98, 0.68, 0.02),
+    "biogasPipe": (0.52, 0.78, 0.03),
+    "backwashPipe": (0.01, 0.58, 0.62),
+    "filtratePipe": (0.48, 0.18, 0.78),
+    "treatedPipe": (0.00, 0.56, 0.90),
+    "safety": (0.95, 0.24, 0.01),
 }
 
 
@@ -105,7 +105,8 @@ def _building(
         light,
     ), collection, group)
 
-    door_width = min(3.4, width * 0.22)
+    door_width = min(4.2, width * 0.22)
+    door_height = min(4.4, max(3.3, height * 0.32))
     side_width = (width - door_width) / 2
     for suffix, offset in (("L", -1), ("R", 1)):
         _adopt(add_box(
@@ -117,27 +118,27 @@ def _building(
         ), collection, group)
     _adopt(add_box(
         f"{name}.Wall.Front.Lintel",
-        (door_width, 0.24, max(0.8, height - 3.4)),
-        (x, y - depth / 2, 3.4 + max(0.8, height - 3.4) / 2),
+        (door_width, 0.24, max(0.8, height - door_height)),
+        (x, y - depth / 2, door_height + max(0.8, height - door_height) / 2),
         0.02,
         light,
     ), collection, group)
     _adopt(add_box(
         f"{name}.Door",
-        (door_width - 0.2, 0.08, 3.2),
-        (x, y - depth / 2 - 0.16, 1.85),
+        (door_width - 0.2, 0.08, door_height - 0.2),
+        (x, y - depth / 2 - 0.16, door_height / 2 + 0.28),
         0.02,
         materials["door"],
     ), collection, group)
     _adopt(add_box(
         f"{name}.Canopy",
         (door_width + 2.0, 2.2, 0.18),
-        (x, y - depth / 2 - 0.85, 3.65),
+        (x, y - depth / 2 - 0.85, door_height + 0.55),
         0.05,
         roof,
     ), collection, group)
 
-    window_z = max(2.2, height * 0.62)
+    window_z = max(2.8, height * 0.60)
     window_count = max(2, int(width / 3.2))
     for index in range(window_count):
         wx = x - width * 0.36 + width * 0.72 * index / max(window_count - 1, 1)
@@ -162,6 +163,57 @@ def _building(
                 glass,
             ), collection, group)
 
+    for index in range(max(4, int(width / 2.7))):
+        rib_x = x - width * 0.45 + width * 0.9 * index / max(
+            int(width / 2.7) - 1,
+            1,
+        )
+        _adopt(add_box(
+            f"{name}.FacadeRib.Front.{index:02d}",
+            (0.13, 0.16, height * 0.82),
+            (rib_x, y - depth / 2 - 0.16, height * 0.45 + 0.28),
+            0.012,
+            concrete,
+        ), collection, group)
+    _adopt(add_box(
+        f"{name}.FacadeBand",
+        (width + 0.08, 0.12, 0.62),
+        (x, y - depth / 2 - 0.17, 0.70),
+        0.015,
+        concrete,
+    ), collection, group)
+    for side, sx in (("L", x - width / 2 - 0.17), ("R", x + width / 2 + 0.17)):
+        for index in range(6):
+            _adopt(add_box(
+                f"{name}.Louver.{side}.{index:02d}",
+                (0.10, 1.85, 0.10),
+                (sx, y + depth * 0.18, height * 0.48 + index * 0.22),
+                0.008,
+                materials["steelDark"],
+            ), collection, group)
+    for side, sy in (
+        ("Front", y - depth / 2 - 0.26),
+        ("Rear", y + depth / 2 + 0.26),
+    ):
+        _adopt(add_cylinder(
+            f"{name}.DoorFrame.{side}.L",
+            0.10,
+            door_height + 0.35,
+            (x - door_width / 2, sy, (door_height + 0.35) / 2 + 0.22),
+            12,
+            0.012,
+            materials["steelDark"],
+        ), collection, group)
+        _adopt(add_cylinder(
+            f"{name}.DoorFrame.{side}.R",
+            0.10,
+            door_height + 0.35,
+            (x + door_width / 2, sy, (door_height + 0.35) / 2 + 0.22),
+            12,
+            0.012,
+            materials["steelDark"],
+        ), collection, group)
+
     _adopt(add_box(
         f"{name}.Roof",
         (width + 0.9, depth + 0.9, 0.34),
@@ -180,6 +232,55 @@ def _building(
             24,
             0.035,
             materials["steel"],
+        ), collection, group)
+    monitor_width = width * 0.52
+    monitor_depth = depth * 0.30
+    _adopt(add_box(
+        f"{name}.RoofMonitor",
+        (monitor_width, monitor_depth, 0.95),
+        (x, y + depth * 0.10, height + 1.02),
+        0.06,
+        light,
+    ), collection, group)
+    for side, sy in (
+        ("N", y + depth * 0.10 + monitor_depth / 2 + 0.04),
+        ("S", y + depth * 0.10 - monitor_depth / 2 - 0.04),
+    ):
+        _adopt(add_box(
+            f"{name}.RoofMonitor.Glazing.{side}",
+            (monitor_width * 0.86, 0.06, 0.42),
+            (x, sy, height + 1.18),
+            0.015,
+            glass,
+        ), collection, group)
+    _adopt(add_box(
+        f"{name}.RoofMonitor.Cap",
+        (monitor_width + 0.35, monitor_depth + 0.35, 0.16),
+        (x, y + depth * 0.10, height + 1.57),
+        0.04,
+        roof,
+    ), collection, group)
+    _adopt(add_box(
+        f"{name}.RoofHatch",
+        (1.35, 1.35, 0.24),
+        (x - width * 0.28, y - depth * 0.22, height + 0.72),
+        0.04,
+        materials["steel"],
+    ), collection, group)
+    for suffix, sx, sy in (
+        ("NW", x - width / 2 + 0.18, y + depth / 2 - 0.18),
+        ("NE", x + width / 2 - 0.18, y + depth / 2 - 0.18),
+        ("SW", x - width / 2 + 0.18, y - depth / 2 + 0.18),
+        ("SE", x + width / 2 - 0.18, y - depth / 2 + 0.18),
+    ):
+        _adopt(add_cylinder(
+            f"{name}.Downspout.{suffix}",
+            0.09,
+            height + 0.55,
+            (sx, sy, (height + 0.55) / 2 + 0.25),
+            12,
+            0.01,
+            materials["steelDark"],
         ), collection, group)
     _adopt(add_box(
         f"{name}.RoofCap",
@@ -343,11 +444,11 @@ def build_site(asset_id):
 
     buildings = create_group("Buildings", collection, site)
     building_specs = (
-        ("Headworks", (18.0, -67.0), (26.0, 15.0, 8.0), False),
-        ("ChemicalDosing", (57.0, 38.0), (35.0, 17.0, 7.0), False),
-        ("Blower", (137.0, 39.0), (31.0, 16.0, 8.5), False),
-        ("Dewatering", (128.0, 55.0), (34.0, 19.0, 9.0), False),
-        ("Administration", (28.0, -17.0), (31.0, 16.0, 9.5), True),
+        ("Headworks", (18.0, -67.0), (26.0, 15.0, 10.5), False),
+        ("ChemicalDosing", (57.0, 38.0), (35.0, 17.0, 9.0), False),
+        ("Blower", (137.0, 39.0), (31.0, 16.0, 11.5), False),
+        ("Dewatering", (128.0, 55.0), (34.0, 19.0, 12.5), False),
+        ("Administration", (28.0, -17.0), (31.0, 16.0, 12.0), True),
     )
     for name, center, size, annex in building_specs:
         group = create_group(f"{name}Building", collection, buildings)

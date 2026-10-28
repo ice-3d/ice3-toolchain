@@ -26,7 +26,7 @@ test('connects every pipeline endpoint to an existing equipment port', () => {
   )));
   const ids = new Set<string>();
 
-  expect(spec.connections.length).toBeGreaterThanOrEqual(45);
+  expect(spec.connections.length).toBeGreaterThanOrEqual(90);
   for (const connection of spec.connections) {
     expect(ids.has(connection.id)).toBe(false);
     ids.add(connection.id);
@@ -42,6 +42,7 @@ test('connects every pipeline endpoint to an existing equipment port', () => {
       'chemical',
       'biogas',
       'backwash',
+      'utilityWater',
     ]));
   const connectedTags = new Set(spec.connections.flatMap((connection) => (
     [connection.from.split(':')[0]!, connection.to.split(':')[0]!]

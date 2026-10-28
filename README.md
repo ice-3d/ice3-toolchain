@@ -43,10 +43,31 @@ If publishing the new directory fails, the previous asset directory is
 restored. The generated scene and all equipment identities are entirely
 fictional.
 
-The current scene contains 65 selectable equipment units, 70 modeled process
-connections, and about 1.68M source triangles. Fine partitions use a
+The current scene contains 65 selectable equipment units, 92 modeled process
+and utility connections, and about 2.0M source triangles. Fine partitions use a
 60,000-triangle budget, coarse LOD content uses a 120k-triangle total budget,
 and coarse chunks are capped at 4 MiB.
+
+### Visual language
+
+The synthetic plant follows a deliberately separated visual hierarchy rather
+than a single realistic material palette:
+
+- terrain and roads use dark, low-chroma colors so the black viewport remains
+  legible without merging foreground geometry into the background;
+- process areas use distinct muted concrete colors, while buildings separate
+  pale walls, dark roofs, glazing, doors, and service equipment;
+- equipment bodies use process-stage colors, with safety orange reserved for
+  moving parts, access structures, and controls;
+- pipe colors encode media and also separate in lightness so adjacent media
+  remain distinguishable;
+- aeration, primary, secondary, filtration, membrane, chemical, and building
+  volumes follow realistic vertical proportions rather than a uniform scale;
+- handrails, ladders, stairs, wall panels, roof equipment, bridge gratings, and
+  tank copings provide human-scale reference and model-detail cues.
+
+The detailed source is intentionally larger than the runtime representation.
+LOD generation and static batching remain entirely offline.
 
 Inspect a source or prepared asset:
 

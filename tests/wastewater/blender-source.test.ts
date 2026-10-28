@@ -174,10 +174,10 @@ test('models distinct process equipment with presentation-grade detail', async (
     ?.listPrimitives().reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0) ?? 0;
-  expect(triangleCount('SC-101')).toBeGreaterThan(1200);
-  expect(triangleCount('AE-101')).toBeGreaterThan(900);
-  expect(triangleCount('GR-102')).toBeGreaterThan(500);
-  expect(triangleCount('BLW-101')).toBeGreaterThan(400);
+  expect(triangleCount('SC-101')).toBeGreaterThan(1600);
+  expect(triangleCount('AE-101')).toBeGreaterThan(1200);
+  expect(triangleCount('GR-102')).toBeGreaterThan(600);
+  expect(triangleCount('BLW-101')).toBeGreaterThan(600);
 });
 
 test('models advanced and sludge equipment with recognizable assemblies', async () => {
@@ -200,17 +200,17 @@ test('models advanced and sludge equipment with recognizable assemblies', async 
     ?.listPrimitives().reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0) ?? 0;
-  expect(triangleCount('DIG-101')).toBeGreaterThan(1200);
-  expect(triangleCount('DWG-101')).toBeGreaterThan(800);
-  expect(triangleCount('UV-101')).toBeGreaterThan(700);
-  expect(triangleCount('FL-101')).toBeGreaterThan(600);
-  expect(triangleCount('OZ-101')).toBeGreaterThan(500);
+  expect(triangleCount('DIG-101')).toBeGreaterThan(1300);
+  expect(triangleCount('DWG-101')).toBeGreaterThan(900);
+  expect(triangleCount('UV-101')).toBeGreaterThan(800);
+  expect(triangleCount('FL-101')).toBeGreaterThan(1000);
+  expect(triangleCount('OZ-101')).toBeGreaterThan(800);
   const total = document.getRoot().listMeshes()
     .flatMap((mesh) => mesh.listPrimitives())
     .reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0);
-  expect(total).toBeGreaterThanOrEqual(1_300_000);
+  expect(total).toBeGreaterThanOrEqual(2_000_000);
 });
 
 test('exports connected pipe runs with semantic process metadata', async () => {
@@ -227,7 +227,7 @@ test('exports connected pipe runs with semantic process metadata', async () => {
       | undefined;
     return profile?.role === 'process-pipe' ? [{ node, profile }] : [];
   });
-  expect(pipes.length).toBeGreaterThanOrEqual(70);
+  expect(pipes.length).toBeGreaterThanOrEqual(90);
   expect(new Set(pipes.map(({ profile }) => profile.connectionId)).size)
     .toBe(pipes.length);
   for (const { node, profile } of pipes) {
@@ -277,7 +277,7 @@ test('keeps process media and structural surfaces visually distinct', async () =
     'Site.treatedPipe',
     'Equipment.concrete',
     'Equipment.steel',
-    'Equipment.equipment',
+    'Equipment.stage:biological',
   ];
   for (const name of required) expect(colors.has(name)).toBe(true);
   const pipeColors = required.slice(0, 9).map((name) => colors.get(name)!);

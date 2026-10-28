@@ -18,18 +18,26 @@ from geometry import (
 
 
 EQUIPMENT_COLORS = {
-    "concrete": (0.48, 0.50, 0.48),
-    "concreteDark": (0.31, 0.33, 0.32),
-    "water": (0.08, 0.30, 0.38),
-    "sludge": (0.27, 0.18, 0.11),
-    "steel": (0.33, 0.37, 0.39),
-    "steelDark": (0.13, 0.16, 0.17),
-    "equipment": (0.19, 0.32, 0.36),
-    "equipmentLight": (0.36, 0.50, 0.52),
-    "safety": (0.92, 0.55, 0.07),
-    "rubber": (0.075, 0.075, 0.07),
-    "air": (0.68, 0.70, 0.68),
-    "glass": (0.10, 0.22, 0.24),
+    "concrete": (0.52, 0.53, 0.48),
+    "concreteDark": (0.17, 0.20, 0.22),
+    "water": (0.02, 0.27, 0.55),
+    "sludge": (0.68, 0.20, 0.04),
+    "steel": (0.20, 0.29, 0.34),
+    "steelDark": (0.02, 0.045, 0.060),
+    "equipment": (0.08, 0.27, 0.45),
+    "equipmentLight": (0.30, 0.55, 0.64),
+    "safety": (0.95, 0.24, 0.01),
+    "rubber": (0.02, 0.025, 0.03),
+    "air": (0.62, 0.78, 0.86),
+    "glass": (0.02, 0.22, 0.34),
+    "stage:intake": (0.035, 0.25, 0.38),
+    "stage:primary": (0.07, 0.23, 0.48),
+    "stage:biological": (0.035, 0.34, 0.23),
+    "stage:secondary": (0.02, 0.30, 0.39),
+    "stage:advanced": (0.24, 0.18, 0.48),
+    "stage:sludge": (0.52, 0.22, 0.055),
+    "stage:chemical": (0.44, 0.12, 0.33),
+    "stage:utilities": (0.24, 0.31, 0.35),
 }
 
 
@@ -366,13 +374,13 @@ def build_grit_basin(item, materials):
     origin = _origin(item)
     parts = [
         _part("Grit.Base", (10.5, 7.6, 0.55), (0, 0, 0.28), origin, materials["concrete"]),
-        _part("Grit.Wall.N", (10.5, 0.42, 3.0), (0, 3.55, 1.55), origin, materials["concrete"]),
-        _part("Grit.Wall.S", (10.5, 0.42, 3.0), (0, -3.55, 1.55), origin, materials["concrete"]),
-        _part("Grit.Wall.W", (0.42, 7.6, 3.0), (-5.05, 0, 1.55), origin, materials["concrete"]),
-        _part("Grit.Wall.E", (0.42, 7.6, 3.0), (5.05, 0, 1.55), origin, materials["concrete"]),
-        _part("Grit.Water", (9.4, 6.6, 0.10), (0, 0, 1.22), origin, materials["water"], 0.01),
-        _part("Grit.Bridge.Deck", (0.72, 7.2, 0.18), (0.8, 0, 3.16), origin, materials["steel"]),
-        _part("Grit.Bridge.Beam.N", (0.18, 7.15, 0.28), (0.8, 0, 2.94), origin, materials["steelDark"]),
+        _part("Grit.Wall.N", (10.5, 0.46, 4.2), (0, 3.55, 2.38), origin, materials["concrete"]),
+        _part("Grit.Wall.S", (10.5, 0.46, 4.2), (0, -3.55, 2.38), origin, materials["concrete"]),
+        _part("Grit.Wall.W", (0.46, 7.6, 4.2), (-5.05, 0, 2.38), origin, materials["concrete"]),
+        _part("Grit.Wall.E", (0.46, 7.6, 4.2), (5.05, 0, 2.38), origin, materials["concrete"]),
+        _part("Grit.Water", (9.4, 6.6, 0.10), (0, 0, 3.55), origin, materials["water"], 0.01),
+        _part("Grit.Bridge.Deck", (0.95, 7.2, 0.20), (0.8, 0, 4.55), origin, materials["steel"]),
+        _part("Grit.Bridge.Beam.N", (0.22, 7.15, 0.32), (0.8, 0, 4.30), origin, materials["steelDark"]),
         _part("Grit.Scraper", (8.8, 0.25, 0.28), (0.6, 0, 0.82), origin, materials["steelDark"]),
         _part("Grit.SandHopper", (2.3, 2.1, 0.7), (-3.5, -2.1, 0.70), origin, materials["concreteDark"], 0.15),
         _pipe("Grit.AirHeader", ((-4.3, -2.8, 3.35), (4.3, -2.8, 3.35)), origin, materials["air"], 0.10),
@@ -444,20 +452,22 @@ def build_grit_classifier(item, materials):
 
 def build_rectangular_clarifier(item, materials):
     origin = _origin(item)
+    wall_height = 4.8
+    deck_z = 5.02
     parts = [
         _part("Primary.Base", (13.0, 10.8, 0.55), (0, 0, 0.28), origin, materials["concrete"]),
-        _part("Primary.Wall.N", (13.0, 0.48, 3.2), (0, 5.15, 1.65), origin, materials["concrete"]),
-        _part("Primary.Wall.S", (13.0, 0.48, 3.2), (0, -5.15, 1.65), origin, materials["concrete"]),
-        _part("Primary.Wall.W", (0.48, 10.8, 3.2), (-6.25, 0, 1.65), origin, materials["concrete"]),
-        _part("Primary.Wall.E", (0.48, 10.8, 3.2), (6.25, 0, 1.65), origin, materials["concrete"]),
-        _part("Primary.Water", (11.8, 9.7, 0.10), (0, 0, 0.92), origin, materials["water"], 0.01),
-        _part("Primary.Bridge.Deck", (0.75, 11.2, 0.18), (-0.8, 0, 3.50), origin, materials["steel"]),
-        _part("Primary.Bridge.Beam.N", (0.18, 11.0, 0.30), (-0.8, 0, 3.25), origin, materials["steelDark"]),
+        _part("Primary.Wall.N", (13.0, 0.48, wall_height), (0, 5.15, 2.7), origin, materials["concrete"]),
+        _part("Primary.Wall.S", (13.0, 0.48, wall_height), (0, -5.15, 2.7), origin, materials["concrete"]),
+        _part("Primary.Wall.W", (0.48, 10.8, wall_height), (-6.25, 0, 2.7), origin, materials["concrete"]),
+        _part("Primary.Wall.E", (0.48, 10.8, wall_height), (6.25, 0, 2.7), origin, materials["concrete"]),
+        _part("Primary.Water", (11.8, 9.7, 0.10), (0, 0, 4.28), origin, materials["water"], 0.01),
+        _part("Primary.Bridge.Deck", (1.05, 11.2, 0.20), (-0.8, 0, deck_z), origin, materials["steel"]),
+        _part("Primary.Bridge.Beam.N", (0.22, 11.0, 0.34), (-0.8, 0, deck_z - 0.30), origin, materials["steelDark"]),
         _part("Primary.ScraperBeam", (12.2, 0.42, 0.45), (0, 0, 0.65), origin, materials["steelDark"]),
         _part("Primary.SludgeHopper", (3.2, 3.0, 1.0), (3.8, 0, 0.5), origin, materials["concreteDark"], 0.15),
-        _part("Primary.Weir.N", (12.4, 0.16, 0.28), (0, 4.45, 2.58), origin, materials["steelDark"]),
-        _part("Primary.Weir.S", (12.4, 0.16, 0.28), (0, -4.45, 2.58), origin, materials["steelDark"]),
-        _pipe("Primary.Outlet", ((4.8, -4.5, 2.45), (4.8, -6.1, 2.45), (4.8, -6.1, 0.5)), origin, materials["water"], 0.17),
+        _part("Primary.Weir.N", (12.4, 0.18, 0.34), (0, 4.45, 4.18), origin, materials["steelDark"]),
+        _part("Primary.Weir.S", (12.4, 0.18, 0.34), (0, -4.45, 4.18), origin, materials["steelDark"]),
+        _pipe("Primary.Outlet", ((4.8, -4.5, 4.14), (4.8, -6.1, 4.14), (4.8, -6.1, 0.5)), origin, materials["water"], 0.17),
     ]
     for index in range(14):
         y = -4.1 + index * 0.63
@@ -471,19 +481,36 @@ def build_rectangular_clarifier(item, materials):
     for side in (-1, 1):
         parts.append(_part(
             f"Primary.WalkwayRail.{side}",
-            (13.0, 0.07, 0.07),
-            (0, side * 5.55, 4.25),
+            (13.0, 0.09, 0.09),
+            (0, side * 5.55, deck_z + 1.03),
             origin,
             materials["safety"],
         ))
         for index in range(7):
             parts.append(_part(
                 f"Primary.RailPost.{side}.{index:02d}",
-                (0.06, 0.06, 1.05),
-                (-5.8 + index * 1.93, side * 5.55, 3.72),
+                (0.08, 0.08, 1.05),
+                (-5.8 + index * 1.93, side * 5.55, deck_z + 0.50),
                 origin,
                 materials["safety"],
             ))
+    parts.append(add_grating(
+        "Primary.BridgeGrating",
+        (origin[0] - 0.8, origin[1]),
+        0.92,
+        10.8,
+        materials["steel"],
+        origin[2] + deck_z + 0.12,
+    ))
+    for index in range(5):
+        x = -5.7 + index * 2.85
+        parts.append(_part(
+            f"Primary.CopingPost.{index:02d}",
+            (0.32, 0.32, 0.72),
+            (x, -5.38, wall_height - 0.25),
+            origin,
+            materials["concreteDark"],
+        ))
     return parts
 
 
@@ -526,21 +553,23 @@ def build_distribution_well(item, materials):
 
 def build_biological_reactor(item, materials):
     origin = _origin(item)
+    wall_height = 5.4
+    deck_z = 5.48
     parts = [
         _part("Reactor.Base", (12.2, 15.0, 0.48), (0, 0, 0.24), origin, materials["concrete"]),
-        _part("Reactor.Wall.N", (12.2, 0.45, 3.25), (0, 7.25, 1.65), origin, materials["concrete"]),
-        _part("Reactor.Wall.S", (12.2, 0.45, 3.25), (0, -7.25, 1.65), origin, materials["concrete"]),
-        _part("Reactor.Wall.W", (0.45, 15.0, 3.25), (-6.1, 0, 1.65), origin, materials["concrete"]),
-        _part("Reactor.Wall.E", (0.45, 15.0, 3.25), (6.1, 0, 1.65), origin, materials["concrete"]),
-        _part("Reactor.Walkway", (11.7, 1.55, 0.16), (0, 0, 3.15), origin, materials["steel"]),
-        _part("Reactor.AirHeader", (11.2, 0.16, 0.16), (0, -6.6, 2.72), origin, materials["air"]),
+        _part("Reactor.Wall.N", (12.2, 0.45, wall_height), (0, 7.25, 3.0), origin, materials["concrete"]),
+        _part("Reactor.Wall.S", (12.2, 0.45, wall_height), (0, -7.25, 3.0), origin, materials["concrete"]),
+        _part("Reactor.Wall.W", (0.45, 15.0, wall_height), (-6.1, 0, 3.0), origin, materials["concrete"]),
+        _part("Reactor.Wall.E", (0.45, 15.0, wall_height), (6.1, 0, 3.0), origin, materials["concrete"]),
+        _part("Reactor.Walkway", (11.7, 1.85, 0.18), (0, 0, deck_z), origin, materials["steel"]),
+        _part("Reactor.AirHeader", (11.2, 0.16, 0.16), (0, -6.6, 5.18), origin, materials["air"]),
     ]
     for compartment, center_x in enumerate((-4.0, 0.0, 4.0)):
         if compartment < 2:
             parts.append(_part(
                 f"Reactor.Compartment.{compartment}.Water",
                 (3.45, 13.7, 0.08),
-                (center_x, 0, 1.18),
+                (center_x, 0, 4.92),
                 origin,
                 materials["water"],
                 0.006,
@@ -548,8 +577,8 @@ def build_biological_reactor(item, materials):
         if compartment > 0:
             parts.append(_part(
                 f"Reactor.Divider.{compartment}",
-                (0.32, 14.4, 2.8),
-                (center_x - 2.0, 0, 1.42),
+                (0.32, 14.4, 4.82),
+                (center_x - 2.0, 0, 2.78),
                 origin,
                 materials["concreteDark"],
             ))
@@ -559,7 +588,7 @@ def build_biological_reactor(item, materials):
                     f"Reactor.Mixer.{compartment}.Pedestal",
                     0.48,
                     0.32,
-                    (center_x, 0, 3.42),
+                    (center_x, 0, 5.62),
                     origin,
                     materials["steelDark"],
                     24,
@@ -568,7 +597,7 @@ def build_biological_reactor(item, materials):
                     f"Reactor.Mixer.{compartment}.Drive",
                     0.30,
                     0.62,
-                    (center_x, 0, 3.84),
+                    (center_x, 0, 6.02),
                     origin,
                     materials["equipment"],
                     24,
@@ -576,15 +605,15 @@ def build_biological_reactor(item, materials):
                 _cylinder(
                     f"Reactor.Mixer.{compartment}.Shaft",
                     0.06,
-                    2.1,
-                    (center_x, 0, 2.72),
+                    4.2,
+                    (center_x, 0, 3.65),
                     origin,
                     materials["steel"],
                     12,
                 ),
                 _part(
                     f"Reactor.Mixer.{compartment}.Propeller",
-                    (1.25, 0.14, 0.16),
+                    (1.55, 0.18, 0.20),
                     (center_x, 0, 1.72),
                     origin,
                     materials["steelDark"],
@@ -595,9 +624,9 @@ def build_biological_reactor(item, materials):
             for column in range(3):
                 parts.append(_cylinder(
                     f"Reactor.Diffuser.{compartment}.{row}.{column}",
-                    0.24,
-                    0.12,
-                    (center_x - 1.1 + column * 1.1, -4.6 + row * 4.6, 1.30),
+                    0.30,
+                    0.14,
+                    (center_x - 1.1 + column * 1.1, -4.6 + row * 4.6, 1.32),
                     origin,
                     materials["air"],
                     18,
@@ -606,8 +635,8 @@ def build_biological_reactor(item, materials):
                     f"Reactor.DiffuserDrop.{compartment}.{row}.{column}",
                     (
                         (center_x - 1.1 + column * 1.1, -4.6 + row * 4.6, 1.34),
-                        (center_x - 1.1 + column * 1.1, -6.2, 1.72),
-                        (center_x - 1.1 + column * 1.1, -6.2, 2.66),
+                        (center_x - 1.1 + column * 1.1, -6.25, 2.20),
+                        (center_x - 1.1 + column * 1.1, -6.25, 5.10),
                     ),
                     origin,
                     materials["air"],
@@ -620,13 +649,13 @@ def build_biological_reactor(item, materials):
             (origin[0] + 5.7, origin[1] + side * 0.92),
             1.08,
             materials["safety"],
-            origin[2] + 3.16,
+            origin[2] + deck_z,
         ))
         parts.extend(_rail_segments(
             f"Reactor.PerimeterRail.{side}",
             (-5.7, side * 7.0),
             (5.7, side * 7.0),
-            3.12,
+            deck_z - 0.04,
             origin,
             materials["safety"],
         ))
@@ -636,15 +665,15 @@ def build_biological_reactor(item, materials):
         11.5,
         1.45,
         materials["steel"],
-        origin[2] + 3.25,
+        origin[2] + deck_z + 0.10,
     ))
     parts.append(add_stairs(
         "Reactor.AccessStairs",
         (origin[0] + 6.2, origin[1]),
         1.5,
-        4.5,
-        3.1,
-        14,
+        6.8,
+        5.35,
+        22,
         materials["safety"],
         direction=1.0,
         z_base=origin[2],
@@ -654,7 +683,7 @@ def build_biological_reactor(item, materials):
             f"Reactor.AirValve.{index:02d}",
             0.15,
             0.36,
-            (-4.5 + index * 3.0, 6.6, 2.55),
+            (-4.5 + index * 3.0, 6.6, 5.08),
             origin,
             materials["safety"],
             18,
@@ -663,7 +692,7 @@ def build_biological_reactor(item, materials):
         "Reactor.PerimeterRail.N",
         (-5.7, 6.95),
         (5.7, 6.95),
-        3.15,
+        deck_z - 0.02,
         origin,
         materials["safety"],
     ))
@@ -671,7 +700,7 @@ def build_biological_reactor(item, materials):
         "Reactor.PerimeterRail.S",
         (-5.7, -6.95),
         (5.7, -6.95),
-        3.15,
+        deck_z - 0.02,
         origin,
         materials["safety"],
     ))
@@ -681,45 +710,47 @@ def build_biological_reactor(item, materials):
 def build_circular_clarifier(item, materials):
     origin = _origin(item)
     radius = 7.25
+    wall_height = 4.15
+    deck_z = 4.92
     parts = [
         _part("Clarifier.Foundation", (15.8, 15.8, 0.38), (0, 0, 0.19), origin, materials["concrete"]),
-        _cylinder("Clarifier.Water", radius - 0.32, 0.10, (0, 0, 1.02), origin, materials["water"], 40, 0.005),
+        _cylinder("Clarifier.Water", radius - 0.32, 0.10, (0, 0, 4.02), origin, materials["water"], 40, 0.005),
     ]
     parts.extend(_tank_shell(
         "Clarifier",
         radius,
-        2.75,
+        wall_height,
         origin,
         materials["concrete"],
         segments=26,
         wall=0.30,
-        z_base=0.28,
+        z_base=0.30,
     ))
     parts.extend(_ring_band(
         "Clarifier.Coping",
         7.26,
-        0.16,
-        3.02,
+        0.20,
+        4.47,
         origin,
         materials["concreteDark"],
         segments=26,
-        thickness=0.44,
+        thickness=0.52,
     ))
     parts.extend(_ring_band(
         "Clarifier.Launder",
         6.10,
-        0.42,
-        2.23,
+        0.48,
+        3.66,
         origin,
         materials["concreteDark"],
         segments=24,
-        thickness=0.18,
+        thickness=0.22,
     ))
     parts.extend(_ring_band(
         "Clarifier.Weir",
         5.80,
-        0.31,
-        2.50,
+        0.34,
+        3.96,
         origin,
         materials["steel"],
         segments=24,
@@ -728,30 +759,30 @@ def build_circular_clarifier(item, materials):
     parts.extend(_ring_band(
         "Clarifier.ScumBaffle",
         5.32,
-        0.62,
-        2.35,
+        0.76,
+        3.78,
         origin,
         materials["steelDark"],
         segments=22,
         thickness=0.07,
     ))
     parts.extend([
-        _cylinder("Clarifier.FeedWell", 1.72, 2.55, (0, 0, 1.52), origin, materials["concreteDark"], 40),
-        _cylinder("Clarifier.FeedWellCap", 1.95, 0.24, (0, 0, 2.90), origin, materials["concrete"], 40),
-        _cylinder("Clarifier.CenterDrive", 1.05, 1.25, (0, 0, 3.00), origin, materials["equipment"], 32),
-        _cylinder("Clarifier.DriveMotor", 0.47, 0.85, (0.3, 0, 3.85), origin, materials["equipmentLight"], 24),
-        _part("Clarifier.Bridge.Deck", (13.2, 1.30, 0.16), (0, 0, 3.82), origin, materials["steel"]),
-        _part("Clarifier.Bridge.Guardrail.N", (13.3, 0.07, 0.07), (0, 0.66, 4.85), origin, materials["safety"]),
-        _part("Clarifier.Bridge.Guardrail.S", (13.3, 0.07, 0.07), (0, -0.66, 4.85), origin, materials["safety"]),
+        _cylinder("Clarifier.FeedWell", 1.72, 3.70, (0, 0, 2.14), origin, materials["concreteDark"], 40),
+        _cylinder("Clarifier.FeedWellCap", 1.95, 0.24, (0, 0, 4.10), origin, materials["concrete"], 40),
+        _cylinder("Clarifier.CenterDrive", 1.10, 1.32, (0, 0, 4.42), origin, materials["equipment"], 32),
+        _cylinder("Clarifier.DriveMotor", 0.50, 0.92, (0.3, 0, 5.22), origin, materials["equipmentLight"], 24),
+        _part("Clarifier.Bridge.Deck", (13.2, 1.55, 0.18), (0, 0, deck_z), origin, materials["steel"]),
+        _part("Clarifier.Bridge.Guardrail.N", (13.3, 0.09, 0.09), (0, 0.73, deck_z + 1.05), origin, materials["safety"]),
+        _part("Clarifier.Bridge.Guardrail.S", (13.3, 0.09, 0.09), (0, -0.73, deck_z + 1.05), origin, materials["safety"]),
         _part("Clarifier.ScraperArm.A", (11.4, 0.32, 0.34), (2.0, 0, 0.67), origin, materials["steelDark"], rotation=(0, 0, 0.43)),
         _part("Clarifier.ScraperArm.B", (11.4, 0.32, 0.34), (-2.0, 0, 0.67), origin, materials["steelDark"], rotation=(0, 0, 0.43)),
-        _part("Clarifier.OutletPipe", (1.3, 0.42, 0.42), (6.65, -1.2, 2.35), origin, materials["water"]),
+        _part("Clarifier.OutletPipe", (1.3, 0.42, 0.42), (6.65, -1.2, 3.96), origin, materials["water"]),
     ])
     parts.extend(_ring_band(
         "Clarifier.BridgePost",
         5.4,
         1.0,
-        4.35,
+        deck_z + 0.45,
         origin,
         materials["safety"],
         segments=13,
@@ -761,7 +792,7 @@ def build_circular_clarifier(item, materials):
         "Clarifier.HalfBridgeTruss",
         (origin[0], origin[1]),
         (origin[0] + 6.7, origin[1]),
-        origin[2] + 3.43,
+        origin[2] + deck_z - 0.42,
         1.05,
         0.80,
         materials["steel"],
@@ -783,7 +814,7 @@ def build_circular_clarifier(item, materials):
         "Clarifier.Ladder",
         origin[0] + 7.55,
         origin[1],
-        3.1,
+        4.62,
         materials["safety"],
         origin[2],
     ))
@@ -793,22 +824,22 @@ def build_circular_clarifier(item, materials):
         6.2,
         1.15,
         materials["steel"],
-        origin[2] + 3.90,
+        origin[2] + deck_z + 0.12,
     ))
     parts.append(add_stairs(
         "Clarifier.AccessStairs",
         (origin[0] + 8.2, origin[1]),
         1.35,
-        4.2,
-        3.1,
-        13,
+        6.7,
+        4.62,
+        19,
         materials["safety"],
         direction=1.0,
         z_base=origin[2],
     ))
     parts.append(_pipe(
         "Clarifier.Outlet",
-        ((6.6, -1.2, 2.35), (8.0, -1.2, 2.35), (8.0, -1.2, 0.55)),
+        ((6.6, -1.2, 3.96), (8.0, -1.2, 3.96), (8.0, -1.2, 0.55)),
         origin,
         materials["water"],
         0.18,
@@ -819,21 +850,21 @@ def build_circular_clarifier(item, materials):
 def build_blower(item, materials):
     origin = _origin(item)
     parts = [
-        _part("Blower.Foundation", (6.2, 3.8, 0.38), (0, 0, 0.19), origin, materials["concrete"]),
-        _part("Blower.Skid.L", (5.8, 0.30, 0.28), (0, 1.2, 0.50), origin, materials["steelDark"]),
-        _part("Blower.Skid.R", (5.8, 0.30, 0.28), (0, -1.2, 0.50), origin, materials["steelDark"]),
-        _part("Blower.Enclosure", (2.15, 2.15, 1.75), (-0.75, 0, 1.45), origin, materials["equipment"], 0.12),
-        _part("Blower.EnclosurePanel.N", (2.10, 0.07, 1.38), (-0.75, 1.06, 1.50), origin, materials["equipmentLight"]),
-        _part("Blower.EnclosurePanel.S", (2.10, 0.07, 1.38), (-0.75, -1.06, 1.50), origin, materials["equipmentLight"]),
-        _part("Blower.EnclosurePanel.E", (0.07, 2.10, 1.38), (0.32, 0, 1.50), origin, materials["equipmentLight"]),
-        _cylinder("Blower.Motor", 0.56, 1.78, (1.62, 0, 1.33), origin, materials["equipmentLight"], 30, rotation=(0.0, math.pi / 2, 0.0)),
-        _cylinder("Blower.MotorCap", 0.62, 0.20, (2.52, 0, 1.33), origin, materials["steelDark"], 24, rotation=(0.0, math.pi / 2, 0.0)),
-        _cylinder("Blower.FlexibleConnector", 0.39, 0.72, (0.65, 0, 1.33), origin, materials["rubber"], 24, rotation=(0.0, math.pi / 2, 0.0)),
-        _cylinder("Blower.IntakeFilter", 0.54, 0.80, (-2.25, 0, 1.52), origin, materials["steel"], 24, rotation=(0.0, math.pi / 2, 0.0)),
-        _cylinder("Blower.Silencer", 0.48, 1.15, (-3.05, 0, 1.52), origin, materials["equipment"], 24, rotation=(0.0, math.pi / 2, 0.0)),
-        _pipe("Blower.Discharge", ((0.95, 0, 1.33), (0.95, 0, 2.55), (2.35, 0, 2.55), (2.35, 0, 1.35)), origin, materials["air"], 0.21),
-        _cylinder("Blower.CheckValve", 0.29, 0.40, (2.35, 0, 1.82), origin, materials["safety"], 22),
-        _cylinder("Blower.Gauge", 0.15, 0.11, (1.65, -0.12, 2.65), origin, materials["steelDark"], 18),
+        _part("Blower.Foundation", (7.0, 4.2, 0.45), (0, 0, 0.225), origin, materials["concrete"]),
+        _part("Blower.Skid.L", (6.4, 0.34, 0.30), (0, 1.40, 0.60), origin, materials["steelDark"]),
+        _part("Blower.Skid.R", (6.4, 0.34, 0.30), (0, -1.40, 0.60), origin, materials["steelDark"]),
+        _part("Blower.Enclosure", (2.55, 2.45, 2.25), (-0.80, 0, 1.72), origin, materials["equipment"], 0.12),
+        _part("Blower.EnclosurePanel.N", (2.50, 0.08, 1.82), (-0.80, 1.23, 1.78), origin, materials["equipmentLight"]),
+        _part("Blower.EnclosurePanel.S", (2.50, 0.08, 1.82), (-0.80, -1.23, 1.78), origin, materials["equipmentLight"]),
+        _part("Blower.EnclosurePanel.E", (0.08, 2.40, 1.82), (0.50, 0, 1.78), origin, materials["equipmentLight"]),
+        _cylinder("Blower.Motor", 0.62, 1.95, (1.72, 0, 1.60), origin, materials["equipmentLight"], 32, rotation=(0.0, math.pi / 2, 0.0)),
+        _cylinder("Blower.MotorCap", 0.69, 0.22, (2.80, 0, 1.60), origin, materials["steelDark"], 24, rotation=(0.0, math.pi / 2, 0.0)),
+        _cylinder("Blower.FlexibleConnector", 0.44, 0.76, (0.70, 0, 1.60), origin, materials["rubber"], 24, rotation=(0.0, math.pi / 2, 0.0)),
+        _cylinder("Blower.IntakeFilter", 0.60, 0.88, (-2.45, 0, 1.82), origin, materials["steel"], 24, rotation=(0.0, math.pi / 2, 0.0)),
+        _cylinder("Blower.Silencer", 0.52, 1.25, (-3.35, 0, 1.82), origin, materials["equipment"], 24, rotation=(0.0, math.pi / 2, 0.0)),
+        _pipe("Blower.Discharge", ((1.0, 0, 1.60), (1.0, 0, 3.10), (2.65, 0, 3.10), (2.65, 0, 1.62)), origin, materials["air"], 0.21),
+        _cylinder("Blower.CheckValve", 0.31, 0.42, (2.65, 0, 2.15), origin, materials["safety"], 22),
+        _cylinder("Blower.Gauge", 0.16, 0.12, (1.80, -0.15, 3.18), origin, materials["steelDark"], 18),
     ]
     for index in range(9):
         parts.append(_cylinder(
@@ -883,6 +914,77 @@ def _tank(
             materials["water"],
             0.006,
         ))
+    coping_z = height + 0.36
+    parts.extend([
+        _part(
+            f"{prefix}.Coping.N",
+            (width + 0.58, 0.62, 0.16),
+            (0, depth / 2 + 0.08, coping_z),
+            origin,
+            materials["concreteDark"],
+            0.012,
+        ),
+        _part(
+            f"{prefix}.Coping.S",
+            (width + 0.58, 0.62, 0.16),
+            (0, -depth / 2 - 0.08, coping_z),
+            origin,
+            materials["concreteDark"],
+            0.012,
+        ),
+        _part(
+            f"{prefix}.Coping.W",
+            (0.62, depth + 0.58, 0.16),
+            (-width / 2 - 0.08, 0, coping_z),
+            origin,
+            materials["concreteDark"],
+            0.012,
+        ),
+        _part(
+            f"{prefix}.Coping.E",
+            (0.62, depth + 0.58, 0.16),
+            (width / 2 + 0.08, 0, coping_z),
+            origin,
+            materials["concreteDark"],
+            0.012,
+        ),
+    ])
+    for x_side in (-1, 1):
+        for y_side in (-1, 1):
+            parts.append(_part(
+                f"{prefix}.CornerPost.{x_side}.{y_side}",
+                (0.34, 0.34, height + 0.72),
+                (
+                    x_side * (width / 2 + 0.02),
+                    y_side * (depth / 2 + 0.02),
+                    (height + 0.72) / 2 + 0.08,
+                ),
+                origin,
+                materials["concreteDark"],
+                0.025,
+            ))
+    for index in range(max(3, int(width / 2.8))):
+        x = -width * 0.42 + width * 0.84 * index / max(
+            int(width / 2.8) - 1,
+            1,
+        )
+        for side in (-1, 1):
+            parts.append(_part(
+                f"{prefix}.WallRib.{side}.{index:02d}",
+                (0.14, 0.16, height * 0.78),
+                (x, side * (depth / 2 + 0.23), height * 0.42 + 0.25),
+                origin,
+                materials["concreteDark"],
+                0.008,
+            ))
+    parts.append(add_ladder(
+        f"{prefix}.ServiceLadder",
+        origin[0] + width / 2 + 0.52,
+        origin[1],
+        height + 0.45,
+        materials["safety"],
+        origin[2],
+    ))
     return parts
 
 
@@ -930,12 +1032,12 @@ def _cone(
 
 def build_coagulation_basin(item, materials):
     origin = _origin(item)
-    parts = _tank("Coagulation", 12.5, 10.0, 2.8, origin, materials, water=False)
+    parts = _tank("Coagulation", 12.5, 10.0, 4.2, origin, materials, water=False)
     for index, x in enumerate((-4.0, 0.0, 4.0)):
         parts.append(_part(
             f"Coagulation.Compartment.{index}.Water",
             (3.55, 8.7, 0.08),
-            (x, 0, 1.42),
+            (x, 0, 3.68),
             origin,
             materials["water"],
             0.005,
@@ -944,7 +1046,7 @@ def build_coagulation_basin(item, materials):
             f"Coagulation.Mixer.{index}.Drive",
             0.35,
             0.72,
-            (x, 0, 3.55),
+            (x, 0, 4.95),
             origin,
             materials["equipment"],
             22,
@@ -952,8 +1054,8 @@ def build_coagulation_basin(item, materials):
         parts.append(_cylinder(
             f"Coagulation.Mixer.{index}.Shaft",
             0.08,
-            1.7,
-            (x, 0, 2.38),
+            3.25,
+            (x, 0, 3.28),
             origin,
             materials["steel"],
             12,
@@ -962,7 +1064,7 @@ def build_coagulation_basin(item, materials):
             parts.append(_part(
                 f"Coagulation.Mixer.{index}.Paddle.{paddle}",
                 (1.25, 0.14, 0.28),
-                (x, 0, 1.54 - paddle * 0.42),
+                (x, 0, 2.05 - paddle * 0.58),
                 origin,
                 materials["steelDark"],
                 rotation=(0.0, 0.0, paddle * math.pi / 2),
@@ -970,21 +1072,21 @@ def build_coagulation_basin(item, materials):
     for index, x in enumerate((-2.0, 2.0)):
         parts.append(_part(
             f"Coagulation.Divider.{index}",
-            (0.28, 8.8, 2.45),
-            (x, 0, 1.53),
+            (0.28, 8.8, 3.86),
+            (x, 0, 2.31),
             origin,
             materials["concreteDark"],
         ))
     parts.extend([
-        _part("Coagulation.Walkway", (12.2, 1.25, 0.14), (0, 4.55, 3.25), origin, materials["steel"]),
-        _part("Coagulation.InletPipe", (0.35, 4.0, 0.35), (-5.1, 0, 2.15), origin, materials["water"]),
+        _part("Coagulation.Walkway", (12.2, 1.45, 0.16), (0, 4.55, 4.70), origin, materials["steel"]),
+        _part("Coagulation.InletPipe", (0.35, 4.0, 0.35), (-5.1, 0, 3.35), origin, materials["water"]),
         _part("Coagulation.SludgeHopper", (3.8, 2.8, 0.9), (3.6, 0, 0.45), origin, materials["concreteDark"], 0.16),
-        _pipe("Coagulation.ChemicalHeader", ((-4.8, 4.0, 3.45), (4.8, 4.0, 3.45)), origin, materials["safety"], 0.07),
+        _pipe("Coagulation.ChemicalHeader", ((-4.8, 4.0, 4.95), (4.8, 4.0, 4.95)), origin, materials["safety"], 0.07),
     ])
     for index in range(4):
         parts.append(_pipe(
             f"Coagulation.ChemicalDrop.{index}",
-            ((-4.2 + index * 2.8, 4.0, 3.42), (-4.2 + index * 2.8, 2.2, 3.42), (-4.2 + index * 2.8, 2.2, 1.92)),
+            ((-4.2 + index * 2.8, 4.0, 4.92), (-4.2 + index * 2.8, 2.2, 4.92), (-4.2 + index * 2.8, 2.2, 3.72)),
             origin,
             materials["safety"],
             0.035,
@@ -994,12 +1096,12 @@ def build_coagulation_basin(item, materials):
 
 def build_filter_cell(item, materials):
     origin = _origin(item)
-    parts = _tank("Filter", 12.0, 9.0, 2.7, origin, materials, water=False)
+    parts = _tank("Filter", 12.0, 9.0, 4.0, origin, materials, water=False)
     for index, x in enumerate((-3.8, 0.0, 3.8)):
         parts.append(_part(
             f"Filter.Cell.{index}.Water",
             (3.45, 7.8, 0.08),
-            (x, 0, 1.55),
+            (x, 0, 3.40),
             origin,
             materials["water"],
             0.005,
@@ -1007,7 +1109,7 @@ def build_filter_cell(item, materials):
         parts.append(_part(
             f"Filter.Cell.{index}.Media",
             (3.10, 7.15, 0.34),
-            (x, 0, 1.27),
+            (x, 0, 3.05),
             origin,
             materials["concreteDark"],
             0.012,
@@ -1015,20 +1117,20 @@ def build_filter_cell(item, materials):
         parts.append(_part(
             f"Filter.Weir.{index}",
             (0.16, 7.45, 0.40),
-            (x + 1.63, 0, 2.04),
+            (x + 1.63, 0, 3.56),
             origin,
             materials["steel"],
         ))
         parts.append(_part(
             f"Filter.Trough.{index}",
             (0.52, 8.0, 0.36),
-            (x + 1.28, 0, 2.26),
+            (x + 1.28, 0, 3.76),
             origin,
             materials["concreteDark"],
         ))
         parts.append(_pipe(
             f"Filter.BackwashHeader.{index}",
-            ((x, -4.0, 2.72), (x, -2.7, 2.72), (x, -2.7, 1.78)),
+            ((x, -4.0, 4.05), (x, -2.7, 4.05), (x, -2.7, 3.18)),
             origin,
             materials["air"],
             0.09,
@@ -1036,15 +1138,15 @@ def build_filter_cell(item, materials):
     for index, x in enumerate((-1.9, 1.9)):
         parts.append(_part(
             f"Filter.Divider.{index}",
-            (0.26, 8.2, 2.45),
-            (x, 0, 1.56),
+            (0.26, 8.2, 3.78),
+            (x, 0, 2.26),
             origin,
             materials["concreteDark"],
         ))
     parts.append(_part(
         "Filter.GratingWalkway",
-        (11.5, 1.35, 0.12),
-        (0, 0, 3.28),
+        (11.5, 1.50, 0.14),
+        (0, 0, 4.48),
         origin,
         materials["steel"],
     ))
@@ -1052,7 +1154,7 @@ def build_filter_cell(item, materials):
         parts.append(_part(
             f"Filter.Grating.{index:02d}",
             (0.08, 1.20, 0.06),
-            (-5.25 + index * 0.70, 0, 3.37),
+            (-5.25 + index * 0.70, 0, 4.58),
             origin,
             materials["steelDark"],
             0.002,
@@ -1062,7 +1164,7 @@ def build_filter_cell(item, materials):
             f"Filter.WalkwayRail.{side}",
             (-5.5, side * 0.72),
             (5.5, side * 0.72),
-            3.30,
+            4.44,
             origin,
             materials["safety"],
         ))
@@ -1071,41 +1173,41 @@ def build_filter_cell(item, materials):
 
 def build_contact_basin(item, materials):
     origin = _origin(item)
-    parts = _tank("Contact", 13.0, 9.5, 2.5, origin, materials, water=False)
+    parts = _tank("Contact", 13.0, 9.5, 3.8, origin, materials, water=False)
     for index in range(5):
         y = -3.4 + index * 1.7
         parts.append(_part(
             f"Contact.Channel.{index}.Water",
             (11.6 if index % 2 == 0 else 9.2, 1.28, 0.08),
-            (-0.25 if index % 2 == 0 else 0.85, y, 1.43),
+            (-0.25 if index % 2 == 0 else 0.85, y, 3.08),
             origin,
             materials["water"],
             0.005,
         ))
         parts.append(_part(
             f"Contact.Baffle.{index}",
-            (9.4 if index % 2 == 0 else 10.8, 0.24, 2.12),
-            (0.8 if index % 2 == 0 else -0.4, y + 0.72, 1.35),
+            (9.4 if index % 2 == 0 else 10.8, 0.24, 3.38),
+            (0.8 if index % 2 == 0 else -0.4, y + 0.72, 2.04),
             origin,
             materials["concreteDark"],
         ))
         parts.append(_part(
             f"Contact.Gate.{index}",
             (1.15, 0.20, 1.45),
-            (-4.0 if index % 2 == 0 else 4.0, y, 1.62),
+            (-4.0 if index % 2 == 0 else 4.0, y, 2.28),
             origin,
             materials["steel"],
         ))
     parts.extend([
-        _part("Contact.Walkway", (12.5, 1.18, 0.14), (0, 3.9, 3.04), origin, materials["steel"]),
-        _pipe("Contact.DisinfectionHeader", ((-5.5, 3.8, 3.30), (5.5, 3.8, 3.30)), origin, materials["safety"], 0.085),
-        _cylinder("Contact.FlowMeter", 0.24, 0.44, (5.3, -0.4, 2.05), origin, materials["equipment"], 22),
-        _pipe("Contact.Outlet", ((5.7, -2.8, 1.42), (7.1, -2.8, 1.42), (7.1, -2.8, 0.45)), origin, materials["water"], 0.15),
+        _part("Contact.Walkway", (12.5, 1.40, 0.16), (0, 3.9, 4.28), origin, materials["steel"]),
+        _pipe("Contact.DisinfectionHeader", ((-5.5, 3.8, 4.56), (5.5, 3.8, 4.56)), origin, materials["safety"], 0.085),
+        _cylinder("Contact.FlowMeter", 0.24, 0.44, (5.3, -0.4, 3.08), origin, materials["equipment"], 22),
+        _pipe("Contact.Outlet", ((5.7, -2.8, 3.05), (7.1, -2.8, 3.05), (7.1, -2.8, 0.45)), origin, materials["water"], 0.15),
     ])
     for index in range(5):
         parts.append(_pipe(
             f"Contact.DosingDrop.{index}",
-            ((5.0, 3.8, 3.27), (5.0, 3.8 - index * 1.22, 2.88), (4.4, 3.8 - index * 1.22, 2.88)),
+            ((5.0, 3.8, 4.53), (5.0, 3.8 - index * 1.22, 4.05), (4.4, 3.8 - index * 1.22, 4.05)),
             origin,
             materials["safety"],
             0.025,
@@ -1115,11 +1217,11 @@ def build_contact_basin(item, materials):
 
 def build_membrane_basin(item, materials):
     origin = _origin(item)
-    parts = _tank("Membrane", 13.0, 9.5, 2.7, origin, materials, water=False)
+    parts = _tank("Membrane", 13.0, 9.5, 4.2, origin, materials, water=False)
     parts.append(_part(
         "Membrane.Water",
         (12.0, 8.4, 0.08),
-        (0, 0, 1.42),
+        (0, 0, 3.55),
         origin,
         materials["water"],
         0.005,
@@ -1128,8 +1230,8 @@ def build_membrane_basin(item, materials):
         x = -4.1 + cassette * 2.75
         parts.append(_part(
             f"Membrane.Cassette.{cassette}.Frame",
-            (2.1, 6.8, 1.65),
-            (x, 0, 1.96),
+            (2.2, 6.8, 2.55),
+            (x, 0, 2.45),
             origin,
             materials["steel"],
             0.025,
@@ -1138,15 +1240,15 @@ def build_membrane_basin(item, materials):
             parts.append(_part(
                 f"Membrane.Cassette.{cassette}.Sheet.{membrane}",
                 (0.06, 6.25, 1.30),
-                (x - 0.72 + membrane * 0.36, 0, 1.98),
+                (x - 0.76 + membrane * 0.38, 0, 2.48),
                 origin,
                 materials["equipmentLight"],
                 0.004,
             ))
     parts.extend([
-        _part("Membrane.Walkway", (12.5, 1.25, 0.14), (0, 4.0, 3.22), origin, materials["steel"]),
-        _pipe("Membrane.PermeateHeader", ((-5.4, -3.9, 3.0), (5.4, -3.9, 3.0)), origin, materials["water"], 0.13),
-        _pipe("Membrane.BackwashHeader", ((-5.2, 4.0, 3.3), (5.2, 4.0, 3.3)), origin, materials["air"], 0.10),
+        _part("Membrane.Walkway", (12.5, 1.45, 0.16), (0, 4.0, 4.68), origin, materials["steel"]),
+        _pipe("Membrane.PermeateHeader", ((-5.4, -3.9, 4.45), (5.4, -3.9, 4.45)), origin, materials["water"], 0.13),
+        _pipe("Membrane.BackwashHeader", ((-5.2, 4.0, 4.70), (5.2, 4.0, 4.70)), origin, materials["air"], 0.10),
         _cylinder("Membrane.VacuumPump", 0.46, 1.1, (5.5, -3.6, 0.82), origin, materials["equipment"], 24, rotation=(0, math.pi / 2, 0)),
     ])
     for index in range(4):
@@ -1163,33 +1265,41 @@ def build_membrane_basin(item, materials):
 def build_chemical_tank(item, materials):
     origin = _origin(item)
     parts = [
-        _part("Chemical.BundBase", (5.6, 5.6, 0.34), (0, 0, 0.17), origin, materials["concrete"]),
-        _part("Chemical.Bund.N", (5.6, 0.30, 1.05), (0, 2.65, 0.52), origin, materials["concreteDark"]),
-        _part("Chemical.Bund.S", (5.6, 0.30, 1.05), (0, -2.65, 0.52), origin, materials["concreteDark"]),
-        _part("Chemical.Bund.W", (0.30, 5.6, 1.05), (-2.65, 0, 0.52), origin, materials["concreteDark"]),
-        _part("Chemical.Bund.E", (0.30, 5.6, 1.05), (2.65, 0, 0.52), origin, materials["concreteDark"]),
-        _cylinder("Chemical.Tank", 1.65, 4.6, (0, 0, 2.66), origin, materials["equipmentLight"], 36, 0.035),
-        _cylinder("Chemical.TankBand.0", 1.70, 0.13, (0, 0, 1.35), origin, materials["steel"], 32, 0.01),
-        _cylinder("Chemical.TankBand.1", 1.70, 0.13, (0, 0, 2.85), origin, materials["steel"], 32, 0.01),
-        _cylinder("Chemical.TankBand.2", 1.70, 0.13, (0, 0, 4.22), origin, materials["steel"], 32, 0.01),
-        _dome("Chemical.Dome", 1.68, (0, 0, 4.95), origin, materials["equipment"]),
-        _part("Chemical.Mixer", (0.54, 0.54, 0.65), (0, 0, 5.56), origin, materials["equipment"]),
-        _cylinder("Chemical.MixerShaft", 0.075, 3.4, (0, 0, 3.50), origin, materials["steel"], 12),
-        _part("Chemical.MixerPaddle", (1.25, 0.12, 0.32), (0, 0, 1.82), origin, materials["steelDark"]),
+        _part("Chemical.BundBase", (6.4, 6.4, 0.38), (0, 0, 0.19), origin, materials["concrete"]),
+        _part("Chemical.Bund.N", (6.4, 0.34, 1.15), (0, 3.03, 0.57), origin, materials["concreteDark"]),
+        _part("Chemical.Bund.S", (6.4, 0.34, 1.15), (0, -3.03, 0.57), origin, materials["concreteDark"]),
+        _part("Chemical.Bund.W", (0.34, 6.4, 1.15), (-3.03, 0, 0.57), origin, materials["concreteDark"]),
+        _part("Chemical.Bund.E", (0.34, 6.4, 1.15), (3.03, 0, 0.57), origin, materials["concreteDark"]),
+        _cylinder("Chemical.Tank", 1.95, 6.1, (0, 0, 3.43), origin, materials["equipmentLight"], 40, 0.035),
+        _cylinder("Chemical.TankBand.0", 2.01, 0.14, (0, 0, 1.42), origin, materials["steel"], 36, 0.01),
+        _cylinder("Chemical.TankBand.1", 2.01, 0.14, (0, 0, 3.60), origin, materials["steel"], 36, 0.01),
+        _cylinder("Chemical.TankBand.2", 2.01, 0.14, (0, 0, 5.55), origin, materials["steel"], 36, 0.01),
+        _dome("Chemical.Dome", 1.98, (0, 0, 6.52), origin, materials["equipment"]),
+        _part("Chemical.Mixer", (0.62, 0.62, 0.72), (0, 0, 7.18), origin, materials["equipment"]),
+        _cylinder("Chemical.MixerShaft", 0.08, 5.0, (0, 0, 4.48), origin, materials["steel"], 12),
+        _part("Chemical.MixerPaddle", (1.55, 0.14, 0.36), (0, 0, 2.02), origin, materials["steelDark"]),
         _part("Chemical.DosingSkid", (1.85, 1.35, 0.62), (1.80, -1.75, 0.55), origin, materials["equipment"]),
-        _pipe("Chemical.DosingLine", ((1.6, -1.45, 0.84), (1.6, -1.45, 1.45), (0.35, -1.45, 1.45), (0.35, -0.8, 1.45)), origin, materials["safety"], 0.055),
-        _cylinder("Chemical.Riser", 0.12, 2.4, (1.92, 0.75, 2.0), origin, materials["safety"], 16),
+        _pipe("Chemical.DosingLine", ((1.85, -1.85, 0.90), (1.85, -1.85, 1.52), (0.45, -1.85, 1.52), (0.45, -1.0, 1.52)), origin, materials["safety"], 0.055),
+        _cylinder("Chemical.Riser", 0.13, 3.0, (2.28, 0.85, 2.45), origin, materials["safety"], 16),
     ]
     for index in range(4):
         parts.append(_cylinder(
             f"Chemical.BundDrain.{index}",
             0.11,
             0.08,
-            (-1.9 + index * 1.3, -2.6, 0.96),
+            (-2.1 + index * 1.4, -3.0, 1.05),
             origin,
             materials["steelDark"],
             14,
         ))
+    parts.append(add_ladder(
+        "Chemical.ServiceLadder",
+        origin[0] + 2.10,
+        origin[1] - 2.65,
+        6.5,
+        materials["safety"],
+        origin[2],
+    ))
     return parts
 
 
@@ -1213,12 +1323,12 @@ def build_sludge_thickener(item, materials):
     radius = 6.2
     parts = [
         _part("Thickener.Foundation", (13.5, 13.5, 0.38), (0, 0, 0.19), origin, materials["concrete"]),
-        _cylinder("Thickener.Water", 5.85, 0.08, (0, 0, 1.38), origin, materials["sludge"], 36, 0.005),
+        _cylinder("Thickener.Water", 5.85, 0.08, (0, 0, 3.80), origin, materials["sludge"], 36, 0.005),
     ]
     parts.extend(_tank_shell(
         "Thickener",
         radius,
-        2.8,
+        4.2,
         origin,
         materials["concrete"],
         segments=24,
@@ -1229,21 +1339,37 @@ def build_sludge_thickener(item, materials):
         "Thickener.Weir",
         5.35,
         0.30,
-        2.68,
+        3.92,
         origin,
         materials["steel"],
         segments=24,
         thickness=0.08,
     ))
     parts.extend([
-        _cylinder("Thickener.CenterWell", 1.22, 2.5, (0, 0, 1.60), origin, materials["concreteDark"], 28),
-        _cylinder("Thickener.Drive", 0.75, 0.8, (0, 0, 3.22), origin, materials["equipment"], 24),
-        _part("Thickener.Bridge", (12.1, 0.88, 0.17), (0, 0, 3.55), origin, materials["steel"]),
+        _cylinder("Thickener.CenterWell", 1.22, 3.7, (0, 0, 2.20), origin, materials["concreteDark"], 28),
+        _cylinder("Thickener.Drive", 0.82, 0.9, (0, 0, 4.62), origin, materials["equipment"], 24),
+        _part("Thickener.Bridge", (12.1, 1.10, 0.18), (0, 0, 4.78), origin, materials["steel"]),
         _part("Thickener.ScraperArm.A", (10.8, 0.20, 0.26), (1.8, 0, 0.72), origin, materials["steelDark"], rotation=(0, 0, 0.65)),
         _part("Thickener.ScraperArm.B", (10.8, 0.20, 0.26), (-1.8, 0, 0.72), origin, materials["steelDark"], rotation=(0, 0, 0.65)),
-        _pipe("Thickener.SupernatantPipe", ((4.8, -0.8, 2.7), (7.0, -0.8, 2.7), (7.0, -0.8, 0.52)), origin, materials["sludge"], 0.16),
+        _pipe("Thickener.SupernatantPipe", ((4.8, -0.8, 4.02), (7.0, -0.8, 4.02), (7.0, -0.8, 0.52)), origin, materials["sludge"], 0.16),
     ])
-    parts.append(add_ladder("Thickener.Ladder", origin[0] + 6.4, origin[1], 3.2, materials["safety"], origin[2]))
+    parts.append(add_ladder("Thickener.Ladder", origin[0] + 6.4, origin[1], 4.7, materials["safety"], origin[2]))
+    for side in (-1, 1):
+        parts.append(_part(
+            f"Thickener.BridgeRail.{side}",
+            (12.2, 0.09, 0.09),
+            (0, side * 0.50, 5.82),
+            origin,
+            materials["safety"],
+        ))
+        parts.extend(_rail_segments(
+            f"Thickener.RimRail.{side}",
+            (-5.7, side * 5.85),
+            (5.7, side * 5.85),
+            4.55,
+            origin,
+            materials["safety"],
+        ))
     return parts
 
 
@@ -1547,6 +1673,13 @@ BUILDERS = {
 
 
 def build_equipment(item, materials):
+    stage_materials = {
+        **materials,
+        "equipment": materials.get(
+            f"stage:{item['stage']}",
+            materials["equipment"],
+        ),
+    }
     builder = BUILDERS.get(item["kind"])
     if builder is None:
         origin = _origin(item)
@@ -1563,12 +1696,12 @@ def build_equipment(item, materials):
                 (3.0, 2.3, 2.0),
                 (0, 0, 1.4),
                 origin,
-                materials["equipment"],
+                stage_materials["equipment"],
             ),
         ]
     else:
-        parts = builder(item, materials)
-    parts.extend(_port_fixtures(item, materials))
+        parts = builder(item, stage_materials)
+    parts.extend(_port_fixtures(item, stage_materials))
     joined = join_parts(parts, item["tag"])
     for polygon in joined.data.polygons:
         polygon.use_smooth = False
