@@ -100,7 +100,7 @@ async function main() {
       '--lod-min-unit-triangles',
       '8',
       '--semantic-proxy',
-      'auto',
+      'off',
       '--render-batch',
       'static',
       '--coarse-chunk-max-bytes',

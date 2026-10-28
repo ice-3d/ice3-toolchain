@@ -72,6 +72,11 @@ than a single realistic material palette:
 The detailed source is intentionally larger than the runtime representation.
 LOD generation and static batching remain entirely offline.
 
+The demo build keeps semantic proxy generation disabled. This heterogeneous
+scene contains long pipe runs, railings, and decorative structures that can
+otherwise collapse into low-detail boxes at the root LOD; adaptive QEM still
+meets the same coarse triangle and byte budgets without those shape jumps.
+
 Inspect a source or prepared asset:
 
 ```bash
