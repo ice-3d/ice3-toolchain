@@ -17,12 +17,16 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "build:wastewater-demo": "npm run build && node --import tsx tools/wastewater-plant/build-example.mjs",
+    "generate:wastewater": "node --import tsx tools/wastewater-plant/generate.ts",
     "typecheck": "tsc -b --pretty false",
+    "typecheck:tools": "tsc -p tools/wastewater-plant/tsconfig.json --pretty false",
     "test": "node scripts/run-tests.mjs",
     "test:architecture": "node scripts/run-tests.mjs tests/architecture",
-    "verify": "npm run test:architecture && npm run typecheck && npm test"
+    "verify": "npm run test:architecture && npm run typecheck && npm run typecheck:tools && npm test"
   },
   "devDependencies": {
+    "@gltf-transform/core": "4.5.1",
     "@types/node": "24.19.2",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",

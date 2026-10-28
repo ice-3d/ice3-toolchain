@@ -25,6 +25,21 @@ npm run build
 npm run verify
 ```
 
+## Virtual Wastewater Demo
+
+Rebuild the complete synthetic municipal wastewater plant:
+
+```bash
+npm run build:wastewater-demo
+```
+
+The command deterministically generates the source GLB, prepared preview,
+Tileset, fine partitions and coarse chunks, validates every artifact, and
+replaces the example asset directory only after the complete pipeline passes.
+If publishing the new directory fails, the previous asset directory is
+restored. The generated scene and all equipment identities are entirely
+fictional.
+
 Inspect a source or prepared asset:
 
 ```bash

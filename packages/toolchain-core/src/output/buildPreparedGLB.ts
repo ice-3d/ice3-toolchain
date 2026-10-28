@@ -508,6 +508,11 @@ export function buildPreparedGLB(
       ? undefined
       : sourceMeshToOutputMesh.get(Number(node.mesh));
     const flatten = options.selection?.flattenWorldTransforms === true;
+    const resolvedSelectionId = typeof semanticSelectionId === 'string'
+      ? semanticSelectionId
+      : renderBatching || options.selectionIdAssetId
+        ? `${selectionIdAssetId}/node/${sourceIndex}`
+        : undefined;
     return {
       name: typeof node.name === 'string' ? node.name : `node-${sourceIndex}`,
       matrix: flatten
@@ -529,17 +534,7 @@ export function buildPreparedGLB(
       extras: {
         ice3: {
           id: `${assetId}/node/${sourceIndex}`,
-          ...(renderBatching
-            ? {
-                selectionId: typeof semanticSelectionId === 'string'
-                  ? semanticSelectionId
-                  : `${selectionIdAssetId}/node/${sourceIndex}`,
-              }
-            : options.selectionIdAssetId
-            ? {
-                selectionId: `${selectionIdAssetId}/node/${sourceIndex}`,
-              }
-            : {}),
+          ...(resolvedSelectionId ? { selectionId: resolvedSelectionId } : {}),
         },
       },
     };
