@@ -1,8 +1,22 @@
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { expect } from '#test-expect';
+import { AUTHORED_GENERATOR } from
+  '../../tools/wastewater-plant/finalize-source-glb.js';
 import { inspectWastewaterArtifacts } from
   '../../tools/wastewater-plant/verify.js';
+
+test('checked-in source is produced by the pinned authored generator', async () => {
+  const source = await readFile(
+    '../ice3-engine/examples/m1/assets/wastewater-plant/'
+      + 'source/wastewater-plant.glb',
+  );
+  const headerLength = source.readUInt32LE(12);
+  const json = JSON.parse(
+    source.subarray(20, 20 + headerLength).toString('utf8'),
+  ) as { asset: { generator?: string } };
+  expect(json.asset.generator).toBe(AUTHORED_GENERATOR);
+});
 
 test('produces split fine content and split coarse proxies', async () => {
   const summary = await inspectWastewaterArtifacts(

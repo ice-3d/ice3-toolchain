@@ -53,7 +53,7 @@ async function main() {
     run(process.execPath, [
       '--import',
       'tsx',
-      join(toolDirectory, 'generate.ts'),
+      join(toolDirectory, 'build-blender-source.ts'),
       '--output',
       source,
     ]);
