@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsc -b",
     "build:wastewater-demo": "npm run build && node --import tsx tools/wastewater-plant/build-example.mjs",
-    "generate:wastewater": "node --import tsx tools/wastewater-plant/generate.ts",
+    "generate:wastewater": "node --import tsx tools/wastewater-plant/build-blender-source.ts --output",
+    "generate:wastewater-spec": "node --import tsx tools/wastewater-plant/scene-spec.ts --output",
     "typecheck": "tsc -b --pretty false",
     "typecheck:tools": "tsc -p tools/wastewater-plant/tsconfig.json --pretty false",
     "test": "node scripts/run-tests.mjs",
