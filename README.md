@@ -33,6 +33,9 @@ Rebuild the complete synthetic municipal wastewater plant:
 npm run build:wastewater-demo
 ```
 
+Building the virtual wastewater source GLB requires Blender 5.2.3. Set
+`BLENDER_BIN` when it is installed outside the standard macOS path.
+
 The command deterministically generates the source GLB, prepared preview,
 Tileset, fine partitions and coarse chunks, validates every artifact, and
 replaces the example asset directory only after the complete pipeline passes.
