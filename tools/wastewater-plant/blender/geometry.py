@@ -1,3 +1,5 @@
+import math
+
 import bpy
 from mathutils import Vector
 
@@ -282,34 +284,89 @@ def add_stairs(
     material,
     direction=1.0,
     z_base=0.0,
+    landing=0.8,
 ):
     x, y = start
     steps = max(3, steps)
     tread = run / steps
     step_rise = rise / steps
-    parts = []
-    for index in range(steps):
-        z = z_base + (index + 1) * step_rise
-        sx = x + direction * (index + 0.5) * tread
-        parts.append(add_box(
-            f"{name}.Tread.{index:02d}",
-            (tread + 0.03, width, 0.07),
-            (sx, y, z),
-            0.008,
-            material,
+    landing = max(0.0, landing)
+    total_run = run + landing
+
+    profile = [(0.0, 0.0), (total_run, 0.0), (total_run, rise)]
+    for index in range(steps - 1, -1, -1):
+        profile.append((index * tread, (index + 1) * step_rise))
+        if index > 0:
+            profile.append((index * tread, index * step_rise))
+    profile.append((0.0, 0.0))
+
+    half_width = width / 2
+    vertices = []
+    for side in (-half_width, half_width):
+        for distance, height in profile:
+            vertices.append((
+                x + direction * distance,
+                y + side,
+                z_base + height,
+            ))
+    count = len(profile)
+    faces = [
+        tuple(range(count)),
+        tuple(range(count, count * 2)),
+    ]
+    for index in range(count):
+        following = (index + 1) % count
+        faces.append((
+            index,
+            following,
+            count + following,
+            count + index,
         ))
-    start_x = x
-    end_x = x + direction * run
-    for side, sy in (("L", y - width / 2), ("R", y + width / 2)):
-        parts.append(add_railing(
-            f"{name}.Rail.{side}",
-            (start_x, sy),
-            (end_x, sy),
-            1.05,
-            material,
-            z_base,
-            post_spacing=1.4,
-        ))
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(vertices, [], faces)
+    mesh.validate()
+    mesh.update()
+    body = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(body)
+    assign_material(body, material)
+    apply_bevel(body, min(0.015, tread * 0.04, step_rise * 0.04), 2)
+
+    parts = [body]
+    rise_length = math.hypot(run, rise)
+    rotation = Vector((1.0, 0.0, 0.0)).rotation_difference(
+        Vector((direction * run, 0.0, rise)),
+    ).to_euler()
+    for side_name, side in (
+        ("L", -half_width + 0.04),
+        ("R", half_width - 0.04),
+    ):
+        for rail_index, rail_height in enumerate((0.55, 1.05)):
+            parts.append(add_box(
+                f"{name}.Rail.{side_name}.{rail_index}",
+                (rise_length, 0.055, 0.055),
+                (
+                    x + direction * run / 2,
+                    y + side,
+                    z_base + rise / 2 + rail_height,
+                ),
+                0.0,
+                material,
+                rotation=rotation,
+            ))
+        for index in range(5):
+            distance = run * index / 4
+            stair_height = rise * index / 4
+            parts.append(add_box(
+                f"{name}.Rail.{side_name}.Post.{index}",
+                (0.055, 0.055, 1.08),
+                (
+                    x + direction * distance,
+                    y + side,
+                    z_base + stair_height + 0.49,
+                ),
+                0.0,
+                material,
+            ))
     return join_parts(parts, name)
 
 

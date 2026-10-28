@@ -44,7 +44,7 @@ restored. The generated scene and all equipment identities are entirely
 fictional.
 
 The current scene contains 65 selectable equipment units, 92 modeled process
-and utility connections, and about 2.0M source triangles. Fine partitions use a
+and utility connections, and about 1.9M source triangles. Fine partitions use a
 60,000-triangle budget, coarse LOD content uses a 120k-triangle total budget,
 and coarse chunks are capped at 4 MiB.
 
@@ -64,7 +64,10 @@ than a single realistic material palette:
 - aeration, primary, secondary, filtration, membrane, chemical, and building
   volumes follow realistic vertical proportions rather than a uniform scale;
 - handrails, ladders, stairs, wall panels, roof equipment, bridge gratings, and
-  tank copings provide human-scale reference and model-detail cues.
+  tank copings provide human-scale reference and model-detail cues;
+- external stairs use a continuous solid stepped core with slope-following
+  handrails, and long elevated pipe runs use regularly spaced supports instead
+  of isolated posts.
 
 The detailed source is intentionally larger than the runtime representation.
 LOD generation and static batching remain entirely offline.

@@ -3,8 +3,10 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
-import { NodeIO } from '@gltf-transform/core';
+import { NodeIO, type Node } from '@gltf-transform/core';
 import { expect } from '#test-expect';
+import { createWastewaterSceneSpec } from
+  '../../tools/wastewater-plant/scene-spec.js';
 
 let sourceRoot = '';
 let sourceGlb = '';
@@ -28,6 +30,88 @@ after(async () => {
 
 function buildSourceForTest(): string {
   return sourceGlb;
+}
+
+interface Bounds {
+  readonly min: readonly [number, number, number];
+  readonly max: readonly [number, number, number];
+}
+
+function worldBounds(node: Node): Bounds | undefined {
+  const mesh = node.getMesh();
+  if (!mesh) return undefined;
+  const matrix = node.getWorldMatrix();
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (const primitive of mesh.listPrimitives()) {
+    const position = primitive.getAttribute('POSITION');
+    if (!position) continue;
+    const localMin = position.getMin([]);
+    const localMax = position.getMax([]);
+    for (let corner = 0; corner < 8; corner += 1) {
+      const local = [
+        (corner & 1) === 0 ? localMin[0]! : localMax[0]!,
+        (corner & 2) === 0 ? localMin[1]! : localMax[1]!,
+        (corner & 4) === 0 ? localMin[2]! : localMax[2]!,
+      ];
+      const world = [
+        matrix[0]! * local[0]! + matrix[4]! * local[1]!
+          + matrix[8]! * local[2]! + matrix[12]!,
+        matrix[1]! * local[0]! + matrix[5]! * local[1]!
+          + matrix[9]! * local[2]! + matrix[13]!,
+        matrix[2]! * local[0]! + matrix[6]! * local[1]!
+          + matrix[10]! * local[2]! + matrix[14]!,
+      ];
+      for (let axis = 0; axis < 3; axis += 1) {
+        min[axis] = Math.min(min[axis]!, world[axis]!);
+        max[axis] = Math.max(max[axis]!, world[axis]!);
+      }
+    }
+  }
+  return min.every(Number.isFinite)
+    ? { min: min as [number, number, number], max: max as [number, number, number] }
+    : undefined;
+}
+
+function mergeBounds(items: readonly Bounds[]): Bounds {
+  return {
+    min: [0, 1, 2].map((axis) => (
+      Math.min(...items.map((item) => item.min[axis]!))
+    )) as [number, number, number],
+    max: [0, 1, 2].map((axis) => (
+      Math.max(...items.map((item) => item.max[axis]!))
+    )) as [number, number, number],
+  };
+}
+
+function overlaps(left: Bounds, right: Bounds): boolean {
+  return [0, 1, 2].every((axis) => (
+    Math.min(left.max[axis]!, right.max[axis]!)
+      - Math.max(left.min[axis]!, right.min[axis]!)
+    > 0.01
+  ));
+}
+
+function buildingBounds(document: Awaited<ReturnType<NodeIO['read']>>): Map<string, Bounds> {
+  const names = [
+    'Administration',
+    'ChemicalDosing',
+    'Blower',
+    'Dewatering',
+    'Headworks',
+  ];
+  return new Map(names.map((name) => {
+    const parts = document.getRoot().listNodes()
+      .filter((node) => (
+        node.getName() === `${name}.ExternalStairs`
+        || node.getName().startsWith(`${name}.`)
+      ))
+      .flatMap((node) => {
+        const bounds = worldBounds(node);
+        return bounds ? [bounds] : [];
+      });
+    return [name, mergeBounds(parts)] as const;
+  }));
 }
 
 test('exports a valid source GLB with stable equipment roots', async () => {
@@ -180,6 +264,131 @@ test('models distinct process equipment with presentation-grade detail', async (
   expect(triangleCount('BLW-101')).toBeGreaterThan(600);
 });
 
+test('keeps decorative buildings clear of process equipment and each other', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const buildings = buildingBounds(document);
+  const equipment = document.getRoot().listNodes().flatMap((node) => {
+    const profile = node.getExtras().ice3 as
+      | { equipmentTag?: string }
+      | undefined;
+    const bounds = worldBounds(node);
+    return profile?.equipmentTag && bounds
+      ? [{ tag: profile.equipmentTag, bounds }]
+      : [];
+  });
+  const collisions: string[] = [];
+  for (const [name, bounds] of buildings) {
+    for (const item of equipment) {
+      if (overlaps(bounds, item.bounds)) {
+        collisions.push(`${name} / ${item.tag}`);
+      }
+    }
+  }
+  const entries = [...buildings];
+  for (let left = 0; left < entries.length; left += 1) {
+    for (let right = left + 1; right < entries.length; right += 1) {
+      if (overlaps(entries[left]![1], entries[right]![1])) {
+        collisions.push(`${entries[left]![0]} / ${entries[right]![0]}`);
+      }
+    }
+  }
+  expect(collisions).toEqual([]);
+});
+
+test('routes process pipes clear of decorative building volumes', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const buildings = buildingBounds(document);
+  const intersections: string[] = [];
+  for (const connection of createWastewaterSceneSpec().connections) {
+    for (let index = 0; index < connection.routePoints.length - 1; index += 1) {
+      const start = connection.routePoints[index]!;
+      const end = connection.routePoints[index + 1]!;
+      for (const [name, bounds] of buildings) {
+        let tMin = 0;
+        let tMax = 1;
+        let intersects = true;
+        for (const axis of [0, 1, 2] as const) {
+          const delta = end[axis] - start[axis];
+          if (Math.abs(delta) < 1e-9) {
+            intersects = start[axis] >= bounds.min[axis]!
+              && start[axis] <= bounds.max[axis]!;
+          } else {
+            const first = (bounds.min[axis]! - start[axis]) / delta;
+            const second = (bounds.max[axis]! - start[axis]) / delta;
+            tMin = Math.max(tMin, Math.min(first, second));
+            tMax = Math.min(tMax, Math.max(first, second));
+            intersects = tMin <= tMax;
+          }
+          if (!intersects) break;
+        }
+        if (intersects) {
+          intersections.push(`${connection.id} / ${name}`);
+        }
+      }
+    }
+  }
+  expect([...new Set(intersections)]).toEqual([]);
+});
+
+test('builds each external staircase around a continuous structural core', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const stairs = document.getRoot().listNodes()
+    .filter((node) => node.getName().endsWith('.ExternalStairs'));
+  expect(stairs).toHaveLength(5);
+  for (const node of stairs) {
+    const mesh = node.getMesh();
+    expect(mesh).toBeDefined();
+    const primitive = mesh!.listPrimitives()[0]!;
+    const positions = primitive.getAttribute('POSITION')!.getArray()!;
+    const indices = primitive.getIndices()!.getArray()!;
+    const vertexIds = new Map<string, number>();
+    const welded: number[] = [];
+    const indexMap = new Uint32Array(indices.length);
+    for (let offset = 0; offset < indices.length; offset += 1) {
+      const source = indices[offset]! * 3;
+      const key = [
+        Math.round(positions[source]! * 1_000),
+        Math.round(positions[source + 1]! * 1_000),
+        Math.round(positions[source + 2]! * 1_000),
+      ].join(',');
+      let id = vertexIds.get(key);
+      if (id === undefined) {
+        id = vertexIds.size;
+        vertexIds.set(key, id);
+        welded.push(source);
+      }
+      indexMap[offset] = id;
+    }
+    const parent = new Uint32Array(vertexIds.size);
+    for (let index = 0; index < parent.length; index += 1) parent[index] = index;
+    const find = (value: number): number => {
+      let current = value;
+      while (parent[current] !== current) {
+        parent[current] = parent[parent[current]!]!;
+        current = parent[current]!;
+      }
+      return current;
+    };
+    const union = (left: number, right: number): void => {
+      const a = find(left);
+      const b = find(right);
+      if (a !== b) parent[b] = a;
+    };
+    for (let offset = 0; offset < indexMap.length; offset += 3) {
+      union(indexMap[offset]!, indexMap[offset + 1]!);
+      union(indexMap[offset]!, indexMap[offset + 2]!);
+    }
+    const triangleCounts = new Map<number, number>();
+    for (let offset = 0; offset < indexMap.length; offset += 3) {
+      const rootId = find(indexMap[offset]!);
+      triangleCounts.set(rootId, (triangleCounts.get(rootId) ?? 0) + 1);
+    }
+    const largest = Math.max(...triangleCounts.values());
+    const total = indices.length / 3;
+    expect(largest / total).toBeGreaterThan(0.45);
+  }
+});
+
 test('models advanced and sludge equipment with recognizable assemblies', async () => {
   const document = await new NodeIO().read(buildSourceForTest());
   const nodes = new Map(
@@ -210,7 +419,7 @@ test('models advanced and sludge equipment with recognizable assemblies', async 
     .reduce((sum, primitive) => (
       sum + (primitive.getIndices()?.getCount() ?? 0) / 3
     ), 0);
-  expect(total).toBeGreaterThanOrEqual(2_000_000);
+  expect(total).toBeGreaterThanOrEqual(1_800_000);
 });
 
 test('exports connected pipe runs with semantic process metadata', async () => {
@@ -235,6 +444,55 @@ test('exports connected pipe runs with semantic process metadata', async () => {
     expect(profile.from).toMatch(/^[^:]+:[a-z-]+$/);
     expect(profile.to).toMatch(/^[^:]+:[a-z-]+$/);
     expect(String(profile.medium).length).toBeGreaterThan(0);
+  }
+});
+
+test('overlaps pipe ends into equipment collars and supports elevated runs', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const spec = createWastewaterSceneSpec();
+  const ports = new Map(spec.equipment.flatMap((equipment) => (
+    equipment.ports.map((port) => (
+      [`${equipment.tag}:${port.id}`, port] as const
+    ))
+  )));
+  const nodes = document.getRoot().listNodes();
+  for (const connection of spec.connections) {
+    const pipe = nodes.find((node) => {
+      const profile = node.getExtras().ice3 as
+        | { role?: string; connectionId?: string }
+        | undefined;
+      return profile?.role === 'process-pipe'
+        && profile.connectionId === connection.id;
+    });
+    expect(pipe).toBeDefined();
+    const bounds = worldBounds(pipe!);
+    expect(bounds).toBeDefined();
+    const firstPort = ports.get(connection.from)!;
+    const lastPort = ports.get(connection.to)!;
+    const firstInside = firstPort.position.map((value, axis) => (
+      value - firstPort.direction[axis]! * 0.35
+    ));
+    const lastInside = lastPort.position.map((value, axis) => (
+      value - lastPort.direction[axis]! * 0.35
+    ));
+    for (const point of [firstInside, lastInside]) {
+      for (let axis = 0; axis < 3; axis += 1) {
+        expect(point[axis]).toBeGreaterThanOrEqual(bounds!.min[axis]! - 0.001);
+        expect(point[axis]).toBeLessThanOrEqual(bounds!.max[axis]! + 0.001);
+      }
+    }
+    const elevatedHorizontal = connection.layout !== 'buried'
+      && connection.routePoints.some((point, index) => {
+        const next = connection.routePoints[index + 1];
+        return next !== undefined
+          && Math.abs(point[1] - next[1]) < 0.01
+          && Math.hypot(next[0] - point[0], next[2] - point[2]) > 6;
+      });
+    if (elevatedHorizontal) {
+      expect(nodes.some((node) => (
+        node.getName() === `Pipe.${connection.id}.Supports`
+      ))).toBe(true);
+    }
   }
 });
 

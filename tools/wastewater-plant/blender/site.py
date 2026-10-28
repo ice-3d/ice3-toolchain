@@ -311,7 +311,7 @@ def _building(
         ), collection, group)
     _adopt(add_stairs(
         f"{name}.ExternalStairs",
-        (x + width * 0.32, y - depth / 2 - 1.5),
+        (x - max(2.4, height * 0.75) / 2, y - depth / 2 - 0.72),
         1.25,
         max(2.4, height * 0.75),
         height,
@@ -444,10 +444,10 @@ def build_site(asset_id):
 
     buildings = create_group("Buildings", collection, site)
     building_specs = (
-        ("Headworks", (18.0, -67.0), (26.0, 15.0, 10.5), False),
+        ("Headworks", (25.0, -84.0), (26.0, 15.0, 10.5), False),
         ("ChemicalDosing", (57.0, 38.0), (35.0, 17.0, 9.0), False),
-        ("Blower", (137.0, 39.0), (31.0, 16.0, 11.5), False),
-        ("Dewatering", (128.0, 55.0), (34.0, 19.0, 12.5), False),
+        ("Blower", (137.0, 34.0), (31.0, 16.0, 11.5), False),
+        ("Dewatering", (128.0, 60.0), (34.0, 19.0, 12.5), False),
         ("Administration", (28.0, -17.0), (31.0, 16.0, 12.0), True),
     )
     for name, center, size, annex in building_specs:
@@ -583,6 +583,10 @@ def build_process_pipes(spec):
         end_direction = direction_to_blender(end_port["direction"])
         radius = max(0.045, route["diameter"] / 2)
         route_points = [to_blender(point) for point in route["routePoints"]]
+        # Extend into the two port collars so batching and simplification can
+        # never expose a hairline gap at the equipment surface.
+        route_points[0] -= start_direction * 0.35
+        route_points[-1] -= end_direction * 0.35
         material = material_by_medium[route["medium"]]
         pipe_parts = []
         for segment_index, (segment_start, segment_end) in enumerate(
@@ -637,7 +641,8 @@ def build_process_pipes(spec):
         joined_pipe["ice3"] = pipe_metadata
         move_to_collection(joined_pipe, collection)
         parent_to(joined_pipe, root)
-        if route["layout"] == "rack":
+        support_parts = []
+        if route["layout"] != "buried":
             for segment_index, (segment_start, segment_end) in enumerate(
                 zip(route_points, route_points[1:]),
             ):
@@ -647,17 +652,36 @@ def build_process_pipes(spec):
                 )
                 if not horizontal:
                     continue
-                support_x = (segment_start.x + segment_end.x) / 2
-                support_y = (segment_start.y + segment_end.y) / 2
-                support = add_box(
-                    f"Pipe.{route['id']}.Support.{segment_index:02d}",
-                    (0.18, 0.18, segment_start.z),
-                    (support_x, support_y, segment_start.z / 2),
-                    0.02,
-                    materials["steelDark"],
-                )
-                move_to_collection(support, collection)
-                parent_to(support, root)
+                length = (segment_end.xy - segment_start.xy).length
+                support_count = max(1, math.ceil(length / 6.0))
+                for support_index in range(support_count):
+                    amount = (support_index + 0.5) / support_count
+                    support_x = (
+                        segment_start.x
+                        + (segment_end.x - segment_start.x) * amount
+                    )
+                    support_y = (
+                        segment_start.y
+                        + (segment_end.y - segment_start.y) * amount
+                    )
+                    support_height = max(0.4, segment_start.z)
+                    support_parts.append(add_box(
+                        (
+                            f"Pipe.{route['id']}.Support."
+                            f"{segment_index:02d}.{support_index:02d}"
+                        ),
+                        (0.14, 0.14, support_height),
+                        (support_x, support_y, support_height / 2),
+                        0.0,
+                        materials["steelDark"],
+                    ))
+        if support_parts:
+            supports = join_parts(
+                support_parts,
+                f"Pipe.{route['id']}.Supports",
+            )
+            move_to_collection(supports, collection)
+            parent_to(supports, root)
 
     _adopt(add_truss(
         "PipeRacks.MainCrossover",
