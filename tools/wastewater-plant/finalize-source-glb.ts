@@ -18,6 +18,12 @@ const ATTRIBUTE_ORDER = [
   'WEIGHTS_0',
 ] as const;
 
+function compareText(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
 function canonicalizeAttribute(
   document: Document,
   accessor: Accessor,
@@ -56,7 +62,7 @@ function canonicalizePrimitive(
         right as (typeof ATTRIBUTE_ORDER)[number],
       );
       return (leftRank < 0 ? 99 : leftRank) - (rightRank < 0 ? 99 : rightRank)
-        || left.localeCompare(right);
+        || compareText(left, right);
     });
   for (const semantic of primitive.listSemantics()) {
     if (semantic.startsWith('TEXCOORD_')) {
@@ -80,7 +86,7 @@ function canonicalizePrimitive(
     }
     return { index, key: values.join(','), values };
   });
-  records.sort((left, right) => left.key.localeCompare(right.key));
+  records.sort((left, right) => compareText(left.key, right.key));
 
   const canonicalVertices: typeof records = [];
   const oldToNew = new Uint32Array(records.length);
