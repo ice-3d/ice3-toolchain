@@ -15,14 +15,32 @@ export type ICEWWTPStage =
   | 'utilities';
 
 export type ICEWWTPEquipmentKind =
-  | 'screen'
+  | 'inlet'
+  | 'bar-screen'
   | 'pump'
   | 'valve'
-  | 'basin'
-  | 'clarifier'
+  | 'grit-basin'
+  | 'grit-classifier'
+  | 'rectangular-clarifier'
+  | 'distribution-well'
+  | 'emergency-basin'
+  | 'biological-reactor'
+  | 'circular-clarifier'
+  | 'coagulation-basin'
+  | 'filter-cell'
+  | 'contact-basin'
+  | 'membrane-basin'
+  | 'chemical-tank'
   | 'blower'
-  | 'filter'
-  | 'analyzer';
+  | 'analyzer'
+  | 'sludge-thickener'
+  | 'sludge-dewatering'
+  | 'sludge-dryer'
+  | 'sludge-storage'
+  | 'conveyor'
+  | 'digester'
+  | 'flare'
+  | 'uv';
 
 export interface ICEWWTPEquipmentSpec {
   readonly tag: string;

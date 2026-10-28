@@ -69,6 +69,8 @@ async function main() {
       'unrestricted',
       '--asset-id',
       'ice3-virtual-wwtp',
+      '--crease-angle',
+      '45',
     ]);
     run(process.execPath, [
       join(toolchainRoot, 'packages', 'cli', 'dist', 'main.js'),
@@ -84,7 +86,7 @@ async function main() {
       '--asset-id',
       'ice3-virtual-wwtp',
       '--max-triangles',
-      '2000',
+      '6000',
       '--max-bytes',
       '1048576',
       '--lod',
@@ -93,7 +95,7 @@ async function main() {
       '--lod-allocation',
       'adaptive',
       '--lod-max-triangles',
-      '8000',
+      '24000',
       '--lod-min-unit-triangles',
       '8',
       '--semantic-proxy',
@@ -101,7 +103,9 @@ async function main() {
       '--render-batch',
       'static',
       '--coarse-chunk-max-bytes',
-      '65536',
+      '524288',
+      '--crease-angle',
+      '45',
     ]);
     run(process.execPath, [
       '--import',

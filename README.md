@@ -40,6 +40,11 @@ If publishing the new directory fails, the previous asset directory is
 restored. The generated scene and all equipment identities are entirely
 fictional.
 
+The current scene contains 65 selectable equipment units and about 79k
+source triangles. Fine partitions use a 6000-triangle budget, coarse LOD
+content uses a 24k-triangle total budget, and coarse chunks are capped at
+512 KiB.
+
 Inspect a source or prepared asset:
 
 ```bash
