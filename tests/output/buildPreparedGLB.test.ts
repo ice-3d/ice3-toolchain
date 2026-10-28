@@ -262,6 +262,36 @@ test('writes static render batches without changing semantic nodes', () => {
   expect(document.asset.extras.ice3.batching.batches).toHaveLength(1);
 });
 
+test('preserves source selection identity without render batching', () => {
+  const source = createPartitionSource();
+  source.json.nodes = (source.json.nodes as Array<Record<string, unknown>>)
+    .map((node, index) => ({
+      ...node,
+      extras: {
+        ice3: {
+          id: `source/node/${index}`,
+          selectionId: `equipment/${index}`,
+        },
+      },
+    }));
+
+  const built = buildPreparedGLB(source, {
+    assetId: 'prepared',
+    edges: false,
+  });
+  const document = readDocument(built.bytes) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes.map((node) => node.extras.ice3.selectionId))
+    .toEqual([
+      'equipment/0',
+      'equipment/1',
+      'equipment/2',
+      'equipment/3',
+    ]);
+});
+
 test('reports contract bounds from replaced mesh geometry', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const built = buildPreparedGLB(source, {

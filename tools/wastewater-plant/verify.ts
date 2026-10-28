@@ -40,6 +40,32 @@ async function glbFiles(directory: string): Promise<string[]> {
   return files;
 }
 
+async function equipmentSelectionIds(file: string): Promise<Set<string>> {
+  const document = await new NodeIO().read(file);
+  return new Set(
+    document.getRoot().listNodes().flatMap((node) => {
+      const selectionId = (
+        node.getExtras().ice3 as Record<string, unknown> | undefined
+      )?.selectionId;
+      return typeof selectionId === 'string'
+        && selectionId.startsWith('ice3-virtual-wwtp/equipment/')
+        ? [selectionId]
+        : [];
+    }),
+  );
+}
+
+function requireEquipmentCoverage(
+  stage: string,
+  selectionIds: ReadonlySet<string>,
+): void {
+  for (const tag of EXPECTED_EQUIPMENT_TAGS) {
+    if (!selectionIds.has(`ice3-virtual-wwtp/equipment/${tag}`)) {
+      invalid(`missing ${stage} equipment identity: ${tag}`);
+    }
+  }
+}
+
 function contentUris(tile: TilesetTile | undefined): string[] {
   if (!tile) return [];
   const uris = [
@@ -88,12 +114,23 @@ export async function inspectWastewaterArtifacts(
     invalid('expected multiple fine partitions and multiple coarse chunks');
   }
 
+  const sourceIds = await equipmentSelectionIds(
+    join(root, 'source', 'wastewater-plant.glb'),
+  );
+  const preparedIds = await equipmentSelectionIds(
+    join(root, 'prepared', 'wastewater-plant.glb'),
+  );
+  requireEquipmentCoverage('source', sourceIds);
+  requireEquipmentCoverage('prepared', preparedIds);
+
   const io = new NodeIO();
-  const selectionIds = new Set<string>();
+  const fineIds = new Set<string>();
+  const coarseIds = new Set<string>();
   let triangleCount = 0;
   for (const file of [...fineFiles, ...coarseFiles]) {
     const bytes = await readFile(file);
     const glb = await io.readBinary(bytes);
+    const target = fineFiles.includes(file) ? fineIds : coarseIds;
     for (const node of glb.getRoot().listNodes()) {
       const selectionId = (
         node.getExtras().ice3 as Record<string, unknown> | undefined
@@ -102,7 +139,7 @@ export async function inspectWastewaterArtifacts(
         typeof selectionId === 'string'
         && selectionId.startsWith('ice3-virtual-wwtp/equipment/')
       ) {
-        selectionIds.add(selectionId);
+        target.add(selectionId);
       }
     }
     if (fineFiles.includes(file)) {
@@ -120,11 +157,9 @@ export async function inspectWastewaterArtifacts(
     }
   }
 
-  for (const tag of EXPECTED_EQUIPMENT_TAGS) {
-    if (!selectionIds.has(`ice3-virtual-wwtp/equipment/${tag}`)) {
-      invalid(`missing equipment identity: ${tag}`);
-    }
-  }
+  requireEquipmentCoverage('fine partition', fineIds);
+  requireEquipmentCoverage('coarse chunk', coarseIds);
+  const selectionIds = new Set([...fineIds, ...coarseIds]);
 
   return Object.freeze({
     fineParts: fineFiles.length,

@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "build:wastewater-demo": "npm run build && node tools/wastewater-plant/build-example.mjs",
+    "build:wastewater-demo": "npm run build && node --import tsx tools/wastewater-plant/build-example.mjs",
     "generate:wastewater": "node --import tsx tools/wastewater-plant/generate.ts",
     "typecheck": "tsc -b --pretty false",
     "typecheck:tools": "tsc -p tools/wastewater-plant/tsconfig.json --pretty false",

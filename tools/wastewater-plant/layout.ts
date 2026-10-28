@@ -38,7 +38,7 @@ export function equipmentArea(
     return 'PrimaryTreatmentArea';
   }
   if (tag.startsWith('AT-') || tag.startsWith('AX-') || tag.startsWith('AE-')) {
-    return tag.endsWith('1') ? 'BiologicalTrainA' : 'BiologicalTrainB';
+    return tag.endsWith('-201') ? 'BiologicalTrainB' : 'BiologicalTrainA';
   }
   if (
     tag.startsWith('SC-')

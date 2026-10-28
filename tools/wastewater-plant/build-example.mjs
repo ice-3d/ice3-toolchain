@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import {
   mkdir,
-  rename,
   rm,
 } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { replaceAssetDirectory } from './replace-asset-directory.ts';
 
 const toolDirectory = dirname(fileURLToPath(import.meta.url));
 const toolchainRoot = resolve(toolDirectory, '..', '..');
@@ -109,8 +109,7 @@ async function main() {
       join(toolDirectory, 'verify.ts'),
       staging,
     ]);
-    await rm(assetRoot, { recursive: true, force: true });
-    await rename(staging, assetRoot);
+    await replaceAssetDirectory(staging, assetRoot);
   } catch (error) {
     await rm(staging, { recursive: true, force: true });
     throw error;

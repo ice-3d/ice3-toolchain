@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import { expect } from '#test-expect';
 import { createWastewaterPlantDocument } from
   '../../tools/wastewater-plant/scene.js';
+import { equipmentArea } from '../../tools/wastewater-plant/layout.js';
+import { WASTEWATER_EQUIPMENT } from
+  '../../tools/wastewater-plant/equipment.js';
 
 test('builds the complete synthetic treatment facility', () => {
   const { document, equipment } = createWastewaterPlantDocument();
@@ -43,4 +46,23 @@ test('covers all primary, auxiliary, and return-flow systems', () => {
   ]) {
     expect(tags.has(tag)).toBe(true);
   }
+});
+
+test('separates the two parallel biological treatment trains', () => {
+  const trainA = WASTEWATER_EQUIPMENT
+    .filter((item) => item.tag.endsWith('101'))
+    .filter((item) => ['AT-101', 'AX-101', 'AE-101'].includes(item.tag));
+  const trainB = WASTEWATER_EQUIPMENT
+    .filter((item) => ['AT-201', 'AX-201', 'AE-201'].includes(item.tag));
+
+  expect(trainA.map(equipmentArea)).toEqual([
+    'BiologicalTrainA',
+    'BiologicalTrainA',
+    'BiologicalTrainA',
+  ]);
+  expect(trainB.map(equipmentArea)).toEqual([
+    'BiologicalTrainB',
+    'BiologicalTrainB',
+    'BiologicalTrainB',
+  ]);
 });
