@@ -62,6 +62,55 @@ test('creates the complete site envelope and process infrastructure', async () =
   expect(primitives.length).toBeGreaterThan(100);
 });
 
+test('places every selectable equipment root inside the site ground', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const nodes = document.getRoot().listNodes();
+  const ground = nodes.find((node) => node.getName() === 'Ground.Slab');
+  expect(ground).toBeDefined();
+  const groundMatrix = ground!.getWorldMatrix();
+  const groundPrimitive = ground!.getMesh()!.listPrimitives()[0]!;
+  const groundMin = groundPrimitive.getAttribute('POSITION')!.getMin([]);
+  const groundMax = groundPrimitive.getAttribute('POSITION')!.getMax([]);
+  const corners = [groundMin, groundMax].flatMap((minimum, index) => {
+    const maximum = index === 0 ? groundMax : groundMin;
+    return [0, 1, 2, 3, 4, 5, 6, 7].map((corner) => [
+      (corner & 1) === 0 ? minimum[0]! : maximum[0]!,
+      (corner & 2) === 0 ? minimum[1]! : maximum[1]!,
+      (corner & 4) === 0 ? minimum[2]! : maximum[2]!,
+      1,
+    ]).map((point) => [
+      groundMatrix[0]! * point[0]! + groundMatrix[4]! * point[1]!
+        + groundMatrix[8]! * point[2]! + groundMatrix[12]!,
+      groundMatrix[1]! * point[0]! + groundMatrix[5]! * point[1]!
+        + groundMatrix[9]! * point[2]! + groundMatrix[13]!,
+      groundMatrix[2]! * point[0]! + groundMatrix[6]! * point[1]!
+        + groundMatrix[10]! * point[2]! + groundMatrix[14]!,
+    ]);
+  });
+  const min = [0, 1, 2].map((axis) => (
+    Math.min(...corners.map((point) => point[axis]!))
+  ));
+  const max = [0, 1, 2].map((axis) => (
+    Math.max(...corners.map((point) => point[axis]!))
+  ));
+
+  expect(min[0]).toBeLessThanOrEqual(-24);
+  expect(max[0]).toBeGreaterThanOrEqual(294);
+  expect(min[2]).toBeLessThanOrEqual(-68);
+  expect(max[2]).toBeGreaterThanOrEqual(112);
+  const outside = nodes.filter((node) => {
+    const profile = node.getExtras().ice3 as
+      | { equipmentTag?: string }
+      | undefined;
+    if (!profile?.equipmentTag) return false;
+    const matrix = node.getWorldMatrix();
+    const x = matrix[12]!;
+    const z = matrix[14]!;
+    return x < min[0]! || x > max[0]! || z < min[2]! || z > max[2]!;
+  }).map((node) => node.getName());
+  expect(outside).toEqual([]);
+});
+
 test('models distinct process equipment with presentation-grade detail', async () => {
   const document = await new NodeIO().read(buildSourceForTest());
   const nodes = new Map(

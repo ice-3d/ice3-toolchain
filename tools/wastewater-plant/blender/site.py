@@ -188,7 +188,7 @@ def build_site(asset_id):
     _adopt(add_box(
         "Ground.Slab",
         (318.0, 180.0, 0.30),
-        (135.0, 22.0, -0.15),
+        (135.0, -22.0, -0.15),
         0.16,
         materials["soil"],
     ), collection, ground)
@@ -200,6 +200,7 @@ def build_site(asset_id):
         (238.0, -45.0, 92.0, 46.0),
         (106.0, 25.0, 86.0, 29.0),
         (86.0, 59.0, 115.0, 38.0),
+        (115.0, -84.0, 110.0, 42.0),
     )):
         _adopt(add_box(
             f"SitePads.{index:02d}",
@@ -216,7 +217,7 @@ def build_site(asset_id):
         ("SouthService", (132.0, -57.0, 286.0, 7.0)),
         ("WestConnector", (22.0, 5.0, 8.0, 123.0)),
         ("EastConnector", (288.0, 5.0, 8.0, 123.0)),
-        ("SludgeAccess", (91.0, 40.0, 104.0, 8.0)),
+        ("SludgeAccess", (91.0, -72.0, 104.0, 8.0)),
     )
     for index, (name, (x, y, width, depth)) in enumerate(road_specs):
         road = _adopt(add_box(
@@ -262,7 +263,7 @@ def build_site(asset_id):
 
     perimeter = create_group("Perimeter", collection, site)
     sides = (
-        ("North", (-18.0, 62.0), (288.0, 62.0)),
+        ("North", (-18.0, 68.0), (288.0, 68.0)),
         ("South", (-18.0, -112.0), (288.0, -112.0)),
         ("West", (-18.0, -112.0), (-18.0, 62.0)),
         ("East", (288.0, -112.0), (288.0, 62.0)),
