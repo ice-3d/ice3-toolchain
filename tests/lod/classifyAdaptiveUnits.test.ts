@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { classifyAdaptiveUnits } from '../../packages/toolchain-core/src/lod/classifyAdaptiveUnits.js';
 
 test('returns only units outside the dominant ratio tolerance', () => {

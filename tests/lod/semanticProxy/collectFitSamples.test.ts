@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { collectFitSamples } from '../../../packages/toolchain-core/src/lod/semanticProxy/collectFitSamples.js';
 
 test('collects unique vertices, triangle centroids, areas, and bounds', () => {

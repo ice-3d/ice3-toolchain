@@ -9,7 +9,10 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterEach, expect, test, vi } from 'node-test';
+import { afterEach } from 'node:test';
+import { test } from '#test-runner';
+import { expect } from '#test-expect';
+import * as mockApi from '#test-mocks';
 import { runCli } from '../../packages/cli/src/commands.js';
 import { createCompressedFixture } from '../fixtures/createCompressedFixture.js';
 import { createPartitionSource } from '../partition/createPartitionSource.js';
@@ -17,7 +20,7 @@ import { createPartitionSource } from '../partition/createPartitionSource.js';
 const directories: string[] = [];
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  mockApi.restoreAllMocks();
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -56,7 +59,7 @@ test('build writes a prepared GLB atomically', async () => {
 });
 
 test('build returns non-zero for unsupported input without leaving output', async () => {
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  mockApi.spyOn(console, 'error').mockImplementation(() => {});
   const directory = mkdtempSync(join(tmpdir(), 'ice3-cli-'));
   directories.push(directory);
   const unsupported = join(directory, 'unsupported.gltf');
@@ -77,7 +80,7 @@ test('build returns non-zero for unsupported input without leaving output', asyn
 
 test('inspect emits machine-readable source statistics', async () => {
   const output: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     output.push(String(value));
   });
 
@@ -125,7 +128,7 @@ test('inspect reports a prepared ICE3 profile', async () => {
     'sample',
   ]);
   const messages: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     messages.push(String(value));
   });
 
@@ -144,7 +147,7 @@ test('inspect decodes an ordinary compressed source GLB', async () => {
   const source = join(directory, 'compressed.glb');
   await createCompressedFixture(source);
   const messages: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     messages.push(String(value));
   });
 
@@ -174,7 +177,7 @@ test('build accepts a no-edge preview option', async () => {
 
   expect(code).toBe(0);
   const messages: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     messages.push(String(value));
   });
   await runCli(['inspect', output, '--json']);
@@ -252,7 +255,7 @@ test('partition writes tileset and numbered GLBs without partial output', async 
 });
 
 test('partition rejects an existing output directory', async () => {
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  mockApi.spyOn(console, 'error').mockImplementation(() => {});
   const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
   directories.push(directory);
   const source = join(directory, 'source.gltf');
@@ -278,7 +281,7 @@ test('partition writes hierarchical LOD content and aggregate stats', async () =
   writePartitionGLTF(source);
   const output = join(directory, 'dist');
   const printed: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     printed.push(String(value));
   });
 
@@ -321,7 +324,7 @@ test('partition writes static render batches and reports their reduction', async
   writePartitionGLTF(source);
   const output = join(directory, 'dist');
   const printed: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     printed.push(String(value));
   });
 
@@ -443,7 +446,7 @@ test.each([
   [['--lod-max-triangles', '0']],
   [['--lod-min-unit-triangles', '9', '--lod-max-triangles', '8']],
 ])('partition rejects invalid LOD options %j', async (lodArguments) => {
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  mockApi.spyOn(console, 'error').mockImplementation(() => {});
   const directory = mkdtempSync(join(tmpdir(), 'ice3-partition-'));
   directories.push(directory);
   const source = join(directory, 'source.gltf');
@@ -473,7 +476,7 @@ test.each([
   writePartitionGLTF(source);
   const output = join(directory, 'dist');
   const printed: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     printed.push(String(value));
   });
 
@@ -509,7 +512,7 @@ test.each([
   const source = join(directory, 'source.gltf');
   writePartitionGLTF(source);
   const errors: string[] = [];
-  vi.spyOn(console, 'error').mockImplementation((value) => {
+  mockApi.spyOn(console, 'error').mockImplementation((value) => {
     errors.push(String(value));
   });
 
@@ -538,7 +541,7 @@ test.each([
   const source = join(directory, 'source.gltf');
   writePartitionGLTF(source);
   const printed: string[] = [];
-  vi.spyOn(console, 'log').mockImplementation((value) => {
+  mockApi.spyOn(console, 'log').mockImplementation((value) => {
     printed.push(String(value));
   });
 
@@ -601,7 +604,7 @@ test.each([
   writePartitionGLTF(source);
   const output = join(directory, 'dist');
   const errors: string[] = [];
-  vi.spyOn(console, 'error').mockImplementation((value) => {
+  mockApi.spyOn(console, 'error').mockImplementation((value) => {
     errors.push(String(value));
   });
 

@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createCoarseChunkPlan } from '../../packages/toolchain-core/src/lod/createCoarseChunkPlan.js';
 
 test('groups stable units without splitting a device', () => {

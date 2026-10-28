@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createLodSampleSchedule } from '../../packages/toolchain-core/src/lod/createLodSampleSchedule.js';
 
 test('builds deterministic logarithmic samples including both endpoints', () => {

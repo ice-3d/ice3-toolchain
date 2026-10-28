@@ -2,7 +2,8 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createGeometryWorkspace } from '../../packages/toolchain-core/src/lod/createGeometryWorkspace.js';
 
 test('reads a unit after spilling it outside the output directory', async () => {
@@ -41,9 +42,8 @@ test('removes the workspace root when disposed', async () => {
   await rm(parent, { recursive: true, force: true });
 });
 
-test.each([1024, 1])(
-  'round-trips vertex colors with maxMemoryBytes=%i',
-  async (maxMemoryBytes) => {
+for (const maxMemoryBytes of [1024, 1]) {
+  test(`round-trips vertex colors with maxMemoryBytes=${maxMemoryBytes}`, async () => {
     const workspace = await createGeometryWorkspace({ maxMemoryBytes });
     const colors = new Float32Array([
       1, 0, 0,
@@ -64,8 +64,8 @@ test.each([1024, 1])(
 
     expect([...loaded.colors!]).toEqual([...colors]);
     await workspace.dispose();
-  },
-);
+  });
+}
 
 test('keeps concurrent spilled writes isolated', async () => {
   const workspace = await createGeometryWorkspace({ maxMemoryBytes: 1 });

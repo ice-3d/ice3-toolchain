@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { allocateLodTargets } from '../../packages/toolchain-core/src/lod/allocateLodTargets.js';
 
 const unit = (index: number, triangleCount: number) => ({
