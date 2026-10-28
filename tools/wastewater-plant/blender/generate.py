@@ -10,6 +10,7 @@ sys.dont_write_bytecode = True
 tools_directory = Path(__file__).parent
 sys.path.insert(0, str(tools_directory))
 from export import BLENDER_VERSION, export_glb, prepare_scene
+from equipment import build_equipment, create_equipment_materials
 
 site_spec = importlib.util.spec_from_file_location(
     "ice3_wastewater_site",
@@ -37,13 +38,9 @@ prepare_scene(spec["assetId"])
 build_site(spec["assetId"])
 build_process_pipes(spec)
 
+equipment_materials = create_equipment_materials()
 for item in spec["equipment"]:
-    bpy.ops.mesh.primitive_cube_add(
-        size=1,
-        location=(item["position"][0], -item["position"][2], item["position"][1]),
-    )
-    obj = bpy.context.object
-    obj.name = item["tag"]
+    obj = build_equipment(item, equipment_materials)
     obj["ice3"] = {
         "selectionId": f'{spec["assetId"]}/equipment/{item["tag"]}',
         "equipmentTag": item["tag"],

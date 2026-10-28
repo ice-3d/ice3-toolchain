@@ -61,3 +61,18 @@ test('creates the complete site envelope and process infrastructure', async () =
     .flatMap((mesh) => mesh.listPrimitives());
   expect(primitives.length).toBeGreaterThan(100);
 });
+
+test('models distinct process equipment with presentation-grade detail', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const nodes = new Map(
+    document.getRoot().listNodes().map((node) => [node.getName(), node]),
+  );
+  const triangleCount = (name: string) => nodes.get(name)?.getMesh()
+    ?.listPrimitives().reduce((sum, primitive) => (
+      sum + (primitive.getIndices()?.getCount() ?? 0) / 3
+    ), 0) ?? 0;
+  expect(triangleCount('SC-101')).toBeGreaterThan(1200);
+  expect(triangleCount('AE-101')).toBeGreaterThan(900);
+  expect(triangleCount('GR-102')).toBeGreaterThan(500);
+  expect(triangleCount('BLW-101')).toBeGreaterThan(400);
+});
