@@ -76,3 +76,37 @@ test('models distinct process equipment with presentation-grade detail', async (
   expect(triangleCount('GR-102')).toBeGreaterThan(500);
   expect(triangleCount('BLW-101')).toBeGreaterThan(400);
 });
+
+test('models advanced and sludge equipment with recognizable assemblies', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const nodes = new Map(
+    document.getRoot().listNodes().map((node) => [node.getName(), node]),
+  );
+  for (const name of [
+    'DIG-101',
+    'DIG-102',
+    'FLARE-101',
+    'UV-101',
+    'DWG-101',
+    'FL-101',
+    'OZ-101',
+  ]) {
+    expect(nodes.has(name)).toBe(true);
+  }
+  const triangleCount = (name: string) => nodes.get(name)?.getMesh()
+    ?.listPrimitives().reduce((sum, primitive) => (
+      sum + (primitive.getIndices()?.getCount() ?? 0) / 3
+    ), 0) ?? 0;
+  expect(triangleCount('DIG-101')).toBeGreaterThan(1200);
+  expect(triangleCount('DWG-101')).toBeGreaterThan(800);
+  expect(triangleCount('UV-101')).toBeGreaterThan(700);
+  expect(triangleCount('FL-101')).toBeGreaterThan(600);
+  expect(triangleCount('OZ-101')).toBeGreaterThan(500);
+  const total = document.getRoot().listMeshes()
+    .flatMap((mesh) => mesh.listPrimitives())
+    .reduce((sum, primitive) => (
+      sum + (primitive.getIndices()?.getCount() ?? 0) / 3
+    ), 0);
+  expect(total).toBeGreaterThanOrEqual(150_000);
+  expect(total).toBeLessThanOrEqual(300_000);
+});

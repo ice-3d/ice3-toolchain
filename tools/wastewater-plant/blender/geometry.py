@@ -43,7 +43,7 @@ def create_group(name, collection, parent=None):
     return group
 
 
-def apply_bevel(obj, width=0.04, segments=2):
+def apply_bevel(obj, width=0.04, segments=1):
     if width <= 0:
         return
     modifier = obj.modifiers.new("Edge Chamfer", "BEVEL")
