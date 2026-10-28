@@ -111,6 +111,60 @@ test('places every selectable equipment root inside the site ground', async () =
   expect(outside).toEqual([]);
 });
 
+test('separates overlapping ground layers to prevent depth flicker', async () => {
+  const document = await new NodeIO().read(buildSourceForTest());
+  const nodes = document.getRoot().listNodes();
+  const bounds = (name: string) => {
+    const node = nodes.find((candidate) => candidate.getName() === name);
+    const primitive = node?.getMesh()?.listPrimitives()[0];
+    if (!node || !primitive) throw new Error(`missing site surface: ${name}`);
+    const offset = node.getTranslation();
+    const min = primitive.getAttribute('POSITION')!.getMin([]);
+    const max = primitive.getAttribute('POSITION')!.getMax([]);
+    return {
+      x: [min[0]! + offset[0], max[0]! + offset[0]] as const,
+      y: [min[1]! + offset[1], max[1]! + offset[1]] as const,
+      z: [min[2]! + offset[2], max[2]! + offset[2]] as const,
+    };
+  };
+
+  const ground = bounds('Ground.Slab');
+  const padNodes = nodes
+    .map((node) => node.getName())
+    .filter((name) => name.startsWith('SitePads.'));
+  const pads = padNodes.map(bounds);
+  const roads = nodes
+    .map((node) => node.getName())
+    .filter((name) => (
+      name.startsWith('RoadNetwork.') && name.split('.').length === 2
+    ))
+    .map(bounds);
+  const padTop = Math.max(...pads.map(({ y }) => y[1]));
+  for (const pad of pads) {
+    expect(pad.y[0]).toBeGreaterThan(ground.y[1] + 0.005);
+    expect(pad.y[1] - ground.y[1]).toBeGreaterThanOrEqual(0.3);
+  }
+  for (const road of roads) {
+    expect(road.y[0]).toBeGreaterThan(padTop + 0.02);
+  }
+  const overlappingPads: string[] = [];
+  for (let left = 0; left < pads.length; left += 1) {
+    for (let right = left + 1; right < pads.length; right += 1) {
+      const a = pads[left]!;
+      const b = pads[right]!;
+      const overlapX = Math.min(a.x[1], b.x[1]) - Math.max(a.x[0], b.x[0]);
+      const overlapZ = Math.min(a.z[1], b.z[1]) - Math.max(a.z[0], b.z[0]);
+      if (overlapX > 0.001 && overlapZ > 0.001) {
+        overlappingPads.push(
+          `${padNodes[left]} / ${padNodes[right]}: `
+          + `${overlapX.toFixed(6)} x ${overlapZ.toFixed(6)}`,
+        );
+      }
+    }
+  }
+  expect(overlappingPads).toEqual([]);
+});
+
 test('models distinct process equipment with presentation-grade detail', async () => {
   const document = await new NodeIO().read(buildSourceForTest());
   const nodes = new Map(
