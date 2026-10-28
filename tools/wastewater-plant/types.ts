@@ -1,7 +1,7 @@
 export interface ICEWWTPMeshData {
-  readonly positions: Float32Array;
-  readonly normals: Float32Array;
-  readonly indices: Uint32Array;
+  readonly positions: Float32Array<ArrayBuffer>;
+  readonly normals: Float32Array<ArrayBuffer>;
+  readonly indices: Uint32Array<ArrayBuffer>;
 }
 
 export type ICEWWTPStage =
