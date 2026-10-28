@@ -4,6 +4,8 @@ import type {
   ICEWWTPStage,
 } from './types.js';
 
+const SITE_EQUIPMENT_ELEVATION = 0.16;
+
 function equipment(
   tag: string,
   name: string,
@@ -11,7 +13,17 @@ function equipment(
   kind: ICEWWTPEquipmentKind,
   position: readonly [number, number, number],
 ): ICEWWTPEquipmentSpec {
-  return { tag, name, stage, kind, position };
+  return {
+    tag,
+    name,
+    stage,
+    kind,
+    position: [
+      position[0],
+      position[1] + SITE_EQUIPMENT_ELEVATION,
+      position[2],
+    ],
+  };
 }
 
 export const WASTEWATER_EQUIPMENT: readonly ICEWWTPEquipmentSpec[] =

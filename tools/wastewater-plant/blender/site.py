@@ -232,25 +232,23 @@ def build_site(asset_id):
     _adopt(add_box(
         "Ground.Slab",
         (318.0, 180.0, 0.30),
-        (135.0, -22.0, -0.15),
+        (135.0, -22.0, -0.40),
         0.16,
         materials["soil"],
     ), collection, ground)
     site_pad = create_group("SitePads", collection, ground)
     for index, (x, y, width, depth, material_key) in enumerate((
-        (25.0, -45.0, 77.0, 44.0, "concreteWarm"),
-        (117.0, -9.0, 73.0, 61.0, "concreteCool"),
-        (174.0, -45.0, 47.0, 38.0, "concreteBlue"),
-        (238.0, -45.0, 92.0, 46.0, "concreteBlue"),
-        (106.0, 25.0, 86.0, 29.0, "concrete"),
-        (86.0, 59.0, 115.0, 38.0, "concrete"),
-        (115.0, -84.0, 110.0, 42.0, "concreteWarm"),
+        (27.0, -43.5, 90.0, 43.0, "concreteWarm"),
+        (113.5, -27.5, 83.0, 75.0, "concreteCool"),
+        (222.0, -43.5, 134.0, 43.0, "concreteBlue"),
+        (114.0, 19.0, 72.0, 18.0, "concrete"),
+        (99.0, -88.5, 162.0, 47.0, "concreteWarm"),
     )):
         _adopt(add_box(
             f"SitePads.{index:02d}",
-            (width, depth, 0.18),
-            (x, y, 0.06),
-            0.08,
+            (width, depth, 0.38),
+            (x, y, -0.05),
+            0.025,
             materials[material_key],
         ), collection, site_pad)
 
@@ -266,17 +264,17 @@ def build_site(asset_id):
     for index, (name, (x, y, width, depth)) in enumerate(road_specs):
         road = _adopt(add_box(
             f"RoadNetwork.{name}",
-            (width, depth, 0.09),
-            (x, y, 0.10),
-            0.03,
+            (width, depth, 0.05),
+            (x, y, 0.20),
+            0.012,
             materials["asphalt"],
         ), collection, roads)
         if name not in ("WestConnector", "EastConnector"):
             for side, offset in (("N", depth / 2), ("S", -depth / 2)):
                 _adopt(add_box(
                     f"RoadNetwork.{name}.Curb.{side}",
-                    (width, 0.25, 0.18),
-                    (x, y + offset, 0.14),
+                    (width, 0.25, 0.20),
+                    (x, y + offset, 0.18),
                     0.025,
                     materials["concreteLight"],
                 ), collection, roads)
@@ -285,8 +283,8 @@ def build_site(asset_id):
                 mx = x - width / 2 + (mark + 0.5) * width / marking_count
                 _adopt(add_box(
                     f"RoadNetwork.{name}.Marking.{mark:02d}",
-                    (3.2, 0.10, 0.015),
-                    (mx, y, 0.16),
+                    (3.2, 0.10, 0.012),
+                    (mx, y, 0.235),
                     0.0,
                     materials["roadMarking"],
                 ), collection, roads)
@@ -298,8 +296,8 @@ def build_site(asset_id):
         _adopt(add_cylinder(
             f"RoadNetwork.StormDrain.{index:02d}",
             0.38,
-            0.04,
-            (x, y, 0.17),
+            0.05,
+            (x, y, 0.235),
             20,
             0.01,
             materials["steelDark"],
