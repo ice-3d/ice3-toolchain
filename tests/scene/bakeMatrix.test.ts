@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { bakeLocalMatrix } from '../../packages/toolchain-core/src/scene/bakeMatrix.js';
 
 test('bakes source TRS into a local matrix', () => {

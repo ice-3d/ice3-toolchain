@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';
 import { readAccessor } from '../../packages/toolchain-core/src/source/readAccessor.js';
 

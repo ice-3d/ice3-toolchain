@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createAssetReport } from '../../packages/toolchain-core/src/output/createAssetReport';
 
 test('creates a deterministic report without source paths', () => {

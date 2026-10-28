@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { buildPreparedGLB } from '../../packages/toolchain-core/src/output/buildPreparedGLB.js';
 import { validatePreparedGLB } from '../../packages/toolchain-core/src/output/validatePreparedGLB.js';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';

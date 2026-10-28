@@ -116,7 +116,8 @@ ice3-toolchain/
 - [ ] **Step 1: Write the failing layout test**
 
 ```ts
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from 'expect';
 import { existsSync, readFileSync } from 'node:fs';
 
 test('workspace contains an isolated preprocessing core and CLI', () => {
@@ -131,9 +132,9 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
 
 - [ ] **Step 2: Run the test and confirm the workspace is absent**
 
-Run: `npx node-test run tests/architecture/layout.test.ts`
+Run: `npm test -- tests/architecture/layout.test.ts`
 
-Expected: FAIL because `package.json` or `node-test` setup is absent.
+Expected: FAIL because `test runner setup is absent.
 
 - [ ] **Step 3: Create the workspace manifests and strict TypeScript configuration**
 
@@ -153,14 +154,16 @@ Root `package.json`:
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b --pretty false",
-    "test": "node-test run",
-    "test:architecture": "node-test run tests/architecture",
+    "test": "node scripts/run-tests.mjs",
+    "test:architecture": "node scripts/run-tests.mjs tests/architecture",
     "verify": "npm run test:architecture && npm run typecheck && npm test"
   },
   "devDependencies": {
     "@types/node": "24.19.2",
     "typescript": "7.0.2",
-    "node-test": "5.0.5"
+    "expect": "30.5.2",
+    "jest-mock": "30.5.2",
+    "tsx": "4.23.15"
   }
 }
 ```
@@ -255,7 +258,8 @@ export async function readSource(path: string): Promise<ICESourceDocument>;
 - [ ] **Step 2: Write failing container tests**
 
 ```ts
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from 'expect';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';
 
 test('reads an external-buffer glTF document', async () => {
@@ -273,7 +277,7 @@ test('rejects a truncated GLB JSON chunk', async () => {
 
 - [ ] **Step 3: Run the tests and verify failure**
 
-Run: `npx node-test run tests/source/readSource.test.ts`
+Run: `npm test -- tests/source/readSource.test.ts`
 
 Expected: FAIL because resource loading and GLB framing are absent.
 
@@ -293,7 +297,7 @@ It requires version `2`, a bounded total length, JSON as the first chunk, at mos
 
 - [ ] **Step 5: Run the tests**
 
-Run: `npx node-test run tests/source/readSource.test.ts`
+Run: `npm test -- tests/source/readSource.test.ts`
 
 Expected: PASS for valid JSON and GLB input, malformed headers, bad chunk order, truncated chunks, missing resources, and unsafe URI traversal.
 
@@ -352,7 +356,7 @@ test('rejects an accessor that exceeds its buffer view', () => {
 
 - [ ] **Step 2: Run and observe RED**
 
-Run: `npx node-test run tests/source/readAccessor.test.ts`
+Run: `npm test -- tests/source/readAccessor.test.ts`
 
 Expected: FAIL because accessor decoding is missing.
 
@@ -380,7 +384,7 @@ test('rejects a cyclic node graph', () => {
 
 Validation checks every node, mesh, primitive, material, accessor, buffer view, and scene reference. It reports, rather than silently skipping, animations, skins, morph targets, cameras, textures, images, samplers, sparse accessors, compressed extensions, and external output requirements.
 
-Run: `npx node-test run tests/source/readAccessor.test.ts tests/scene/validateSource.test.ts`
+Run: `npm test -- tests/source/readAccessor.test.ts tests/scene/validateSource.test.ts`
 
 Expected: PASS.
 
@@ -461,7 +465,7 @@ test('preserves a source matrix without decomposing it', () => {
 
 - [ ] **Step 2: Run and implement matrix baking**
 
-Run: `npx node-test run tests/scene/bakeMatrix.test.ts`
+Run: `npm test -- tests/scene/bakeMatrix.test.ts`
 
 Expected: RED first, then PASS after implementing column-major TRS composition and matrix passthrough.
 
@@ -495,7 +499,7 @@ The default crease angle is `30`, controlled by `--crease-angle`.
 
 - [ ] **Step 6: Run tests and commit**
 
-Run: `npx node-test run tests/scene/bakeMatrix.test.ts tests/scene/prepareMesh.test.ts`
+Run: `npm test -- tests/scene/bakeMatrix.test.ts tests/scene/prepareMesh.test.ts`
 
 Expected: PASS, including cube edges without triangulation diagonals.
 
@@ -551,7 +555,7 @@ test('builds byte-identical prepared GLB output', () => {
 
 - [ ] **Step 2: Run and observe RED**
 
-Run: `npx node-test run tests/output/buildPreparedGLB.test.ts`
+Run: `npm test -- tests/output/buildPreparedGLB.test.ts`
 
 Expected: FAIL because GLB output building is absent.
 
@@ -578,7 +582,7 @@ test('rejects ordinary GLB without ICE3 profile metadata', () => {
 
 Validate GLB framing, profile metadata, one scene, one buffer, no external URI, node matrices, triangle/line primitive modes, accessor types and alignment, index ranges, forbidden features, ID uniqueness, digest, bounds, and stats.
 
-Run: `npx node-test run tests/output`
+Run: `npm test -- tests/output`
 
 Expected: PASS.
 
@@ -627,7 +631,7 @@ test('build returns non-zero for unsupported input', async () => {
 
 - [ ] **Step 2: Run and observe RED**
 
-Run: `npx node-test run tests/cli/commands.test.ts`
+Run: `npm test -- tests/cli/commands.test.ts`
 
 Expected: FAIL because CLI commands are absent.
 
@@ -642,7 +646,7 @@ Support `--json`, `--asset-id`, and `--crease-angle`.
 Run:
 
 ```bash
-npx node-test run tests/cli
+npm test -- tests/cli
 npm run verify
 ```
 

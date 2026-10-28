@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { evaluateProxyCandidates } from '../../../packages/toolchain-core/src/lod/semanticProxy/evaluateProxy.js';
 
 test('evaluates large vertex sets without argument spreading', () => {

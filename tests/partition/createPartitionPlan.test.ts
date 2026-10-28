@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { analyzePartitionUnits } from '../../packages/toolchain-core/src/partition/analyzePartitionUnits.js';
 import {
   createPartitionPlan,

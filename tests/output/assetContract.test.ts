@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import {
   ICE_ASSET_CONTRACT_VERSION,
   contractStats,

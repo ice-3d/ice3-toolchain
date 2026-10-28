@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { collectNodeWorldMatrices } from '../../packages/toolchain-core/src/scene/nodeMatrices.js';
 import { buildRenderBatches } from '../../packages/toolchain-core/src/output/buildRenderBatches.js';
 import { createPartitionSource } from '../partition/createPartitionSource.js';

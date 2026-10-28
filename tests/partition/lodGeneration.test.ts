@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createHash } from 'node:crypto';
 import { partitionAsset } from '../../packages/toolchain-core/src/partition/partitionAsset.js';
 import { validatePreparedGLB } from '../../packages/toolchain-core/src/output/validatePreparedGLB.js';

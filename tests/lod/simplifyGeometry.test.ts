@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { simplifyGeometry } from '../../packages/toolchain-core/src/lod/simplifyGeometry.js';
 
 const grid = (cells = 8) => {

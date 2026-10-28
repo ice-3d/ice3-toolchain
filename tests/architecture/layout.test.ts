@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 
 test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(existsSync('packages/toolchain-core/package.json')).toBe(true);

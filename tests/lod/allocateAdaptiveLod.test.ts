@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import {
   allocateAdaptiveLod,
   type ICELodUnitCurve,

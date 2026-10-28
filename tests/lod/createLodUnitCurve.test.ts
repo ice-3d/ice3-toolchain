@@ -1,4 +1,5 @@
-import { expect, test } from 'node-test';
+import { test } from 'node:test';
+import { expect } from '#test-expect';
 import { createGeometryWorkspace } from '../../packages/toolchain-core/src/lod/createGeometryWorkspace.js';
 import { createLodUnitCurve } from '../../packages/toolchain-core/src/lod/createLodUnitCurve.js';
 
