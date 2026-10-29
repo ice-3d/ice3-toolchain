@@ -6,7 +6,7 @@ test('publishes the bundled toolchain as one scoped CLI package', () => {
   const manifest = createPublicPackageManifest();
 
   expect(manifest.name).toBe('@ice3/toolchain');
-  expect(manifest.version).toBe('0.1.0');
+  expect(manifest.version).toBe('0.2.0');
   expect(manifest.private).toBeUndefined();
   expect(manifest.bin).toEqual({
     'ice3-tool': 'dist/main.js',
