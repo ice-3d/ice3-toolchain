@@ -170,6 +170,13 @@ engine example 目录。
 生成的 Scene 完全虚构。单体 source 和 prepared preview 保留在被 Git 忽略的本地路径，
 版本库只提交 runtime slices。
 
+## 跨格式 Conformance
+
+`npm run build:conformance` 使用七种 synthetic source fixture 生成 Prepared GLB 和
+`manifest.json`，并输出到相邻 Engine 示例的 `examples/m2/assets/conformance/`。
+统一测试同时验证 Profile、预期 Node、Geometry、Material 和 byte determinism。
+方法和失败样例矩阵见 [Conformance Assets](tools/conformance/README.md)。
+
 ## 构建性能
 
 Authoring source generator 使用 content-addressed cache；缓存 key 包含 generator
