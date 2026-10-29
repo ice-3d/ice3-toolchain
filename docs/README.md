@@ -33,6 +33,12 @@
 | `ICE3-TOOL-NOTICE-001` | [第三方声明](../THIRD_PARTY_NOTICES.md) | Active | 上游归属和许可证范围 |
 | `ICE3-TOOL-REF-002` | [OGC 3D Tiles Schema 来源](../tests/fixtures/3d-tiles-1.1-schema/SOURCE.md) | Active | schema fixture bundle 的来源 |
 
+## Spec
+
+| ID | 标题 | Status | 用途 |
+|---|---|---|---|
+| `ICE3-TOOL-SPEC-001` | [多格式 Source Import 适配器与 STEP AP242 首期规格](specs/2026-10-29-source-import-adapters.md) | Draft | 定义 adapter contract、CLI 和首个 STEP 纵向切片 |
+
 ## 决策
 
 | ID | 标题 | Status | 用途 |
