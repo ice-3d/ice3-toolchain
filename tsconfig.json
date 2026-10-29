@@ -12,6 +12,9 @@
     },
     {
       "path": "./packages/ifc-importer"
+    },
+    {
+      "path": "./packages/fbx-importer"
     }
   ]
 }
