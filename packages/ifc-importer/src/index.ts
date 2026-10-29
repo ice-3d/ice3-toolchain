@@ -8,6 +8,16 @@ export {
   validateIfcLengthUnit,
   type IIfcOpenDocument,
 } from './ifcApi.js';
+export {
+  readIfcMetadata,
+} from './readIfcMetadata.js';
+export type {
+  IIfcMetadata,
+  IIfcMetadataNode,
+  IIfcProductMetadata,
+  IIfcPropertySetMetadata,
+  IIfcSystemMetadata,
+} from './types.js';
 
 export function createIfcImporter(): ICESourceImporter {
   return {
