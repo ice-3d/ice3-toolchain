@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-005
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -57,7 +57,7 @@ custom properties、坐标原点和最终 source GLB。
 
 - 产出：两个表示相同合成结构的 USD 文件，供 bridge、adapter、CLI 和 release 测试复用。
 
-- [ ] **步骤 1：编写 fixture 验证测试**
+- [x] **步骤 1：编写 fixture 验证测试**
 
 ```ts
 test('fixtures contain ASCII and binary USD', async () => {
@@ -69,13 +69,13 @@ test('fixtures contain ASCII and binary USD', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/usd/fixture.test.ts`
 
 预期：FAIL，fixture 尚不存在。
 
-- [ ] **步骤 3：生成 fixture**
+- [x] **步骤 3：生成 fixture**
 
 Generator 创建 `TreatmentLine`、`PrimaryPump`、`PumpInstanceA` 和 `BufferTank`，
 设置 `EquipmentTag=P-101`，分别用 `.usda` 和 `.usdc` export。
@@ -89,13 +89,13 @@ Generator 创建 `TreatmentLine`、`PrimaryPump`、`PumpInstanceA` 和 `BufferTa
   --output-dir tests/fixtures/usd
 ```
 
-- [ ] **步骤 4：运行 fixture 测试**
+- [x] **步骤 4：运行 fixture 测试**
 
 运行：`npm test -- tests/usd/fixture.test.ts`
 
 预期：PASS。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add tests/fixtures/usd tests/usd/fixture.test.ts
@@ -129,7 +129,7 @@ export async function runUsdBridge(
 ): Promise<IUsdBridgeReport>;
 ```
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 test('maps USD timeout without leaking process output', async () => {
@@ -147,18 +147,18 @@ test('maps USD timeout without leaking process output', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/usd/runBridge.test.ts`
 
 预期：FAIL，module 不存在。
 
-- [ ] **步骤 3：实现受控 runtime**
+- [x] **步骤 3：实现受控 runtime**
 
 精确匹配 `5.2.3`，白名单参数不接收调用方 Python，输出和 report 限制在临时目录。
 超时发送 `SIGTERM`，一秒后发送 `SIGKILL`。
 
-- [ ] **步骤 4：实现 bridge 脚本**
+- [x] **步骤 4：实现 bridge 脚本**
 
 固定 USD import 与 GLB export 参数。成功 report 必须包含：
 
@@ -172,13 +172,13 @@ test('maps USD timeout without leaking process output', async () => {
 }
 ```
 
-- [ ] **步骤 5：运行测试**
+- [x] **步骤 5：运行测试**
 
 运行：`npm test -- tests/usd/runBridge.test.ts`
 
 预期：PASS，包括忽略 `SIGTERM` 的进程在一秒后被强制结束。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add packages/usd-importer tests/usd/runBridge.test.ts
@@ -200,7 +200,7 @@ git commit -m "feat(toolchain): add USD Blender bridge"
 - 消费：raw GLB 与 `IUsdBridgeReport`。
 - 产出：标准 source GLB、稳定 stats、`extras.ice3.usd`。
 
-- [ ] **步骤 1：编写层级与实例失败测试**
+- [x] **步骤 1：编写层级与实例失败测试**
 
 ```ts
 test('canonicalizes USD hierarchy, instances and properties', async () => {
@@ -221,23 +221,23 @@ test('canonicalizes USD hierarchy, instances and properties', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/usd/canonicalizeUsdGlb.test.ts`
 
 预期：FAIL，canonicalizer 尚不存在。
 
-- [ ] **步骤 3：实现稳定 canonicalization**
+- [x] **步骤 3：实现稳定 canonicalization**
 
 按 GLB Node ordinal 分配 Selection，清理不支持资源，设置基础 display Material，
 写入 USD metadata，确定性过滤复杂 custom property。
 
-- [ ] **步骤 4：验证大坐标**
+- [x] **步骤 4：验证大坐标**
 
 对 generator 提供的 `large-origin.usda` 断言 source accessor 最大绝对坐标小于 20，
 且 `sourceOrigin[0]` 大于 1,000,000。
 
-- [ ] **步骤 5：运行测试并提交**
+- [x] **步骤 5：运行测试并提交**
 
 运行：`npm test -- tests/usd/canonicalizeUsdGlb.test.ts`
 
@@ -266,7 +266,7 @@ git commit -m "feat(toolchain): canonicalize USD source GLB"
 - CLI auto 和显式 `--adapter usd` 均可选择该 adapter。
 - partition 直接接收 `.usda/.usdc`。
 
-- [ ] **步骤 1：编写 CLI 与 partition 失败测试**
+- [x] **步骤 1：编写 CLI 与 partition 失败测试**
 
 ```ts
 expect(await runCli([
@@ -276,28 +276,28 @@ expect(await runCli([
 expect(JSON.parse(await readFile(report, 'utf8')).adapter.id).toBe('usd');
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/cli/usdImportCommand.test.ts tests/usd/usdPipeline.test.ts`
 
 预期：FAIL，registry 未注册 USD。
 
-- [ ] **步骤 3：注册 adapter 与 workspace**
+- [x] **步骤 3：注册 adapter 与 workspace**
 
 只在 `auto` 或显式 `usd` 时 lazy import package，不增加 Runtime dependency。
 
-- [ ] **步骤 4：验证 metadata 穿越 processing**
+- [x] **步骤 4：验证 metadata 穿越 processing**
 
 对 `.usdc` 执行 static batching partition，断言
 `extras.ice3.usd.customProperties.EquipmentTag` 和 `instanceGroup` 保留。
 
-- [ ] **步骤 5：运行全部 USD 测试**
+- [x] **步骤 5：运行全部 USD 测试**
 
 运行：`npm test -- tests/usd tests/cli/usdImportCommand.test.ts`
 
 预期：PASS。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add packages/usd-importer packages/cli tsconfig.json tests/usd tests/cli
@@ -322,7 +322,7 @@ git commit -m "feat(toolchain): expose USD import command"
 - 产出：Blender 缺失、版本错误、timeout、截断、空 Mesh 和 byte determinism 的证据。
 - 发布 tarball 包含 `dist/usd/usd-to-glb.py`，不包含 Blender binary。
 
-- [ ] **步骤 1：编写失败与 determinism 测试**
+- [x] **步骤 1：编写失败与 determinism 测试**
 
 ```ts
 test('repeated USD imports are byte-identical', async () => {
@@ -332,22 +332,22 @@ test('repeated USD imports are byte-identical', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/usd/usdFailures.test.ts tests/usd/usdDeterminism.test.ts`
 
 预期：FAIL，failure mapping 或 determinism 尚不完整。
 
-- [ ] **步骤 3：实现稳定失败和资源清理**
+- [x] **步骤 3：实现稳定失败和资源清理**
 
 确保所有失败码符合规格，并验证 output 不存在。
 
-- [ ] **步骤 4：更新发布 package**
+- [x] **步骤 4：更新发布 package**
 
 Tarball 包含 USD bridge script，release check 实际从 tarball 执行 `.usda` 和 `.usdc`
 import、validate 和 batching metadata 检查。
 
-- [ ] **步骤 5：运行 USD、架构和 release 测试**
+- [x] **步骤 5：运行 USD、架构和 release 测试**
 
 ```bash
 npm run test:architecture
@@ -357,7 +357,7 @@ npm run release:check
 
 预期：全部 PASS。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add tests scripts
@@ -378,16 +378,16 @@ git commit -m "test(toolchain): verify USD import boundaries"
 - 修改：`THIRD_PARTY_NOTICES.md`
 - 修改：本计划
 
-- [ ] **步骤 1：更新公开文档**
+- [x] **步骤 1：更新公开文档**
 
 记录 `.usda/.usdc`、Blender `5.2.3`、`ICE3_USD_TIMEOUT_MS`、支持边界、Diagnostic、
 import/partition 示例和发布脚本位置。
 
-- [ ] **步骤 2：更新文档索引**
+- [x] **步骤 2：更新文档索引**
 
 加入 `ICE3-TOOL-SPEC-004` 与 `ICE3-TOOL-PLAN-005`，并保持有效引用关系。
 
-- [ ] **步骤 3：运行完整门禁**
+- [x] **步骤 3：运行完整门禁**
 
 ```bash
 nvm use
@@ -399,12 +399,12 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 4：整分支审查**
+- [x] **步骤 4：整分支审查**
 
 重点检查 process timeout、shared mesh、Selection 稳定性、custom property 深度、
 local origin、partition metadata、敏感路径和禁用名称。
 
-- [ ] **步骤 5：提交并合并**
+- [x] **步骤 5：提交并合并**
 
 确认 author/committer 为 `damoqiongqiu <damoqiongqiu@126.com>`，完整门禁通过后：
 
