@@ -869,7 +869,7 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 5：整分支审查**
+- [x] **步骤 5：整分支审查**
 
 重点检查：
 
