@@ -1,5 +1,10 @@
-# Source
+# OGC 3D Tiles Schema Source
 
+> Document ID: ICE3-TOOL-REF-002
+>
+> Status: Active
+>
+> Owner: ICE3 Toolchain maintainers
 This directory contains the JSON Schema files from Annex B of:
 
 - Standard: OGC 3D Tiles 1.1
@@ -13,3 +18,8 @@ Use of these files is subject to the OGC Document License Agreement:
 https://www.ogc.org/license
 
 The files are test fixtures only. They are not runtime dependencies.
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](../../../docs/README.md)
+- `ICE3-TOOL-NOTICE-001` — [Third-party notices](../../../THIRD_PARTY_NOTICES.md)

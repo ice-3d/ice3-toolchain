@@ -1,5 +1,10 @@
 # ICE3 Toolchain M1 GLB Pipeline Implementation Plan
 
+> Document ID: ICE3-TOOL-PLAN-001
+>
+> Status: Implemented
+>
+> Owner: ICE3 Toolchain maintainers
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a standalone toolchain that converts source glTF 2.0 assets into deterministic ICE3 Prepared GLB Profile v1 files without introducing a runtime conversion pipeline.
@@ -8,7 +13,7 @@
 
 **Tech Stack:** Node.js 24 LTS, TypeScript 7, ESM, native Node APIs, Node test runner through `tsx`, npm workspaces.
 
-**Spec:** `../ice3-engine/docs/superpowers/specs/2026-10-27-engine-m1-asset-design.md`
+**Spec:** [ICE3 Engine M1 Asset Design](https://github.com/ice-3d/ice3-engine/blob/main/docs/specs/2026-10-27-engine-m1-asset-design.md)
 
 ## Global Constraints
 
@@ -718,3 +723,9 @@ Expected: all tests pass and the contract fixture validates.
 git add README.md fixtures tests/fixtures/contract.test.ts
 git commit -m "test: freeze prepared GLB contract fixture"
 ```
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](../README.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
+- `ICE3-TOOL-REF-001` — [CLI reference](../reference/cli.md)

@@ -1,5 +1,10 @@
 # ICE3 Toolchain Repository Rules
 
+> Document ID: ICE3-TOOL-POL-001
+>
+> Status: Active
+>
+> Owner: ICE3 Toolchain maintainers
 ## Architecture
 
 - Source-format adaptation, geometry preparation, and GLB packing live only in this repository.
@@ -27,3 +32,8 @@
 ```bash
 npm run verify
 ```
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](docs/README.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain architecture](docs/architecture.md)

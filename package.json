@@ -25,7 +25,8 @@
     "typecheck:tools": "tsc -p tools/wastewater-plant/tsconfig.json --pretty false",
     "test": "node scripts/run-tests.mjs",
     "test:architecture": "node scripts/run-tests.mjs tests/architecture",
-    "verify": "npm run test:architecture && npm run typecheck && npm run typecheck:tools && npm test"
+    "docs:check": "node scripts/check-docs.mjs",
+    "verify": "npm run docs:check && npm run test:architecture && npm run typecheck && npm run typecheck:tools && npm test"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",
