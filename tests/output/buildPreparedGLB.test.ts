@@ -444,6 +444,37 @@ test('preserves explicit USD source metadata for prepared nodes', () => {
   });
 });
 
+test('preserves explicit OBJ source metadata for prepared nodes', () => {
+  const source = createPartitionSource();
+  source.json.nodes = [{
+    ...(source.json.nodes as Array<Record<string, unknown>>)[0],
+    extras: {
+      ice3: {
+        selectionId: 'obj-demo/obj/node/0',
+        obj: {
+          objectType: 'MESH',
+          sourceName: 'PrimaryPump',
+          materialNames: ['PumpBlue'],
+        },
+      },
+    },
+  }];
+  source.json.scenes = [{ nodes: [0] }];
+  const built = buildPreparedGLB(source, {
+    assetId: 'obj-demo',
+    edges: false,
+  });
+  const document = readDocument(built.bytes) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3.obj).toEqual({
+    objectType: 'MESH',
+    sourceName: 'PrimaryPump',
+    materialNames: ['PumpBlue'],
+  });
+});
+
 test('reports contract bounds from replaced mesh geometry', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const built = buildPreparedGLB(source, {
