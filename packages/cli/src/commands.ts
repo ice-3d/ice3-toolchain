@@ -155,6 +155,10 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
           args.values.get('--coarse-chunk-max-bytes') ?? String(maxBytes),
           '--coarse-chunk-max-bytes',
         );
+        const maxMemoryBytes = positiveInteger(
+          args.values.get('--lod-max-memory-bytes') ?? '67108864',
+          '--lod-max-memory-bytes',
+        );
         return {
           allocation,
           semanticProxy,
@@ -163,6 +167,7 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
           maxTrianglesPerProxy,
           minTrianglesPerUnit,
           coarseChunkMaxBytes,
+          maxMemoryBytes,
         };
       })()
     : undefined;
@@ -454,6 +459,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
     '--semantic-proxy',
     '--render-batch',
     '--coarse-chunk-max-bytes',
+    '--lod-max-memory-bytes',
   ]);
   const knownFlags = new Set([
     '--json',

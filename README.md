@@ -243,6 +243,22 @@ final coarse totals separately.
 - The browser runtime receives only prepared GLB and never imports this
   repository or a source-format adapter.
 
+## Build performance
+
+The authored wastewater source generation uses a content-addressed cache because
+Blender scene construction dominates a cold build. The cache key covers the
+generator sources, scene specification, pinned Blender version, and package
+lockfile. Cache hits use the operating system copy-on-write clone when available.
+
+The default cache location is the platform user-cache directory. Override it
+with `ICE3_BLENDER_CACHE_DIR=/path/to/cache`, or disable it for a clean build
+with `ICE3_BLENDER_SOURCE_CACHE=0`.
+
+After the source is ready, the example build runs full-model preparation and the
+tiled/LOD pipeline concurrently. LOD workspace memory defaults to 64 MiB for the
+CLI and is raised to 512 MiB by the authored example build. Override it with
+`--lod-max-memory-bytes` for larger models.
+
 ## AI-assisted development
 
 This project makes substantial use of AI-assisted development. 本项目在设计和实现过程中大量使用了 AI 辅助开发。
