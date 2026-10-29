@@ -38,7 +38,7 @@
 | ID | 标题 | Status | 用途 |
 |---|---|---|---|
 | `ICE3-TOOL-SPEC-001` | [多格式 Source Import 适配器与 STEP AP242 首期规格](specs/2026-10-29-source-import-adapters.md) | Approved | 定义 adapter contract、CLI 和首个 STEP 纵向切片 |
-| `ICE3-TOOL-SPEC-002` | [IFC 4.3 Source Importer 规格](specs/2026-10-29-ifc-4-3-importer.md) | Draft | 定义 IFC Geometry、空间结构、属性、系统和发布边界 |
+| `ICE3-TOOL-SPEC-002` | [IFC 4.3 Source Importer 规格](specs/2026-10-29-ifc-4-3-importer.md) | Approved | 定义 IFC Geometry、空间结构、属性、系统和发布边界 |
 
 ## 决策
 
