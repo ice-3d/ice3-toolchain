@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-003
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -855,7 +855,7 @@ npm run verify
 - 大坐标精度。
 - Prepared metadata 不被 partition 或 batching 丢失。
 
-- [ ] **步骤 6：提交并合并**
+- [x] **步骤 6：提交并合并**
 
 确认 Git author/committer 为：
 
