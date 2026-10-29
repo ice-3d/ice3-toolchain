@@ -14,6 +14,9 @@
     },
     {
       "path": "../step-importer"
+    },
+    {
+      "path": "../ifc-importer"
     }
   ]
 }

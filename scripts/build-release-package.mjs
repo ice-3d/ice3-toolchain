@@ -21,6 +21,7 @@ const runtimeDependencies = {
   'draco3dgltf': '1.5.9',
   'meshoptimizer': '1.3.0',
   'occt-import-js': '0.0.23',
+  'web-ifc': '0.0.78',
 };
 
 export function createPublicPackageManifest() {
@@ -115,6 +116,7 @@ export async function buildReleasePackage() {
       'draco3dgltf',
       'meshoptimizer',
       'occt-import-js',
+      'web-ifc',
     ],
   });
 

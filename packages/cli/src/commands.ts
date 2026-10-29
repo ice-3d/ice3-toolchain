@@ -752,10 +752,11 @@ async function readToolVersion(): Promise<string> {
 async function loadSourceImporters(
   requestedAdapter: string,
 ): Promise<readonly import('@ice3/toolchain-core').ICESourceImporter[]> {
+  const importers: import('@ice3/toolchain-core').ICESourceImporter[] = [];
   if (requestedAdapter === 'auto' || requestedAdapter === 'step') {
     try {
       const module = await import('../../step-importer/src/index.js');
-      return [module.createStepImporter()];
+      importers.push(module.createStepImporter());
     } catch (error) {
       throw new Error(
         `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: step (${
@@ -764,6 +765,19 @@ async function loadSourceImporters(
       );
     }
   }
+  if (requestedAdapter === 'auto' || requestedAdapter === 'ifc') {
+    try {
+      const module = await import('../../ifc-importer/src/index.js');
+      importers.push(module.createIfcImporter());
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ifc (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
+  if (importers.length > 0) return importers;
   throw new Error(
     `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
   );
@@ -775,7 +789,7 @@ function printHelp(): void {
     '',
     'Commands:',
     '  build SOURCE --output FILE',
-    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step]',
+    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc]',
     '  inspect SOURCE',
     '  validate FILE',
     '  partition SOURCE --output DIRECTORY --asset-id ID',
