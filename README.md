@@ -5,122 +5,56 @@
 > Status: Active
 >
 > Owner: ICE3 Toolchain maintainers
-ICE3 Toolchain performs all source-model parsing, normalization, triangle
-preparation, crease-edge generation, and deterministic GLB packing outside the
-browser runtime.
 
-Cross-repository formats, shared metrics, budgets, compatibility rules, and
-diagnostic codes are defined by the canonical
-[Asset Preparation Contract v1](https://github.com/ice-3d/ice3-doc/blob/main/docs/contracts/asset-preparation-contract-v1.md).
+ICE3 Toolchain prepares large industrial source models for the ICE3 runtime. It
+performs all source parsing, normalization, simplification, spatial partitioning,
+and GLB packing outside the browser.
 
-## Requirements
+The runtime output remains standard GLB with the ICE3 Prepared GLB Profile and,
+where streaming is required, an OGC 3D Tiles 1.1 hierarchy.
+
+## Capabilities
+
+| Area | Current capability |
+|---|---|
+| Input | glTF 2.0 JSON and GLB with supported mesh-compression extensions |
+| Preparation | Geometry normalization, flat display colors, transforms, profile metrics, optional edges |
+| Validation | Structural GLB checks, asset budgets, deterministic reports, Tileset validation |
+| Partitioning | Spatial leaves, hierarchical LOD, coarse chunks, stable semantic IDs |
+| LOD | Proportional and adaptive device budgets, optional semantic proxies |
+| Batching | Deterministic static render batches |
+| Publication | Atomic output publication and safe asset-directory replacement |
+| Build acceleration | Content-addressed Blender source cache and parallel post-processing |
+
+## Quick Start
+
+Requirements:
 
 - Node.js 24 LTS or 26+
 - npm 11 or newer
+- Blender 5.2.3 only when rebuilding the authored wastewater source
 
 ```bash
+git clone https://github.com/ice-3d/ice3-toolchain.git
+cd ice3-toolchain
 nvm use
 npm install
-```
-
-## Commands
-
-```bash
 npm run build
-npm run verify
 ```
 
-## Virtual Wastewater Demo
-
-Rebuild the complete synthetic municipal wastewater plant:
-
-```bash
-npm run build:wastewater-demo
-```
-
-Building the virtual wastewater source GLB requires Blender 5.2.3. Set
-`BLENDER_BIN` when it is installed outside the standard macOS path.
-
-The command deterministically generates the source GLB, prepared preview,
-Tileset, fine partitions and coarse chunks, validates every artifact, and
-replaces the example asset directory only after the complete pipeline passes.
-If publishing the new directory fails, the previous asset directory is
-restored. The generated scene and all equipment identities are entirely
-fictional.
-
-The current scene contains 65 selectable equipment units, 92 modeled process
-and utility connections, and about 1.9M source triangles. Fine partitions use a
-60,000-triangle budget, coarse LOD content uses a 120k-triangle total budget,
-and coarse chunks are capped at 4 MiB.
-
-### Visual language
-
-The synthetic plant follows a deliberately separated visual hierarchy rather
-than a single realistic material palette:
-
-- terrain and roads use dark, low-chroma colors so the black viewport remains
-  legible without merging foreground geometry into the background;
-- process areas use distinct muted concrete colors, while buildings separate
-  pale walls, dark roofs, glazing, doors, and service equipment;
-- equipment bodies use process-stage colors, with safety orange reserved for
-  moving parts, access structures, and controls;
-- pipe colors encode media and also separate in lightness so adjacent media
-  remain distinguishable;
-- aeration, primary, secondary, filtration, membrane, chemical, and building
-  volumes follow realistic vertical proportions rather than a uniform scale;
-- handrails, ladders, stairs, wall panels, roof equipment, bridge gratings, and
-  tank copings provide human-scale reference and model-detail cues;
-- external stairs use a continuous solid stepped core with slope-following
-  handrails, and long elevated pipe runs use regularly spaced supports instead
-  of isolated posts.
-
-The detailed source is intentionally larger than the runtime representation.
-LOD generation and static batching remain entirely offline.
-
-The demo build keeps semantic proxy generation disabled. This heterogeneous
-scene contains long pipe runs, railings, and decorative structures that can
-otherwise collapse into low-detail boxes at the root LOD; adaptive QEM still
-meets the same coarse triangle and byte budgets without those shape jumps.
-
-Inspect a source or prepared asset:
+Inspect, build, validate, and partition an asset:
 
 ```bash
 node packages/cli/dist/main.js inspect tests/fixtures/minimal.gltf --json
-```
 
-Build an ICE3 Prepared GLB:
-
-```bash
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
-  --output fixtures/prepared-cube.glb \
-  --report fixtures/prepared-cube.report.json \
-  --budget interactive-desktop-v1 \
-  --asset-id prepared-cube
-```
+  --output /tmp/prepared-cube.glb \
+  --report /tmp/prepared-cube.report.json \
+  --asset-id prepared-cube \
+  --budget interactive-desktop-v1
 
-`--budget` accepts the built-in `interactive-desktop-v1` profile, the
-`unrestricted` profile, or a JSON budget file. Hard-limit failures never
-publish an output file. `--warnings-as-errors` turns soft-limit warnings into
-release failures. `--report` writes an optional deterministic sidecar report
-for CI and tool UIs; runtime loading never requires it.
+node packages/cli/dist/main.js validate /tmp/prepared-cube.glb
 
-For a very large model where generated edges would dominate draw calls, use
-`--skip-edges` to produce a geometry-only preview.
-
-Validate a prepared profile:
-
-```bash
-node packages/cli/dist/main.js validate fixtures/prepared-cube.glb
-```
-
-`build` writes through a temporary file in the destination directory and only
-renames it after the generated profile validates. A failed build leaves no
-partial output.
-
-Partition a large asset into an OGC 3D Tiles 1.1 tree and independent Prepared
-GLBs:
-
-```bash
 node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
   --output /tmp/partition-result \
   --asset-id partition-demo \
@@ -128,141 +62,64 @@ node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
   --max-bytes 33554432
 ```
 
-The output directory must not exist. It contains `tileset.json` and
-`parts/part-NNN.glb`. The command publishes the directory with one atomic
-rename only after every GLB and content reference validates. `--output`,
-`--asset-id`, `--max-triangles`, and `--max-bytes` are validated before source
-processing. Existing `--skip-edges`, `--budget`, `--warnings-as-errors`, and
-`--json` options are also supported.
+Every command validates inputs and refuses to publish partial output. See the
+[CLI reference](docs/reference/cli.md) for every option and default.
 
-Generate hierarchical LOD content in the same partition build:
+## Wastewater Demonstration
+
+Rebuild the complete synthetic wastewater asset set:
 
 ```bash
-node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
-  --output /tmp/hierarchical-result \
-  --asset-id partition-demo \
-  --max-triangles 16 \
-  --lod \
-  --lod-ratio 0.15 \
-  --lod-max-triangles 250000 \
-  --lod-min-unit-triangles 8
+npm run build:wastewater-demo
 ```
 
-With `--lod`, internal tree nodes receive `coarse/` GLBs while leaves keep
-their independent fine partitions. The source is normalized once into a
-bounded temporary workspace; memory and spill files are released after success
-or failure. Each coarse node preserves the original device selection IDs and
-records world-space geometric error in the Tileset.
+The command generates the authored source, full Prepared preview, fine
+partitions, coarse LOD, static batches, validation reports, and the final Tileset.
+It replaces the engine example directory only after every artifact passes.
 
-Partition treats each mesh node as an indivisible semantic unit and reports
-`ICE3_TOOL_PARTITION_UNSPLITTABLE` when one unit exceeds the byte budget.
-LOD defaults are `0.15` ratio, 250,000 triangles per proxy, and at least 8
-triangles per device. The browser runtime never loads the simplifier.
-Use `--coarse-chunk-max-bytes` to override the default 32 MiB coarse chunk
-limit; when omitted it follows `--max-bytes`. Oversized indivisible devices
-remain intact and are reported.
+The generated scene is entirely fictional. The monolithic source and prepared
+preview stay in ignored local paths; only runtime slices are committed.
 
-Use `--render-batch off|static` to generate deterministic world-space render
-batches. `static` groups compatible triangles by material inside each emitted
-Prepared GLB while retaining semantic node identities; the default is `off`.
-Static batching can be combined with either non-LOD partitioning or
-`--lod --lod-allocation proportional|adaptive`.
+## Build Performance
 
-Material grouping uses the effective output material state, including flat base
-color and edge color, so source materials with identical rendered state do not
-create duplicate batches. LOD geometry and semantic proxy overrides are applied
-before batching. Batch nodes receive Tileset-wide unique IDs, while
-`selectionId` remains the existing business identity.
+The authored source generator uses a content-addressed cache keyed by generator
+sources, scene specification, Blender version, and the package lockfile.
 
-On a controlled industrial asset with edges disabled and identical partition
-settings, static batching reduced visible runtime Draw Calls from 1,472 to 662
-(55.03%). The prepared output grew from 406,072,056 to 476,678,116 bytes, and
-the offline build grew from 22.68 s to 40.77 s. Peak resident memory fell from
-4.64 GiB to 3.42 GiB. Chromium and WebKit both reported zero page errors and
-zero failed requests. These are aggregate measurements; the source asset and
-derived files remain outside the repository.
+```bash
+# Override the cache directory
+ICE3_BLENDER_CACHE_DIR=/tmp/ice3-cache npm run build:wastewater-demo
 
-Select the coarse-model allocation strategy with
-`--lod-allocation proportional|adaptive`. The default is `proportional`;
-`adaptive` generates deterministic per-device error curves and spends each
-Tile's triangle budget where marginal error reduction is largest.
-`--lod-curve-samples 4..32` controls the logarithmic samples per semantic
-device in adaptive mode and defaults to `8`. Adaptive sampling remains offline
-and changes neither the Prepared GLB profile nor the Tileset schema.
+# Force a clean Blender generation
+ICE3_BLENDER_SOURCE_CACHE=0 npm run build:wastewater-demo
+```
 
-Adaptive mode first keeps the monotonic part of each device curve: actual
-triangle count must rise while world-space error falls. It starts from each
-device's minimum sample and allocates the node budget to the greatest
-normalized marginal error reduction. The node budget is the lower of
-`--lod-max-triangles` and the proportional mode's target total for that node,
-so both strategies compare under the same nominal work. If device minimums
-cannot fit that budget, the build fails instead of emitting an over-budget
-partial result.
+After source generation, full-model preparation and the tiled/LOD pipeline run
+concurrently. The authored build uses a 512 MiB LOD workspace. See
+[large-model performance](docs/guides/large-model-performance.md).
 
-Each semantic-device curve is generated once and cached for the lifetime of the
-partition build. Normalized and sampled geometry share the bounded temporary
-workspace, including original vertex colors; excess geometry spills to unique
-temporary files. The workspace and incomplete output directory are removed on
-success, failure, or cancellation.
+## Verification
 
-Use `--semantic-proxy off|auto` to enable conservative OBB and cylinder
-candidates. The default is `off`; `auto` requires
-`--lod --lod-allocation adaptive`. A proxy is accepted only when normalized
-surface deviation is at most `0.05`, volume inflation is at most `2.0`, and the
-device has at least eight times fewer triangles. Accepted proxies compete with
-QEM samples in the same LOD budget; rejected candidates fall back to QEM.
-The OBB aspect limit also rejects source bounds above `8:1`, preserving visible
-structure on long conveyors and similar equipment; cylinder candidates are not
-subject to this aspect limit.
+```bash
+npm run docs:check
+npm run test:architecture
+npm run typecheck
+npm run typecheck:tools
+npm test
+npm run verify
+```
 
-Proxy replacement operates only on source mesh geometry. Node transforms, node
-IDs, and semantic selection IDs remain unchanged, and proxy and QEM devices can
-coexist in one coarse Tile. The default-off mode preserves existing output;
-`auto` is intended for offline preprocessing and never moves fitting or mesh
-replacement into the browser runtime.
+## Documentation
 
-Partition statistics report accepted OBB and cylinder units, rejected units,
-selected proxy contents, selected proxy triangles, local saved triangles, and
-maximum proxy error. Saved triangles describe the local device benefit before
-the adaptive allocator may spend the released budget on other devices; compare
-final coarse totals separately.
+- [Documentation index](docs/README.md)
+- [Processing architecture](docs/architecture.md)
+- [Build, validate, and partition](docs/guides/build-validate-partition.md)
+- [Large-model performance](docs/guides/large-model-performance.md)
+- [CLI reference](docs/reference/cli.md)
+- [Architecture decisions](docs/decisions/README.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-## Scope
-
-- Input is glTF 2.0 JSON or GLB.
-- Required mesh-compression extensions are decoded during preprocessing.
-- Unreferenced textures, images, and samplers are removed from the prepared
-  output. Source materials that still reference textures are rejected until a
-  later texture milestone supplies an explicit conversion policy.
-- Optional material extensions outside the geometry-focused profile are
-  discarded during preprocessing.
-- Output is a standard single-JSON/single-BIN GLB with the
-  `ice3-prepared` profile in `asset.extras.ice3`.
-- M1 supports triangle and generated line primitives, node matrices, flat base
-  colors, and crease-edge overlays.
-- Optional LOD proxies use a mature quadratic-error simplifier in the toolchain
-  only and retain stable semantic selection IDs.
-- Animations, skins, Morph targets, referenced textures, cameras, lights,
-  sparse accessors, external output resources, and unsupported required
-  extensions are rejected after preprocessing.
-- The browser runtime receives only prepared GLB and never imports this
-  repository or a source-format adapter.
-
-## Build performance
-
-The authored wastewater source generation uses a content-addressed cache because
-Blender scene construction dominates a cold build. The cache key covers the
-generator sources, scene specification, pinned Blender version, and package
-lockfile. Cache hits use the operating system copy-on-write clone when available.
-
-The default cache location is the platform user-cache directory. Override it
-with `ICE3_BLENDER_CACHE_DIR=/path/to/cache`, or disable it for a clean build
-with `ICE3_BLENDER_SOURCE_CACHE=0`.
-
-After the source is ready, the example build runs full-model preparation and the
-tiled/LOD pipeline concurrently. LOD workspace memory defaults to 64 MiB for the
-CLI and is raised to 512 MiB by the authored example build. Override it with
-`--lod-max-memory-bytes` for larger models.
+The canonical cross-repository format and compatibility contract is
+[Asset Preparation Contract v1](https://github.com/ice-3d/ice3-doc/blob/main/docs/contracts/asset-preparation-contract-v1.md).
 
 ## AI-assisted development
 
@@ -271,5 +128,3 @@ This project makes substantial use of AI-assisted development. 本项目在设�
 ## License
 
 ICE3-owned code and documentation are licensed under the [MIT License](LICENSE).
-The OGC 3D Tiles schema fixtures retain their upstream license and attribution;
-see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

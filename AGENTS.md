@@ -32,3 +32,8 @@
 ```bash
 npm run verify
 ```
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](docs/README.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain architecture](docs/architecture.md)

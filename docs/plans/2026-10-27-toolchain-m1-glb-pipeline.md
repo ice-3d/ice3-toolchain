@@ -723,3 +723,9 @@ Expected: all tests pass and the contract fixture validates.
 git add README.md fixtures tests/fixtures/contract.test.ts
 git commit -m "test: freeze prepared GLB contract fixture"
 ```
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](../README.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
+- `ICE3-TOOL-REF-001` — [CLI reference](../reference/cli.md)

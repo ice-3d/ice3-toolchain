@@ -17,3 +17,8 @@ https://www.ogc.org/license
 
 The MIT License in this repository applies to ICE3-owned code and documentation.
 It does not replace the upstream license for these OGC schema fixtures.
+
+## Related Documents
+
+- `ICE3-TOOL-IDX-001` — [Documentation index](docs/README.md)
+- `ICE3-TOOL-REF-002` — [OGC schema source](tests/fixtures/3d-tiles-1.1-schema/SOURCE.md)
