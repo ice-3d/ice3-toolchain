@@ -96,6 +96,9 @@ const defaultRunner: IFbxBridgeRunner = async (args, options) => (
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill('SIGTERM');
+      setTimeout(() => {
+        child.kill('SIGKILL');
+      }, 1_000).unref();
     }, options.timeoutMs);
     child.on('error', reject);
     child.on('close', (code) => {

@@ -43,7 +43,8 @@ Runtime 继续只消费 Prepared GLB 或 Tileset，不导入 FBX，也不依赖 
 | 项目 | 决策 |
 | --- | --- |
 | 扩展名 | `.fbx`，大小写不敏感 |
-| Geometry bridge | Blender `5.2.3` headless Python |
+| Binary Geometry bridge | Blender `5.2.3` headless Python |
+| ASCII Geometry bridge | `assimpjs` `0.0.10` 进程内 WASM |
 | Node adapter | 私有 `@ice3/fbx-importer` |
 | Blender 分发 | 不作为 npm dependency 分发 |
 | Blender 定位 | `BLENDER_BIN` 或明确配置的 executable |
@@ -52,8 +53,8 @@ Runtime 继续只消费 Prepared GLB 或 Tileset，不导入 FBX，也不依赖 
 选择固定 Blender 的原因：
 
 - FBX 是 DCC interchange format，当前主流解析质量依赖成熟 DCC importer。
-- 当前 Blender 版本已提供 ASCII/Binary FBX import、层级、材质、custom properties 和
-  标准 glTF 2.0 export。
+- 当前 Blender 版本提供 Binary FBX import、层级、材质、custom properties 和标准 glTF
+  2.0 export；ASCII FBX 使用进程内 WASM fallback。
 - 旧 Node 转换器维护活跃度不足，无法满足当前技术支持范围。
 
 FBX adapter 在 Blender 不可用或版本不匹配时必须明确失败，不回退到不受支持的转换路径。
@@ -62,8 +63,8 @@ FBX adapter 在 Blender 不可用或版本不匹配时必须明确失败，不�
 
 ```text
 FBX source
-    ↓
-fixed Blender headless bridge
+    ├── Binary → fixed Blender headless bridge
+    └── ASCII  → in-process WASM bridge
     ↓
 temporary raw GLB + bridge report
     ↓
@@ -74,8 +75,8 @@ standard source GLB
 existing readSource / Prepared GLB / partition / LOD
 ```
 
-Bridge 只负责 DCC 级导入和初次导出。ICE3 selection、metadata、规范化、validation 和
-publication 仍由 TypeScript Toolchain 完成。
+两个 bridge 只负责格式导入和初次 GLB 导出。ICE3 selection、metadata、规范化、
+validation 和 publication 仍由 TypeScript Toolchain 完成。
 
 ## 5. Blender Bridge
 
@@ -103,7 +104,14 @@ BLENDER_BIN --background --factory-startup --python-exit-code 1
 - 启用网络、embedded image search 或任意 Blender add-on。
 - 启动 GUI。
 
-### 5.2 Import 参数
+### 5.2 ASCII 转换
+
+Blender `5.2.3` 不读取 ASCII FBX。ASCII 输入使用 `assimpjs` `0.0.10` 在 Node process 内
+生成 raw GLB 和对象报告，再经过与 Binary 相同的 TypeScript canonicalizer。ASCII custom
+properties 从 FBX `Model.Properties70` 提取可序列化值。`assimpjs` 以独立 runtime
+dependency 安装，不进入 Browser bundle。
+
+### 5.3 Binary Import 参数
 
 固定设置：
 
@@ -118,7 +126,7 @@ BLENDER_BIN --background --factory-startup --python-exit-code 1
 FBX 文件声明的 axis system 和单位由固定 Blender importer 解释。输出前仍由 TypeScript
 验证 right-handed y-up 和 meter。
 
-### 5.3 GLB export 参数
+### 5.4 Binary GLB export 参数
 
 Bridge 使用：
 
@@ -139,10 +147,11 @@ Bridge 使用：
 Blender 导出的临时 GLB 不是最终发布物。TypeScript 必须执行一次 canonicalization，移除
 不属于支持范围的 texture、image、animation、skin、camera 和 light 资源。
 
-### 5.4 进程控制
+### 5.5 Binary 进程控制
 
 - 每次 import 使用独立 `mkdtemp()` workspace。
 - 设置固定 timeout，默认 120 秒。
+- timeout 先发送 SIGTERM，未退出时发送 SIGKILL。
 - 检查 executable 和 Blender 精确版本。
 - bridge stdout/stderr 不直接进入报告。
 - Blender 失败时清理 raw GLB 和 report。
@@ -240,7 +249,7 @@ Metadata 最终结构：
 
 | Code | 条件 |
 | --- | --- |
-| `ICE3_TOOL_FBX_BLENDER_UNAVAILABLE` | `BLENDER_BIN` 不存在或不可执行 |
+| `ICE3_TOOL_FBX_BLENDER_UNAVAILABLE` | Binary FBX 的 `BLENDER_BIN` 不存在或不可执行 |
 | `ICE3_TOOL_FBX_BLENDER_VERSION_INVALID` | Blender 版本不是 `5.2.3` |
 | `ICE3_TOOL_FBX_TIMEOUT` | headless bridge 超过 timeout |
 | `ICE3_TOOL_FBX_IMPORT_FAILED` | FBX 无法读取或 Blender import 失败 |
@@ -286,12 +295,12 @@ ice3-tool partition model.fbx \
   --asset-id example
 ```
 
-`--adapter auto` 按 `.fbx` 选择 FBX adapter。Blender 不可用时返回
-`ICE3_TOOL_FBX_BLENDER_UNAVAILABLE`。
+`--adapter auto` 按 `.fbx` 选择 FBX adapter。Binary FBX 在 Blender 不可用时返回
+`ICE3_TOOL_FBX_BLENDER_UNAVAILABLE`；ASCII FBX 不依赖 Blender。
 
 发布要求：
 
-- npm package 包含 adapter 和 bridge script。
+- npm package 包含 adapter、bridge script 和 `assimpjs` runtime dependency。
 - 不包含或重新分发 Blender binary。
 - README 明确 Blender 是 FBX 可选系统依赖。
 - Blender 版本不符合时禁止 fallback。
@@ -321,7 +330,7 @@ ice3-tool partition model.fbx \
 ### 15.1 Bridge
 
 - 固定版本和 timeout。
-- ASCII/Binary FBX 都可执行。
+- Binary FBX 可执行，ASCII FBX 通过独立 WASM 路径执行。
 - 不读取 source 目录之外的文件。
 - raw GLB 和 report 写入指定 temporary path。
 - 失败时不生成成功 report。

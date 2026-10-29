@@ -1,4 +1,10 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -70,6 +76,31 @@ test('maps bridge timeout without leaking process output', async () => {
         timedOut: true,
       }),
     })).rejects.toThrow('ICE3_TOOL_FBX_TIMEOUT');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('force-kills a bridge process that ignores SIGTERM', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-fbx-kill-'));
+  try {
+    const executable = join(root, 'stubborn-blender');
+    await writeFile(
+      executable,
+      '#!/bin/sh\ntrap "" TERM\nsleep 5\n',
+    );
+    await chmod(executable, 0o755);
+    const started = Date.now();
+    await expect(runFbxBridge({
+      inputPath: join(root, 'source.fbx'),
+      outputPath: join(root, 'raw.glb'),
+      reportPath: join(root, 'report.json'),
+    }, {
+      blenderBinary: executable,
+      scriptPath: '/repo/fbx-to-glb.py',
+      timeoutMs: 50,
+    })).rejects.toThrow('ICE3_TOOL_FBX_TIMEOUT');
+    expect(Date.now() - started).toBeLessThan(1_500);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

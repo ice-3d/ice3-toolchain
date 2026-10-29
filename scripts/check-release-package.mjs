@@ -188,6 +188,31 @@ try {
     ['validate', fbxOutput, '--json'],
     consumer,
   ), 'published FBX output validation');
+  const fbxAsciiOutput = join(consumer, 'synthetic-fbx-ascii.glb');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      join(
+        root,
+        'tests',
+        'fixtures',
+        'fbx',
+        'synthetic-ascii.fbx',
+      ),
+      '--output',
+      fbxAsciiOutput,
+      '--asset-id',
+      'synthetic-fbx-ascii',
+      '--json',
+    ],
+    consumer,
+  ), 'published ASCII FBX import');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', fbxAsciiOutput, '--json'],
+    consumer,
+  ), 'published ASCII FBX output validation');
   const assimpWasmRuntime = await stat(join(
     consumer,
     'node_modules',
