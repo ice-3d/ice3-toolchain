@@ -425,7 +425,7 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 5：合并**
+- [x] **步骤 5：合并**
 
 在 `feat/source-import-adapters` 完成全部验证后提交，并以 `--no-ff` 合入 `main`。
 确认 Git author/committer 均为
