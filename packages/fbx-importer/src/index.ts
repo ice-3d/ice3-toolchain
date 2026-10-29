@@ -1,4 +1,9 @@
 export {
+  canonicalizeFbxGlb,
+  type IFbxCanonicalizeOptions,
+  type IFbxSourceStats,
+} from './canonicalizeFbxGlb.js';
+export {
   assertBlenderVersion,
   assertSupportedBlender,
   parseBlenderVersion,
