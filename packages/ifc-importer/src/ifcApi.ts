@@ -25,6 +25,13 @@ export async function openIfcDocument(
   path: string,
 ): Promise<IIfcOpenDocument> {
   const bytes = new Uint8Array(await readFile(path));
+  const text = new TextDecoder().decode(bytes);
+  if (
+    !/^\uFEFF?ISO-10303-21;/u.test(text)
+    || !/END-ISO-10303-21;\s*$/u.test(text)
+  ) {
+    throw new Error('ICE3_TOOL_IFC_IMPORT_FAILED');
+  }
   const modelID = api.OpenModel(bytes, {
     ALLOW_INCOMPATIBLE_SCHEMA_ALIASES: false,
     COORDINATE_TO_ORIGIN: false,

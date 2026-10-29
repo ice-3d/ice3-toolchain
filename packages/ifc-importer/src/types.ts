@@ -1,4 +1,5 @@
 export interface IIfcMetadata {
+  readonly assetId: string;
   readonly projectId: number;
   readonly nodes: readonly IIfcMetadataNode[];
   readonly products: readonly IIfcProductMetadata[];

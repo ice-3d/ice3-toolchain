@@ -14,6 +14,9 @@ import type {
   IIfcMetadata,
   IIfcProductMetadata,
 } from './types.js';
+import {
+  readIfcProductMetadata,
+} from './readIfcMetadata.js';
 
 export interface IIfcSourceStats {
   readonly outputPath: string;
@@ -40,9 +43,25 @@ export async function buildIfcSourceGlb(
     metadata.products.map((product) => [product.expressId, product] as const),
   );
   const warnings = [...metadata.warnings];
+  const usedSelectionIds = new Set(
+    metadata.products.map((product) => product.selectionId),
+  );
   for (const expressId of geometries.keys()) {
     if (!products.has(expressId)) {
       warnings.push(`IFC_UNMAPPED_GEOMETRY:${expressId}`);
+      const line = document.api.GetLine(document.modelID, expressId);
+      const ifcType = document.api.GetNameFromTypeCode(line.type).toUpperCase();
+      const fallback = readIfcProductMetadata(
+        document.api,
+        document.modelID,
+        expressId,
+        ifcType,
+        metadata.assetId,
+        usedSelectionIds,
+        new Map(),
+        warnings,
+      );
+      products.set(expressId, fallback);
     }
   }
   const bounds = geometryBounds([...geometries.values()]);
@@ -91,6 +110,17 @@ export async function buildIfcSourceGlb(
       : nodesByExpressId.get(parentId);
     if (parent) parent.addChild(node);
     else if (expressId === metadata.projectId) scene.addChild(node);
+  }
+  const projectNode = nodesByExpressId.get(metadata.projectId);
+  for (const [expressId, product] of products) {
+    if (nodesByExpressId.has(expressId)) continue;
+    const node = output.createNode(stableName(
+      product.name,
+      expressId,
+      usedNames,
+    ));
+    nodesByExpressId.set(expressId, node);
+    projectNode?.addChild(node);
   }
 
   const materials = new Map<string, Material>();

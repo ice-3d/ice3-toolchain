@@ -14,6 +14,7 @@ import {
   readIfcMetadata,
 } from '../../packages/ifc-importer/src/readIfcMetadata.js';
 import { readSource } from '../../packages/toolchain-core/src/source/readSource.js';
+import { readAccessor } from '../../packages/toolchain-core/src/source/readAccessor.js';
 
 test('converts IFC geometry and hierarchy to a y-up meter source GLB', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ice3-ifc-source-'));
@@ -66,6 +67,70 @@ test('converts IFC geometry and hierarchy to a y-up meter source GLB', async () 
         },
       }),
     ]));
+  } finally {
+    document.api.CloseModel(document.modelID);
+    document.api.Dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('keeps an element with geometry outside the spatial tree', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-ifc-orphan-'));
+  const api = await createIfcApi();
+  const document = await openIfcDocument(
+    api,
+    'tests/fixtures/ifc/orphan-product.ifc',
+  );
+  try {
+    const metadata = await readIfcMetadata(document, 'orphan-ifc');
+    const sourcePath = join(root, 'source.glb');
+    const stats = await buildIfcSourceGlb(document, metadata, sourcePath);
+    const source = await readSource(sourcePath);
+
+    expect(stats.productCount).toBe(3);
+    expect(stats.warnings).toEqual(expect.arrayContaining([
+      expect.stringMatching(/^IFC_UNMAPPED_GEOMETRY:/u),
+    ]));
+    expect(source.json.nodes).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Orphan Pump',
+        extras: expect.objectContaining({
+          ice3: expect.objectContaining({
+            equipmentTag: 'P-ORPHAN',
+          }),
+        }),
+      }),
+    ]));
+  } finally {
+    document.api.CloseModel(document.modelID);
+    document.api.Dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('uses one local origin for a georeferenced model', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-ifc-origin-'));
+  const api = await createIfcApi();
+  const document = await openIfcDocument(
+    api,
+    'tests/fixtures/ifc/large-origin.ifc',
+  );
+  try {
+    const metadata = await readIfcMetadata(document, 'large-origin');
+    const sourcePath = join(root, 'source.glb');
+    const stats = await buildIfcSourceGlb(document, metadata, sourcePath);
+    const source = await readSource(sourcePath);
+    expect(stats.sourceOrigin[0]).toBeGreaterThan(1_000_000);
+    const positionAccessors = (source.json.meshes ?? []).flatMap((mesh) => (
+      (mesh.primitives ?? []).map((primitive) => (
+        primitive.attributes?.POSITION
+      )).filter((index): index is number => Number.isInteger(index))
+    ));
+    const positions = positionAccessors.flatMap((index) => [
+      ...readAccessor(source, index).values,
+    ]);
+    expect(positions.length).toBeGreaterThan(0);
+    expect(Math.max(...positions.map(Math.abs))).toBeLessThan(20);
   } finally {
     document.api.CloseModel(document.modelID);
     document.api.Dispose();

@@ -52,7 +52,7 @@ export async function readIfcMetadata(
       children: node.children.map((child) => child.expressID),
     });
     if (api.IsIfcElement(line.type) && !SPATIAL_TYPES.has(ifcType)) {
-      products.push(readProduct(
+      products.push(readIfcProductMetadata(
         api,
         modelID,
         node.expressID,
@@ -74,6 +74,7 @@ export async function readIfcMetadata(
         ?? left.expressId - right.expressId
     ));
   return {
+    assetId,
     projectId: spatial.expressID,
     nodes,
     products,
@@ -82,7 +83,7 @@ export async function readIfcMetadata(
   };
 }
 
-function readProduct(
+export function readIfcProductMetadata(
   api: IfcAPI,
   modelID: number,
   expressID: number,

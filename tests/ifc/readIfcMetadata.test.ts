@@ -58,3 +58,40 @@ test('reads spatial hierarchy, product properties and systems', async () => {
     document.api.Dispose();
   }
 });
+
+test('keeps Selection IDs unique when IFC GlobalIds are duplicated', async () => {
+  const metadata = await readFixtureMetadata('duplicate-global-id.ifc');
+  const pump = metadata.products.find((product) => product.name === 'Primary Pump')!;
+  const tank = metadata.products.find((product) => product.name === 'Buffer Tank')!;
+
+  expect(pump.globalId).toBe(tank.globalId);
+  expect(new Set(metadata.products.map((product) => product.selectionId)).size)
+    .toBe(2);
+  expect(metadata.warnings).toEqual(expect.arrayContaining([
+    expect.stringMatching(/^IFC_DUPLICATE_GLOBAL_ID:/u),
+  ]));
+});
+
+test('creates an express-ID Selection fallback when GlobalId is missing', async () => {
+  const metadata = await readFixtureMetadata('missing-global-id.ifc');
+  const tank = metadata.products.find((product) => product.name === 'Buffer Tank')!;
+
+  expect(tank.globalId).toBeUndefined();
+  expect(tank.selectionId).toMatch(
+    /^synthetic-ifc\/ifc\/express\/\d+$/u,
+  );
+});
+
+async function readFixtureMetadata(fixture: string) {
+  const api = await createIfcApi();
+  const document = await openIfcDocument(
+    api,
+    `tests/fixtures/ifc/${fixture}`,
+  );
+  try {
+    return await readIfcMetadata(document, 'synthetic-ifc');
+  } finally {
+    document.api.CloseModel(document.modelID);
+    document.api.Dispose();
+  }
+}

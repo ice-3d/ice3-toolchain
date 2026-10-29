@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import re
 from pathlib import Path
 
 import ifcopenshell
@@ -8,8 +9,14 @@ import ifcopenshell.api
 import ifcopenshell.guid
 
 
-def create_model(length_unit: bool) -> ifcopenshell.file:
-    model = ifcopenshell.api.run("project.create_file", version="IFC4X3")
+def create_model(
+    length_unit: bool = True,
+    schema: str = "IFC4X3",
+    origin_offset: float = 0.0,
+    with_products: bool = True,
+    with_orphan: bool = False,
+) -> ifcopenshell.file:
+    model = ifcopenshell.api.run("project.create_file", version=schema)
     project = ifcopenshell.api.run(
         "root.create_entity",
         model,
@@ -75,6 +82,8 @@ def create_model(length_unit: bool) -> ifcopenshell.file:
             ),
         )
     ifcopenshell.api.run("unit.assign_unit", model, units=units)
+    if not with_products:
+        return model
 
     model_context = ifcopenshell.api.run(
         "context.add_context",
@@ -147,7 +156,7 @@ def create_model(length_unit: bool) -> ifcopenshell.file:
         model,
         product=pump,
         matrix=[
-            [1.0, 0.0, 0.0, 2.0],
+            [1.0, 0.0, 0.0, 2.0 + origin_offset],
             [0.0, 1.0, 0.0, 1.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0],
@@ -158,7 +167,7 @@ def create_model(length_unit: bool) -> ifcopenshell.file:
         model,
         product=tank,
         matrix=[
-            [1.0, 0.0, 0.0, 5.0],
+            [1.0, 0.0, 0.0, 5.0 + origin_offset],
             [0.0, 1.0, 0.0, 2.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0],
@@ -257,24 +266,110 @@ def create_model(length_unit: bool) -> ifcopenshell.file:
         products=[pump, tank],
         system=system,
     )
+    if with_orphan:
+        orphan = ifcopenshell.api.run(
+            "root.create_entity",
+            model,
+            ifc_class="IfcPump",
+            predefined_type="CENTRIFUGAL",
+            name="Orphan Pump",
+        )
+        orphan.Tag = "P-ORPHAN"
+        orphan_representation = ifcopenshell.api.run(
+            "geometry.add_wall_representation",
+            model,
+            context=body_context,
+            length=1.0,
+            height=0.6,
+            thickness=0.4,
+        )
+        ifcopenshell.api.run(
+            "geometry.assign_representation",
+            model,
+            product=orphan,
+            representation=orphan_representation,
+        )
+        ifcopenshell.api.run(
+            "geometry.edit_object_placement",
+            model,
+            product=orphan,
+            matrix=[
+                [1.0, 0.0, 0.0, 9.0 + origin_offset],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ],
+        )
     return model
 
 
-def main(output: str, unsupported_unit_output: str | None) -> None:
-    output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    model = create_model(True)
+def main(output_directory: str) -> None:
+    root = Path(output_directory)
+    root.mkdir(parents=True, exist_ok=True)
+    fixtures = {
+        "synthetic-plant.ifc": create_model(),
+        "unsupported-unit.ifc": create_model(length_unit=False),
+        "ifc4-legacy.ifc": create_model(schema="IFC4"),
+        "empty-model.ifc": create_model(with_products=False),
+        "large-origin.ifc": create_model(origin_offset=1_000_000.0),
+        "orphan-product.ifc": create_model(with_orphan=True),
+    }
+    for name, model in fixtures.items():
+        model.write((root / name).as_posix())
+    write_truncated(
+        root / "synthetic-plant.ifc",
+        root / "truncated.ifc",
+    )
+    write_global_id_variant(
+        root / "synthetic-plant.ifc",
+        root / "duplicate-global-id.ifc",
+    )
+    write_missing_global_id_variant(
+        root / "synthetic-plant.ifc",
+        root / "missing-global-id.ifc",
+    )
+
+
+def write_truncated(source_path: Path, output_path: Path) -> None:
+    synthetic = source_path.read_text(encoding="utf-8")
+    header_start = synthetic.find("HEADER;")
+    data_start = synthetic.find("DATA;")
+    if header_start < 0 or data_start < 0:
+        raise RuntimeError("unable to create truncated fixture")
+    header_start += len("HEADER;")
+    truncation = header_start + (data_start - header_start) // 2
+    output_path.write_text(
+        synthetic[:truncation],
+        encoding="utf-8",
+    )
+
+
+def write_global_id_variant(
+    source_path: Path,
+    output_path: Path,
+) -> None:
+    model = ifcopenshell.open(source_path.as_posix())
+    pump = model.by_type("IfcPump")[0]
+    tank = model.by_type("IfcTank")[0]
+    tank.GlobalId = pump.GlobalId
     model.write(output_path.as_posix())
 
-    if unsupported_unit_output:
-        unsupported_path = Path(unsupported_unit_output)
-        unsupported_path.parent.mkdir(parents=True, exist_ok=True)
-        create_model(False).write(unsupported_path.as_posix())
+
+def write_missing_global_id_variant(
+    source_path: Path,
+    output_path: Path,
+) -> None:
+    source = source_path.read_text(encoding="utf-8")
+    source = re.sub(
+        r"(=IFCTANK\(')[^']+(')",
+        r"\1$\2",
+        source,
+        count=1,
+    )
+    output_path.write_text(source, encoding="utf-8")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (2, 3):
-        raise SystemExit(
-            "usage: generate-synthetic-plant.py OUTPUT [UNSUPPORTED_UNIT_OUTPUT]"
-        )
-    main(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: generate-synthetic-plant.py OUTPUT_DIRECTORY")
+    main(sys.argv[1])

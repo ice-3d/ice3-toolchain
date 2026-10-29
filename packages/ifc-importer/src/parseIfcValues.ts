@@ -57,7 +57,7 @@ export function normalizeIfcString(value: unknown): string | undefined {
   const parsed = parseIfcValue(value);
   if (typeof parsed.value === 'string') {
     const normalized = parsed.value.trim();
-    return normalized || undefined;
+    return normalized && normalized !== '$' ? normalized : undefined;
   }
   if (typeof parsed.value === 'number' || typeof parsed.value === 'boolean') {
     return String(parsed.value);
