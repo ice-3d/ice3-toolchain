@@ -11,6 +11,7 @@
 | ID | 标题 | Status | 用途 |
 |---|---|---|---|
 | `ICE3-TOOL-RM-001` | [ICE3 Toolchain](../README.md) | Active | 构建、验证、partition 和 Asset 概览 |
+| `ICE3-TOOL-RM-002` | [npm package toolchain](../packages/cli/README.md) | Active | 发布 package 和 `ice3-tool` 命令的安装说明 |
 | `ICE3-TOOL-POL-001` | [仓库规则](../AGENTS.md) | Active | Toolchain 架构和交付规则 |
 | `ICE3-TOOL-ARC-001` | [Toolchain 架构](architecture.md) | Active | Pipeline 边界、确定性、内存和失败行为 |
 | `ICE3-TOOL-IDX-002` | [架构决策](decisions/README.md) | Active | Toolchain 设计决策索引 |

@@ -1,6 +1,6 @@
 .superpowers/
 node_modules/
 dist/
+/release/
 *.tgz
 *.tmp
-

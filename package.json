@@ -26,16 +26,79 @@
     "test": "node scripts/run-tests.mjs",
     "test:architecture": "node scripts/run-tests.mjs tests/architecture",
     "docs:check": "node scripts/check-docs.mjs",
-    "verify": "npm run docs:check && npm run test:architecture && npm run typecheck && npm run typecheck:tools && npm test"
+    "verify": "npm run docs:check && npm run test:architecture && npm run typecheck && npm run typecheck:tools && npm test",
+    "release:package": "npm run build && node scripts/build-release-package.mjs",
+    "release:check": "npm run release:package && node scripts/check-release-package.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",
     "@types/node": "24.19.2",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "esbuild": "^0.28.2",
     "expect": "30.5.2",
     "jest-mock": "30.5.2",
-    "typescript": "7.0.2",
-    "tsx": "4.23.15"
-  }
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "description": "> Document ID: ICE3-TOOL-RM-001 > > Status: Active > > Owner: ICE3 Toolchain maintainers",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "dependencies": {
+    "ansi-styles": "^4.3.0",
+    "chalk": "^4.1.2",
+    "ci-info": "^4.4.0",
+    "color-convert": "^2.0.1",
+    "color-name": "^1.1.4",
+    "cwise-compiler": "^1.1.3",
+    "detect-libc": "^2.1.2",
+    "draco3dgltf": "^1.5.9",
+    "escape-string-regexp": "^2.0.0",
+    "fast-deep-equal": "^3.1.3",
+    "fast-uri": "^3.1.9",
+    "fsevents": "^2.3.3",
+    "graceful-fs": "^4.2.11",
+    "has-flag": "^4.0.0",
+    "ice3-tool": "^0.0.0",
+    "iota-array": "^1.0.0",
+    "is-buffer": "^1.1.6",
+    "jest-diff": "^30.5.2",
+    "jest-matcher-utils": "^30.5.2",
+    "jest-message-util": "^30.5.1",
+    "jest-regex-util": "^30.5.0",
+    "jest-util": "^30.5.1",
+    "js-tokens": "^4.0.0",
+    "json-schema-traverse": "^1.0.0",
+    "ktx-parse": "^1.1.0",
+    "meshoptimizer": "^1.3.0",
+    "ndarray": "^1.1.1",
+    "ndarray-lanczos": "^0.3.0",
+    "ndarray-ops": "^1.2.2",
+    "ndarray-pixels": "^5.2.0",
+    "picocolors": "^1.1.1",
+    "picomatch": "^4.0.7",
+    "pretty-format": "^30.5.1",
+    "property-graph": "^4.1.0",
+    "require-from-string": "^2.0.2",
+    "semver": "^7.8.5",
+    "sharp": "^0.35.5",
+    "slash": "^3.0.0",
+    "stack-utils": "^2.0.6",
+    "supports-color": "^7.2.0",
+    "undici-types": "^7.24.6",
+    "uniq": "^1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ice-3d/ice3-toolchain.git"
+  },
+  "keywords": [],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/ice-3d/ice3-toolchain/issues"
+  },
+  "homepage": "https://github.com/ice-3d/ice3-toolchain#readme"
 }
