@@ -28,7 +28,7 @@
   LOD 和 Tileset 管线。
 - 提供一个完全合成的 STEP fixture 和端到端测试。
 
-IFC 4.3、FBX 和 USD 已按同一契约实现；OBJ 和 JT 继续使用该扩展点。
+IFC 4.3、FBX、USD 和 OBJ 已按同一契约实现；JT 继续使用该扩展点。
 
 ## 2. 边界
 
@@ -56,7 +56,7 @@ IFC 4.3、FBX 和 USD 已按同一契约实现；OBJ 和 JT 继续使用该扩�
 | 已完成 | IFC 4.3 `.ifc` | 空间结构、产品 identity、property set、系统关系 |
 | 已完成 | FBX `.fbx` | 节点层级、Geometry、基础颜色、实例 |
 | 已完成 | USD `.usdc`，兼容 `.usda` | 层级、实例、变换、基础颜色 |
-| 后续 | OBJ `.obj` | Geometry、节点名称、基础材质引用 |
+| 已完成 | OBJ `.obj` | Geometry、节点名称、基础 MTL |
 | 后续 | JT `.jt` | 大型装配和轻量可视化；采用外部 adapter |
 
 不计划支持旧式 `.dae`、`.3ds`、`.x3d`，也不直接支持软件私有 CAD 格式。
@@ -129,7 +129,7 @@ Adapter 必须先在临时目录写出完整 source GLB，再返回其路径。�
 ice3-tool import SOURCE \
   --output FILE \
   --asset-id ID \
-  [--adapter auto|step|ifc|fbx|usd] \
+  [--adapter auto|step|ifc|fbx|usd|obj] \
   [--report FILE] \
   [--budget PROFILE|FILE] \
   [--warnings-as-errors] \
@@ -257,7 +257,7 @@ node packages/cli/dist/main.js import tests/fixtures/step/pump-skid.step \
 
 ## 12. 非目标
 
-- 不在当前版本承诺 OBJ 或 JT。
+- 不在当前版本承诺 JT。
 - 不实现通用 CAD 编辑、B-Rep 运算或精确几何建模。
 - 不恢复 Blender 专有对象、修改器或节点图。
 - 不支持纹理、复杂 PBR、animation、skinning 或 morph targets。

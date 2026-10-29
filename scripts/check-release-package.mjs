@@ -79,8 +79,9 @@ try {
     !publishedSource.includes('ICE3_TOOL_STEP_IMPORT_FAILED')
     || !publishedSource.includes('step-ap242')
     || !publishedSource.includes('occt-import-js')
+    || !publishedSource.includes('ICE3_TOOL_OBJ_IMPORT_FAILED')
   ) {
-    throw new Error('ICE3_RELEASE_STEP_ADAPTER_MISSING');
+    throw new Error('ICE3_RELEASE_SOURCE_ADAPTER_MISSING');
   }
   const fixture = join(root, 'tests', 'fixtures', 'step', 'synthetic-skid.step');
   const importedOutput = join(consumer, 'synthetic-skid.glb');
@@ -293,6 +294,32 @@ try {
     'usd',
     'usd-to-glb.py',
   ));
+  const objOutput = join(consumer, 'synthetic-obj.glb');
+  const objReport = join(consumer, 'synthetic-obj.report.json');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      join(root, 'tests', 'fixtures', 'obj', 'synthetic-plant.obj'),
+      '--output',
+      objOutput,
+      '--report',
+      objReport,
+      '--asset-id',
+      'synthetic-obj',
+      '--json',
+    ],
+    consumer,
+  ), 'published OBJ import');
+  const objReportDocument = JSON.parse(await readFile(objReport, 'utf8'));
+  if (objReportDocument.adapter?.id !== 'obj') {
+    throw new Error('ICE3_RELEASE_OBJ_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', objOutput, '--json'],
+    consumer,
+  ), 'published OBJ output validation');
   const wasmRuntime = await stat(join(
     consumer,
     'node_modules',

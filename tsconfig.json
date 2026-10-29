@@ -18,6 +18,9 @@
     },
     {
       "path": "./packages/usd-importer"
+    },
+    {
+      "path": "./packages/obj-importer"
     }
   ]
 }

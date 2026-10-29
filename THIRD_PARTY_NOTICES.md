@@ -85,7 +85,7 @@ ICE3 只调用仓库内白名单脚本，不修改或重新分发 Blender。
 
 ### assimpjs
 
-FBX ASCII adapter 依赖：
+FBX ASCII 和 OBJ adapter 依赖：
 
 | 项目 | 版本 | 许可证 |
 |---|---|---|

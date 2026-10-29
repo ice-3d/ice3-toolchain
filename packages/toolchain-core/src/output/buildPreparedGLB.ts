@@ -508,6 +508,7 @@ export function buildPreparedGLB(
     const ifcMetadata = record(semantic?.ifc);
     const fbxMetadata = record(semantic?.fbx);
     const usdMetadata = record(semantic?.usd);
+    const objMetadata = record(semantic?.obj);
     const businessMetadata = {
       ...(typeof semantic?.displayName === 'string'
         ? { displayName: semantic.displayName }
@@ -534,6 +535,7 @@ export function buildPreparedGLB(
       ...(ifcMetadata ? { ifc: ifcMetadata } : {}),
       ...(fbxMetadata ? { fbx: fbxMetadata } : {}),
       ...(usdMetadata ? { usd: usdMetadata } : {}),
+      ...(objMetadata ? { obj: objMetadata } : {}),
     };
     const sourceMesh = node.mesh === undefined
       ? undefined

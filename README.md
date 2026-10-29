@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX、USD |
+| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX、USD、OBJ |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -73,6 +73,11 @@ node packages/cli/dist/main.js import tests/fixtures/usd/synthetic-plant.usda \
   --report /tmp/prepared-usd.report.json \
   --asset-id synthetic-usd
 
+node packages/cli/dist/main.js import tests/fixtures/obj/synthetic-plant.obj \
+  --output /tmp/prepared-obj.glb \
+  --report /tmp/prepared-obj.report.json \
+  --asset-id synthetic-obj
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -104,13 +109,14 @@ node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc 
 | 当前 | IFC 4.3 `.ifc` | 空间结构、产品 identity、Property Set、Quantity Set、System membership |
 | 当前 | FBX `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
 | 当前 | USD `.usda` / `.usdc` | 层级、Geometry、基础颜色、实例和 custom properties |
-| 后续 | OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
+| 当前 | OBJ `.obj` | Geometry、object/group 名称和同目录基础 MTL |
+| 后续 | JT | 独立 adapter 任务，不在当前版本承诺 |
 
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
 执行格式转换。
 
-`partition` 对 glTF/GLB 直接读取；对 STEP、IFC、FBX 和 USD 会先在临时目录执行对应
+`partition` 对 glTF/GLB 直接读取；对 STEP、IFC、FBX、USD 和 OBJ 会先在临时目录执行对应
 importer，完成切分与 LOD 后删除中间 source GLB。
 
 STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
@@ -132,6 +138,11 @@ USD source 通过固定版本 Blender `5.2.3` headless bridge 导入 `.usda` 和
 基础颜色、shared-mesh instance、USD prim path 和可序列化 custom properties 会写入
 Prepared GLB metadata。首期不支持 `.usdz`、animation、camera、light、复杂材质和
 Runtime conversion。
+
+OBJ adapter 在进程内完成 Geometry 和多边形三角化，并只读取同目录下的安全相对 MTL
+sidecar。OBJ 没有标准单位，因此固定按米解释并返回
+`ICE3_TOOL_OBJ_UNIT_ASSUMED_METERS` warning；启用 `--warnings-as-errors` 时会阻止
+publication。复杂材质、texture、绝对路径、URL 和目录外资源不支持。
 
 ## 污水处理厂演示
 
