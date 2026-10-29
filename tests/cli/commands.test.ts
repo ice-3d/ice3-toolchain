@@ -503,6 +503,7 @@ test.each([
   [['--lod-curve-samples', '3'], /must be between 4 and 32/],
   [['--lod-curve-samples', '33'], /must be between 4 and 32/],
   [['--lod-curve-samples', '4.5'], /must be a positive integer/],
+  [['--lod-max-memory-bytes', '0'], /must be a positive integer/],
 ])('partition rejects invalid adaptive options %j', async (
   arguments_,
   expectedError,
