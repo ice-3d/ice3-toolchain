@@ -3,6 +3,10 @@ import type {
 } from '@ice3/toolchain-core';
 
 export {
+  buildIfcSourceGlb,
+  type IIfcSourceStats,
+} from './buildIfcSourceGlb.js';
+export {
   createIfcApi,
   openIfcDocument,
   validateIfcLengthUnit,
