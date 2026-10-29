@@ -1,4 +1,4 @@
-# Build, Validate, And Partition Assets
+# 构建、验证与拆分 Asset
 
 > Document ID: ICE3-TOOL-GUIDE-001
 >
@@ -6,14 +6,14 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Intended Outcome
+## 目标结果
 
-Produce a validated Prepared GLB or a spatial Tileset without modifying the
-source file or leaving partial output after failure.
+在不修改 source file、失败不留部分输出的前提下，生成已校验 Prepared GLB 或 spatial
+Tileset。
 
-## Prerequisites
+## 前置条件
 
-Run from the repository root after:
+在仓库根目录执行以下命令后运行：
 
 ```bash
 nvm use
@@ -21,16 +21,15 @@ npm install
 npm run build
 ```
 
-## Inspect
+## 检查
 
 ```bash
 node packages/cli/dist/main.js inspect path/to/source.glb --json
 ```
 
-Inspect reports aggregate source statistics and validates source support before
-a long build starts.
+Inspect 报告聚合 source 统计，并在长时间 build 开始前校验 source support。
 
-## Build A Full Prepared GLB
+## 构建完整 Prepared GLB
 
 ```bash
 node packages/cli/dist/main.js build path/to/source.glb \
@@ -41,16 +40,15 @@ node packages/cli/dist/main.js build path/to/source.glb \
   --skip-edges
 ```
 
-The output path must be a file. The report is optional. Hard budget failures do
-not publish a GLB.
+Output path 必须是文件。Report 可选。Hard budget failure 不发布 GLB。
 
-## Validate
+## 验证
 
 ```bash
 node packages/cli/dist/main.js validate /tmp/prepared/asset.glb
 ```
 
-Expected: exit code `0` and an empty `errors` array in JSON mode.
+预期：exit code 为 `0`，JSON mode 下 `errors` 数组为空。
 
 ## Partition
 
@@ -71,19 +69,19 @@ node packages/cli/dist/main.js partition path/to/source.glb \
   --skip-edges
 ```
 
-The output directory must not exist. Success creates `tileset.json`, fine
-partitions, and any requested coarse content.
+Output directory 不得预先存在。成功后创建 `tileset.json`、fine partition 和请求的
+coarse content。
 
-## Expected Result
+## 预期结果
 
-- Every emitted GLB validates.
-- Tileset content URLs are relative and contained by the output directory.
-- Partition triangle totals match the source.
-- Coarse content preserves equipment selection IDs.
-- No temporary output remains after a failure.
+- 每个输出 GLB 都通过 validation。
+- Tileset content URL 为相对路径，并位于 output directory 内。
+- Partition triangle total 与 source 一致。
+- Coarse content 保留 equipment Selection ID。
+- Failure 后不残留 temporary output。
 
-## Related Documents
+## 关联文档
 
-- `ICE3-TOOL-REF-001` — [CLI reference](../reference/cli.md)
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
-- `ICE3-TOOL-GUIDE-002` — [Large-model performance](large-model-performance.md)
+- `ICE3-TOOL-REF-001` — [CLI 参考](../reference/cli.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
+- `ICE3-TOOL-GUIDE-002` — [大型模型性能](large-model-performance.md)

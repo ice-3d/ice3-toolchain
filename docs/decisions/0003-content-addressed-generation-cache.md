@@ -1,4 +1,4 @@
-# Content-Addressed Generation Cache
+# Content-Addressed 生成缓存
 
 > Document ID: ICE3-TOOL-ADR-003
 >
@@ -6,55 +6,52 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Context
+## 背景
 
-The authored wastewater scene takes several minutes to build in Blender while
-subsequent preparation and partitioning take seconds. Repeated test and demo
-builds should not pay the cold authoring cost when their inputs have not
-changed.
+Authoring 污水处理厂 Scene 在 Blender 中构建需要数分钟，后续 preparation 和
+partitioning 只需数秒。输入未变化时，重复 test 和 demo build 不应再次支付 cold
+authoring cost。
 
-## Decision
+## 决策
 
-Cache finalized authored-source GLB files under a key derived from:
+按以下信息派生 key，并缓存最终 authored-source GLB：
 
-- generator source files;
-- scene specification content;
-- pinned Blender version;
-- package lockfile.
+- generator source file。
+- Scene specification content。
+- 固定的 Blender version。
+- package lockfile。
 
-A cache hit copies the immutable GLB to the requested output using a
-copy-on-write clone when supported. The cache can be redirected with
-`ICE3_BLENDER_CACHE_DIR` and disabled with `ICE3_BLENDER_SOURCE_CACHE=0`.
+Cache hit 使用 copy-on-write clone 将不可变 GLB 复制到目标 output。可用
+`ICE3_BLENDER_CACHE_DIR` 重定向 cache，并用 `ICE3_BLENDER_SOURCE_CACHE=0` 禁用它。
 
-## Considered Alternatives
+## 备选方案
 
-- Rebuild Blender output on every invocation.
-- Cache by output filename or modification time.
-- Commit the 100+ MiB generated source asset to Git.
+- 每次调用都重建 Blender output。
+- 按 output filename 或 modification time 缓存。
+- 将 100+ MiB generated source Asset 提交到 Git。
 
-These alternatives waste time, risk stale output, or violate the repository
-asset-size policy.
+这些方案浪费时间、产生 stale output，或违反仓库 Asset-size policy。
 
-## Consequences
+## 影响
 
-- Unchanged builds can skip several minutes of Blender execution.
-- Any relevant generator or dependency change invalidates the key.
-- Cache storage sits outside the repository and is not published.
-- A cold cache still requires the full authored build.
+- 未变化 build 可跳过数分钟 Blender execution。
+- generator 或 dependency 的相关变化会使 key 失效。
+- Cache 位于仓库之外且不发布。
+- Cold cache 仍需要完整 authored build。
 
-## Compatibility
+## 兼容性
 
-The cache stores the same deterministic finalized GLB expected from a clean run.
-Disabling the cache preserves the full build path for release verification.
+Cache 保存与 clean run 相同的确定性 final GLB。禁用 cache 会保留完整 build path，供
+release verification 使用。
 
-## Verification
+## 验证
 
 ```bash
 npm test -- tests/wastewater/blender-source-cache.test.ts
 ICE3_BLENDER_SOURCE_CACHE=0 npm run build:wastewater-demo
 ```
 
-## Related Documents
+## 关联文档
 
 - `ICE3-TOOL-GUIDE-002` — [Large-model performance](../guides/large-model-performance.md)
-- `ICE3-TOOL-ADR-002` — [Deterministic atomic publication](0002-deterministic-atomic-publication.md)
+- `ICE3-TOOL-ADR-002` — [确定性原子 Publication](0002-deterministic-atomic-publication.md)

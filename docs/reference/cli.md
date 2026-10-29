@@ -1,4 +1,4 @@
-# ICE3 Tool CLI Reference
+# ICE3 Tool CLI 参考
 
 > Document ID: ICE3-TOOL-REF-001
 >
@@ -6,25 +6,24 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Command Syntax
+## Command 语法
 
 ```text
 ice3-tool <build|inspect|validate|partition> [arguments]
 ```
 
-The installed binary is `ice3-tool`; repository examples use
-`node packages/cli/dist/main.js`.
+安装后的 binary 为 `ice3-tool`；仓库示例使用 `node packages/cli/dist/main.js`。
 
-## Command-Line Conventions
+## Command-Line 约定
 
-| Option | Values | Behavior |
+| Option | 值 | 行为 |
 |---|---|---|
-| `--json` | flag | Emit one machine-readable JSON result |
-| `--crease-angle` | finite number, default `30` | Set generated edge threshold |
-| `--skip-edges` | flag | Omit generated edge geometry |
+| `--json` | flag | 输出一个 machine-readable JSON result |
+| `--crease-angle` | 有限数值，默认 `30` | 设置 generated edge threshold |
+| `--skip-edges` | flag | 省略 generated edge Geometry |
 
-`--budget` and `--warnings-as-errors` are accepted by `build` and `partition`.
-`--report` is accepted by `build`.
+`build` 和 `partition` 接受 `--budget` 与 `--warnings-as-errors`。`build` 接受
+`--report`。
 
 ## `inspect`
 
@@ -36,8 +35,7 @@ ice3-tool inspect SOURCE \
   [--json]
 ```
 
-Reads a source model or Prepared GLB and reports aggregate format and profile
-statistics.
+读取 source model 或 Prepared GLB，并报告聚合 format 与 profile statistic。
 
 ## `build`
 
@@ -53,8 +51,8 @@ ice3-tool build SOURCE \
   [--json]
 ```
 
-`--output` is required. Output publication is atomic. A hard-budget failure or
-invalid generated profile leaves no final GLB.
+`--output` 必填。Output publication 是原子的。Hard-budget failure 或无效 generated
+profile 不会留下最终 GLB。
 
 ## `validate`
 
@@ -62,7 +60,7 @@ invalid generated profile leaves no final GLB.
 ice3-tool validate FILE [--json]
 ```
 
-Validates an ICE3 Prepared GLB. Exit code `1` indicates one or more errors.
+校验 ICE3 Prepared GLB。Exit code `1` 表示一个或多个 error。
 
 ## `partition`
 
@@ -88,21 +86,21 @@ ice3-tool partition SOURCE \
   [--json]
 ```
 
-### Partition Constraints
+### Partition 约束
 
-| Option | Constraint |
+| Option | 约束 |
 |---|---|
-| `--max-triangles` | Positive number |
-| `--max-bytes` | Positive byte count |
-| `--lod-ratio` | Greater than zero and less than one |
-| `--lod-max-triangles` | Positive integer |
-| `--lod-min-unit-triangles` | Positive integer no greater than `--lod-max-triangles` |
-| `--lod-curve-samples` | Integer from `4` through `32` |
-| `--lod-max-memory-bytes` | Positive integer |
-| `--coarse-chunk-max-bytes` | Positive integer |
-| `--semantic-proxy auto` | Requires `--lod --lod-allocation adaptive` |
+| `--max-triangles` | 正数 |
+| `--max-bytes` | 正数 byte count |
+| `--lod-ratio` | 大于 0 且小于 1 |
+| `--lod-max-triangles` | 正整数 |
+| `--lod-min-unit-triangles` | 正整数，且不大于 `--lod-max-triangles` |
+| `--lod-curve-samples` | `4` 到 `32` 的整数 |
+| `--lod-max-memory-bytes` | 正整数 |
+| `--coarse-chunk-max-bytes` | 正整数 |
+| `--semantic-proxy auto` | 需要 `--lod --lod-allocation adaptive` |
 
-The output directory must not already exist. Success publishes:
+Output directory 不得预先存在。成功后发布：
 
 ```text
 tileset.json
@@ -112,12 +110,12 @@ coarse/... (when LOD is enabled)
 
 ## Exit Status
 
-- `0`: command completed and all required validation passed.
-- `1`: invalid arguments, unsupported input, validation failure, budget failure,
-  publication failure, or runtime exception.
+- `0`：command 完成且全部 required validation 通过。
+- `1`：无效 argument、不支持 input、validation failure、budget failure、publication
+  failure 或 Runtime exception。
 
-## Related Documents
+## 关联文档
 
-- `ICE3-TOOL-GUIDE-001` — [Build, validate, and partition](../guides/build-validate-partition.md)
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
+- `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](../guides/build-validate-partition.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
 - `ICE3-ENG-REF-001` — [Runtime diagnostics](https://github.com/ice-3d/ice3-engine/blob/main/docs/diagnostics.md)
