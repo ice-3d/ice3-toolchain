@@ -6,11 +6,16 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-ICE3 Toolchain 为 ICE3 Runtime 准备大型工业 source model，在浏览器外完成所有 source
-parsing、normalization、simplification、spatial partitioning 和 GLB packing。
+ICE3 Toolchain 为 ICE3 Runtime 准备大型工业 source model，在浏览器外完成 source
+parsing、Geometry normalization、LOD simplification、spatial partitioning、render
+batching 和 GLB packing。
 
 Runtime 输出保持为带 ICE3 Prepared GLB Profile 的标准 GLB；需要流式加载时，输出
 OGC 3D Tiles 1.1 hierarchy。
+
+**它解决的是“把客户已有的工业模型稳定接入 Runtime”，而不是做 CAD 编辑工具。**
+功能、依赖、输出和边界总览见
+[ICE3 Toolchain 功能指南](docs/guides/capabilities.md)。
 
 ## 能力
 
@@ -31,7 +36,8 @@ OGC 3D Tiles 1.1 hierarchy。
 
 - Node.js 24.22.1 LTS
 - npm 11 或更高版本
-- 仅在重新构建人工设计的污水处理厂 source 时需要 Blender 5.2.3
+- Binary FBX、USD 和污水处理厂 authoring rebuild 需要 Blender 5.2.3
+- JT 需要部署方提供 `ICE3_JT_CONVERTER`
 
 ```bash
 git clone https://github.com/ice-3d/ice3-toolchain.git
@@ -48,57 +54,57 @@ npm install --save-dev @ice3/toolchain
 npx ice3-tool inspect tests/fixtures/minimal.gltf --json
 ```
 
-检查、构建、验证并拆分 Asset：
+仓库内开发时检查、构建、验证并拆分 Asset：
 
 ```bash
-node packages/cli/dist/main.js inspect tests/fixtures/minimal.gltf --json
+node --import tsx packages/cli/src/main.ts inspect tests/fixtures/minimal.gltf --json
 
-node packages/cli/dist/main.js import tests/fixtures/step/synthetic-skid.step \
+node --import tsx packages/cli/src/main.ts import tests/fixtures/step/synthetic-skid.step \
   --output /tmp/prepared-skid.glb \
   --report /tmp/prepared-skid.report.json \
   --asset-id synthetic-skid
 
-node packages/cli/dist/main.js import tests/fixtures/ifc/synthetic-plant.ifc \
+node --import tsx packages/cli/src/main.ts import tests/fixtures/ifc/synthetic-plant.ifc \
   --output /tmp/prepared-ifc-plant.glb \
   --report /tmp/prepared-ifc-plant.report.json \
   --asset-id synthetic-ifc-plant
 
-node packages/cli/dist/main.js import tests/fixtures/fbx/synthetic-binary.fbx \
+node --import tsx packages/cli/src/main.ts import tests/fixtures/fbx/synthetic-binary.fbx \
   --output /tmp/prepared-fbx.glb \
   --report /tmp/prepared-fbx.report.json \
   --asset-id synthetic-fbx
 
-node packages/cli/dist/main.js import tests/fixtures/usd/synthetic-plant.usda \
+node --import tsx packages/cli/src/main.ts import tests/fixtures/usd/synthetic-plant.usda \
   --output /tmp/prepared-usd.glb \
   --report /tmp/prepared-usd.report.json \
   --asset-id synthetic-usd
 
-node packages/cli/dist/main.js import tests/fixtures/obj/synthetic-plant.obj \
+node --import tsx packages/cli/src/main.ts import tests/fixtures/obj/synthetic-plant.obj \
   --output /tmp/prepared-obj.glb \
   --report /tmp/prepared-obj.report.json \
   --asset-id synthetic-obj
 
 ICE3_JT_CONVERTER=/path/to/approved-jt-converter \
-  node packages/cli/dist/main.js import assembly.jt \
+  node --import tsx packages/cli/src/main.ts import assembly.jt \
   --output /tmp/prepared-jt.glb \
   --report /tmp/prepared-jt.report.json \
   --asset-id jt-assembly
 
-node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
+node --import tsx packages/cli/src/main.ts build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
   --asset-id prepared-cube \
   --budget interactive-desktop-v1
 
-node packages/cli/dist/main.js validate /tmp/prepared-cube.glb
+node --import tsx packages/cli/src/main.ts validate /tmp/prepared-cube.glb
 
-node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
+node --import tsx packages/cli/src/main.ts partition tests/fixtures/partition-source.gltf \
   --output /tmp/partition-result \
   --asset-id partition-demo \
   --max-triangles 500000 \
   --max-bytes 33554432
 
-node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc \
+node --import tsx packages/cli/src/main.ts partition tests/fixtures/ifc/synthetic-plant.ifc \
   --output /tmp/ifc-tiles \
   --asset-id synthetic-ifc-plant
 ```
@@ -175,7 +181,8 @@ engine example 目录。
 `npm run build:conformance` 使用七种 synthetic source fixture 生成 Prepared GLB 和
 `manifest.json`，并输出到相邻 Engine 示例的 `examples/m2/assets/conformance/`。
 统一测试同时验证 Profile、预期 Node、Geometry、Material 和 byte determinism。
-方法和失败样例矩阵见 [Conformance Assets](tools/conformance/README.md)。
+方法和失败样例矩阵见 [Conformance Assets](tools/conformance/README.md)。对应浏览器示例位于
+[ICE3 Engine Conformance 示例](https://github.com/ice-3d/ice3-engine/blob/main/docs/guides/conformance-example.md)。
 
 ## 构建性能
 
@@ -208,6 +215,7 @@ npm run verify
 ## 文档
 
 - [文档索引](docs/README.md)
+- [功能指南](docs/guides/capabilities.md)
 - [处理架构](docs/architecture.md)
 - [构建、验证与拆分](docs/guides/build-validate-partition.md)
 - [从 GLB 到 Engine 的完整接入流程](docs/guides/glb-to-engine.md)

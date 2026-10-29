@@ -42,7 +42,7 @@ ice3-tool import SOURCE \
 的 Geometry preparation 和 Prepared GLB validation。成功发布的 `--output` 始终是
 Prepared GLB，而不是源模型或中间 source GLB。
 
-首期 adapter：
+Source adapters：
 
 | Adapter | 扩展名 | 源能力 |
 |---|---|---|
@@ -220,6 +220,7 @@ coarse/... (when LOD is enabled)
 
 ## 关联文档
 
+- `ICE3-TOOL-GUIDE-006` — [Toolchain 功能指南](../guides/capabilities.md)
 - `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](../guides/build-validate-partition.md)
 - `ICE3-TOOL-GUIDE-003` — [从 GLB 到 Engine 的完整接入流程](../guides/glb-to-engine.md)
 - `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)

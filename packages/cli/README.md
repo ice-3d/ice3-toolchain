@@ -62,5 +62,7 @@ const exitCode = await runCli([
 
 完整文档见
 [Toolchain 文档](https://github.com/ice-3d/ice3-toolchain/blob/main/README.md)。
+格式、输出和边界总览见
+[Toolchain 功能指南](https://github.com/ice-3d/ice3-toolchain/blob/main/docs/guides/capabilities.md)。
 
 本项目采用 MIT License，第三方依赖声明随包发布。
