@@ -30,3 +30,21 @@ test('GLB authoring stays inside build-time tooling', () => {
   ) as { dependencies?: Record<string, string> };
   expect(cli.dependencies?.['@gltf-transform/core']).toBeUndefined();
 });
+
+test('workspace root remains a private orchestration manifest', () => {
+  const root = JSON.parse(readFileSync('package.json', 'utf8')) as {
+    description?: string;
+    main?: string;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+    scripts?: Record<string, string>;
+  };
+
+  expect(root.description).toBeUndefined();
+  expect(root.main).toBeUndefined();
+  expect(root.dependencies ?? {}).toEqual({});
+  expect(root.devDependencies?.esbuild).toBe('^0.28.2');
+  expect(root.scripts?.['release:package']).toBe(
+    'npm run build && node scripts/build-release-package.mjs',
+  );
+});
