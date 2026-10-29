@@ -28,7 +28,7 @@ const runtimeDependencies = {
 export function createPublicPackageManifest() {
   return {
     name: '@ice3/toolchain',
-    version: '0.1.0',
+    version: '0.2.0',
     description: 'Offline industrial GLB preparation and tiling CLI',
     license: 'MIT',
     type: 'module',
