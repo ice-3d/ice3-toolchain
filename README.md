@@ -242,3 +242,13 @@ final coarse totals separately.
   extensions are rejected after preprocessing.
 - The browser runtime receives only prepared GLB and never imports this
   repository or a source-format adapter.
+
+## AI-assisted development
+
+This project makes substantial use of AI-assisted development. 本项目在设计和实现过程中大量使用了 AI 辅助开发。
+
+## License
+
+ICE3-owned code and documentation are licensed under the [MIT License](LICENSE).
+The OGC 3D Tiles schema fixtures retain their upstream license and attribution;
+see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
