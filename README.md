@@ -30,7 +30,7 @@ where streaming is required, an OGC 3D Tiles 1.1 hierarchy.
 
 Requirements:
 
-- Node.js 24 LTS or 26+
+- Node.js 24.22.1 LTS
 - npm 11 or newer
 - Blender 5.2.3 only when rebuilding the authored wastewater source
 
