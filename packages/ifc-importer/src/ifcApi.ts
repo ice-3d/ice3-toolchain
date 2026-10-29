@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import {
   IfcAPI,
   IFCCONVERSIONBASEDUNIT,
+  IFCPROJECT,
   IFCSIUNIT,
   LogLevel,
 } from 'web-ifc';
@@ -57,18 +58,37 @@ export function validateIfcLengthUnit(
   api: IfcAPI,
   modelID: number,
 ): void {
-  const siUnits = [...api.GetLineIDsWithType(modelID, IFCSIUNIT)];
-  const conversionUnits = [...api.GetLineIDsWithType(
-    modelID,
-    IFCCONVERSIONBASEDUNIT,
-  )];
-  const recognized = [
-    ...siUnits.map((id) => siLengthUnitMeters(api.GetLine(modelID, id))),
-    ...conversionUnits.map((id) => (
-      conversionLengthUnitMeters(api, modelID, api.GetLine(modelID, id))
-    )),
-  ].filter((value): value is number => value !== undefined);
-  if (recognized.length === 0 || recognized.some((value) => !Number.isFinite(value))) {
+  const projectIds = [...api.GetLineIDsWithType(modelID, IFCPROJECT)];
+  if (projectIds.length !== 1) {
+    throw new Error('ICE3_TOOL_IFC_UNIT_UNSUPPORTED');
+  }
+  const project = api.GetLine(modelID, projectIds[0]!);
+  const assignmentId = project.UnitsInContext?.value;
+  if (!Number.isInteger(assignmentId)) {
+    throw new Error('ICE3_TOOL_IFC_UNIT_UNSUPPORTED');
+  }
+  const assignment = api.GetLine(modelID, assignmentId);
+  const lengthUnits = (assignment.Units ?? [])
+    .map((value: unknown) => referenceValue(value))
+    .filter((id: number) => {
+      const unit = api.GetLine(modelID, id);
+      return unit.UnitType?.value === 'LENGTHUNIT';
+    });
+  if (lengthUnits.length !== 1) {
+    throw new Error('ICE3_TOOL_IFC_UNIT_UNSUPPORTED');
+  }
+  const unitId = lengthUnits[0]!;
+  const unitType = api.GetLineType(modelID, unitId);
+  const metres = unitType === IFCSIUNIT
+    ? siLengthUnitMeters(api.GetLine(modelID, unitId))
+    : unitType === IFCCONVERSIONBASEDUNIT
+      ? conversionLengthUnitMeters(
+          api,
+          modelID,
+          api.GetLine(modelID, unitId),
+        )
+      : undefined;
+  if (metres === undefined || !Number.isFinite(metres)) {
     throw new Error('ICE3_TOOL_IFC_UNIT_UNSUPPORTED');
   }
 }
@@ -113,4 +133,9 @@ function conversionLengthUnitMeters(
     return undefined;
   }
   return siLengthUnitMeters(api.GetLine(modelID, unitRef));
+}
+
+function referenceValue(value: unknown): number {
+  const reference = value as { readonly value?: unknown } | undefined;
+  return typeof reference?.value === 'number' ? reference.value : -1;
 }

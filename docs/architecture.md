@@ -72,6 +72,10 @@ IFC parser 和 WASM 不进入 Engine package 或 Browser bundle。
 Success 输出始终是 Prepared GLB。Import adapter 返回的 source GLB 和临时 workspace
 只存在于构建过程中，不作为发布格式。
 
+`partition` 对 STEP 和 IFC 直接调用同一 adapter，在临时 workspace 获得 source GLB 后
+继续 spatial partition、LOD 和 Tileset publication。调用方不需要自行保存或传递中间
+source GLB。
+
 ## 确定性
 
 对于相同 input bytes、option、dependency version 和 tool version：

@@ -28,6 +28,7 @@ test('reports stable IFC failures without publishing output', async () => {
     ['truncated.ifc', 'ICE3_TOOL_IFC_IMPORT_FAILED'],
     ['empty-model.ifc', 'ICE3_TOOL_IMPORT_EMPTY_GEOMETRY'],
     ['unsupported-unit.ifc', 'ICE3_TOOL_IFC_UNIT_UNSUPPORTED'],
+    ['conflicting-units.ifc', 'ICE3_TOOL_IFC_UNIT_UNSUPPORTED'],
   ] as const;
   for (const [fixture, code] of cases) {
     errors.length = 0;

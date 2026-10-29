@@ -76,6 +76,10 @@ node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
   --asset-id partition-demo \
   --max-triangles 500000 \
   --max-bytes 33554432
+
+node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc \
+  --output /tmp/ifc-tiles \
+  --asset-id synthetic-ifc-plant
 ```
 
 每条命令都会校验输入，并拒绝发布不完整输出。完整选项和默认值见
@@ -93,6 +97,9 @@ node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
 执行格式转换。
+
+`partition` 对 glTF/GLB 直接读取；对 STEP 和 IFC 会先在临时目录执行对应 importer，
+完成切分与 LOD 后删除中间 source GLB。
 
 STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
 设备 identity、端口和连接时，不猜测业务语义。未知格式、不可用 adapter、空 Geometry

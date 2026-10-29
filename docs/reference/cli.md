@@ -134,6 +134,10 @@ ice3-tool partition SOURCE \
   [--json]
 ```
 
+`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp` 或 `.ifc`。非 glTF source 会先由
+对应 adapter 转为临时标准 source GLB，再执行同一 partition/LOD pipeline；中间文件
+不会进入最终 Tileset。
+
 ### Partition 约束
 
 | Option | 约束 |

@@ -137,3 +137,37 @@ test('uses one local origin for a georeferenced model', async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('keeps IFC metadata for a product without geometry', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-ifc-semantic-only-'));
+  const api = await createIfcApi();
+  const document = await openIfcDocument(
+    api,
+    'tests/fixtures/ifc/semantic-only-product.ifc',
+  );
+  try {
+    const metadata = await readIfcMetadata(document, 'semantic-only');
+    const sourcePath = join(root, 'source.glb');
+    await buildIfcSourceGlb(document, metadata, sourcePath);
+    const source = await readSource(sourcePath);
+    const pump = source.json.nodes?.find(
+      (node) => node.name === 'Primary Pump',
+    ) as {
+      mesh?: number;
+      extras?: {
+        ice3?: {
+          ifc?: {
+            ifcType?: string;
+          };
+        };
+      };
+    };
+
+    expect(pump.mesh).toBeUndefined();
+    expect(pump.extras?.ice3?.ifc?.ifcType).toBe('IFCPUMP');
+  } finally {
+    document.api.CloseModel(document.modelID);
+    document.api.Dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});

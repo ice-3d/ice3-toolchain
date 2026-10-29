@@ -15,6 +15,7 @@ def create_model(
     origin_offset: float = 0.0,
     with_products: bool = True,
     with_orphan: bool = False,
+    conflicting_units: bool = False,
 ) -> ifcopenshell.file:
     model = ifcopenshell.api.run("project.create_file", version=schema)
     project = ifcopenshell.api.run(
@@ -81,6 +82,13 @@ def create_model(
                 prefix="MILLI",
             ),
         )
+        if conflicting_units:
+            units.append(ifcopenshell.api.run(
+                "unit.add_si_unit",
+                model,
+                unit_type="LENGTHUNIT",
+                prefix=None,
+            ))
     ifcopenshell.api.run("unit.assign_unit", model, units=units)
     if not with_products:
         return model
@@ -309,6 +317,7 @@ def main(output_directory: str) -> None:
     fixtures = {
         "synthetic-plant.ifc": create_model(),
         "unsupported-unit.ifc": create_model(length_unit=False),
+        "conflicting-units.ifc": create_model(conflicting_units=True),
         "ifc4-legacy.ifc": create_model(schema="IFC4"),
         "empty-model.ifc": create_model(with_products=False),
         "large-origin.ifc": create_model(origin_offset=1_000_000.0),
@@ -327,6 +336,10 @@ def main(output_directory: str) -> None:
     write_missing_global_id_variant(
         root / "synthetic-plant.ifc",
         root / "missing-global-id.ifc",
+    )
+    write_semantic_only_variant(
+        root / "synthetic-plant.ifc",
+        root / "semantic-only-product.ifc",
     )
 
 
@@ -367,6 +380,16 @@ def write_missing_global_id_variant(
         count=1,
     )
     output_path.write_text(source, encoding="utf-8")
+
+
+def write_semantic_only_variant(
+    source_path: Path,
+    output_path: Path,
+) -> None:
+    model = ifcopenshell.open(source_path.as_posix())
+    pump = model.by_type("IfcPump")[0]
+    pump.Representation = None
+    model.write(output_path.as_posix())
 
 
 if __name__ == "__main__":

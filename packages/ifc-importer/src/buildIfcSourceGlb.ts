@@ -122,6 +122,12 @@ export async function buildIfcSourceGlb(
     nodesByExpressId.set(expressId, node);
     projectNode?.addChild(node);
   }
+  for (const [expressId, product] of products) {
+    const node = nodesByExpressId.get(expressId);
+    node?.setExtras({
+      ice3: productExtras(product, document.schema),
+    });
+  }
 
   const materials = new Map<string, Material>();
   let triangleCount = 0;
@@ -152,9 +158,6 @@ export async function buildIfcSourceGlb(
       vertexCount += part.positions.length / 3;
     }
     node.setMesh(mesh);
-    node.setExtras({
-      ice3: productExtras(product, document.schema),
-    });
     productCount += 1;
     meshCount += 1;
   }

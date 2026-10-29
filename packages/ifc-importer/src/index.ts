@@ -80,22 +80,32 @@ export function createIfcImporter(): ICESourceImporter {
           }
           throw new Error('ICE3_TOOL_IFC_IMPORT_FAILED');
         }
-        const metadata = await readIfcMetadata(document, context.assetId);
-        const sourceGlbPath = join(
-          context.temporaryDirectory,
-          `${safeAssetId(context.assetId)}.source.glb`,
-        );
-        const stats = await buildIfcSourceGlb(
-          document,
-          metadata,
-          sourceGlbPath,
-        );
-        return {
-          adapterId: 'ifc',
-          sourceFormat: 'ifc-4x3',
-          sourceGlbPath,
-          warnings: stats.warnings,
-        };
+        try {
+          const metadata = await readIfcMetadata(document, context.assetId);
+          const sourceGlbPath = join(
+            context.temporaryDirectory,
+            `${safeAssetId(context.assetId)}.source.glb`,
+          );
+          const stats = await buildIfcSourceGlb(
+            document,
+            metadata,
+            sourceGlbPath,
+          );
+          return {
+            adapterId: 'ifc',
+            sourceFormat: 'ifc-4x3',
+            sourceGlbPath,
+            warnings: stats.warnings,
+          };
+        } catch (error) {
+          if (
+            error instanceof Error
+            && error.message.startsWith('ICE3_TOOL_')
+          ) {
+            throw error;
+          }
+          throw new Error('ICE3_TOOL_IFC_IMPORT_FAILED');
+        }
       } finally {
         if (document) document.api.CloseModel(document.modelID);
         api?.Dispose();
