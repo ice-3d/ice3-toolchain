@@ -6,6 +6,7 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(existsSync('packages/toolchain-core/package.json')).toBe(true);
   expect(existsSync('packages/cli/package.json')).toBe(true);
   expect(existsSync('packages/step-importer/package.json')).toBe(true);
+  expect(existsSync('packages/ifc-importer/package.json')).toBe(true);
 
   const root = JSON.parse(readFileSync('package.json', 'utf8')) as {
     private?: boolean;
@@ -22,6 +23,25 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   };
   expect(stepImporter.private).toBe(true);
   expect(stepImporter.dependencies?.['occt-import-js']).toBe('0.0.23');
+
+  const ifcImporter = JSON.parse(
+    readFileSync('packages/ifc-importer/package.json', 'utf8'),
+  ) as {
+    private?: boolean;
+    dependencies?: Record<string, string>;
+  };
+  expect(ifcImporter.private).toBe(true);
+  expect(ifcImporter.dependencies?.['web-ifc']).toBe('0.0.78');
+
+  const core = JSON.parse(
+    readFileSync('packages/toolchain-core/package.json', 'utf8'),
+  ) as { dependencies?: Record<string, string> };
+  expect(core.dependencies?.['web-ifc']).toBeUndefined();
+
+  const cli = JSON.parse(
+    readFileSync('packages/cli/package.json', 'utf8'),
+  ) as { dependencies?: Record<string, string> };
+  expect(cli.dependencies?.['web-ifc']).toBe('0.0.78');
 });
 
 test('GLB authoring stays inside build-time tooling', () => {

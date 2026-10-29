@@ -47,6 +47,7 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | Adapter | 扩展名 | 源能力 |
 |---|---|---|
 | `step` | `.step`、`.stp` | STEP AP242 Geometry、层级、名称、颜色和米制 conversion |
+| `ifc` | `.ifc` | IFC 4.3 spatial hierarchy、identity、Pset、Qto、System 和米制 conversion |
 
 `--adapter auto` 按 extension 选择 adapter。`--report` 在标准 Asset Report 顶层增加
 `adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
@@ -60,9 +61,17 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE` | 显式 adapter 不存在、不可用，或 extension 不匹配 |
 | `ICE3_TOOL_IMPORT_EMPTY_GEOMETRY` | adapter 成功解析，但没有可用 triangle Geometry |
 | `ICE3_TOOL_STEP_IMPORT_FAILED` | STEP 文件语法、解析或三角化失败 |
+| `ICE3_TOOL_IFC_SCHEMA_UNSUPPORTED` | IFC 文件不是 IFC4X3 系列 |
+| `ICE3_TOOL_IFC_UNIT_UNSUPPORTED` | IFC 长度单位缺失、未知或冲突 |
+| `ICE3_TOOL_IFC_IMPORT_FAILED` | IFC 文件截断、解析或读取失败 |
+| `ICE3_TOOL_IFC_GEOMETRY_INVALID` | IFC Geometry、transform 或 index 无效 |
 
 Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
 warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
+
+IFC 产品使用 `GlobalId` 作为 Selection identity。重复 GlobalId 会追加 express ID；
+缺失 GlobalId 使用稳定的 express-ID fallback。Pset、Qto 和 System membership 会保留
+在 Prepared GLB node metadata。复杂且不可 JSON 序列化的 property 会省略并产生 warning。
 
 ## `inspect`
 
@@ -124,6 +133,10 @@ ice3-tool partition SOURCE \
   [--semantic-proxy off|auto] \
   [--json]
 ```
+
+`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp` 或 `.ifc`。非 glTF source 会先由
+对应 adapter 转为临时标准 source GLB，再执行同一 partition/LOD pipeline；中间文件
+不会进入最终 Tileset。
 
 ### Partition 约束
 

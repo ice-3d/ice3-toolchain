@@ -505,6 +505,7 @@ export function buildPreparedGLB(
     const node = sourceNodes[sourceIndex]!;
     const semantic = record(record(node.extras)?.ice3);
     const semanticSelectionId = semantic?.selectionId;
+    const ifcMetadata = record(semantic?.ifc);
     const businessMetadata = {
       ...(typeof semantic?.displayName === 'string'
         ? { displayName: semantic.displayName }
@@ -528,6 +529,7 @@ export function buildPreparedGLB(
             typeof value === 'string'
           )) }
         : {}),
+      ...(ifcMetadata ? { ifc: ifcMetadata } : {}),
     };
     const sourceMesh = node.mesh === undefined
       ? undefined

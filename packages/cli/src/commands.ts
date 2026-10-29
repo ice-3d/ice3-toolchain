@@ -319,7 +319,8 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     );
   }
 
-  const source = await readSource(sourcePath);
+  const partitionInput = await readPartitionSource(sourcePath, assetId);
+  const source = partitionInput.source;
   const sourceReport = validateSource(source);
   if (sourceReport.errors.length > 0) {
     throw new Error(`ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`);
@@ -335,7 +336,11 @@ async function partitionCommand(args: ParsedArguments): Promise<void> {
     renderBatch,
     ...(lod ? { lod } : {}),
   });
-  const warnings = [...new Set([...sourceReport.warnings, ...result.warnings])];
+  const warnings = [...new Set([
+    ...partitionInput.warnings,
+    ...sourceReport.warnings,
+    ...result.warnings,
+  ])];
   if (
     warnings.length > 0
     && args.flags.has('--warnings-as-errors')
@@ -752,10 +757,11 @@ async function readToolVersion(): Promise<string> {
 async function loadSourceImporters(
   requestedAdapter: string,
 ): Promise<readonly import('@ice3/toolchain-core').ICESourceImporter[]> {
+  const importers: import('@ice3/toolchain-core').ICESourceImporter[] = [];
   if (requestedAdapter === 'auto' || requestedAdapter === 'step') {
     try {
       const module = await import('../../step-importer/src/index.js');
-      return [module.createStepImporter()];
+      importers.push(module.createStepImporter());
     } catch (error) {
       throw new Error(
         `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: step (${
@@ -764,9 +770,56 @@ async function loadSourceImporters(
       );
     }
   }
+  if (requestedAdapter === 'auto' || requestedAdapter === 'ifc') {
+    try {
+      const module = await import('../../ifc-importer/src/index.js');
+      importers.push(module.createIfcImporter());
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ifc (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
+  if (importers.length > 0) return importers;
   throw new Error(
     `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
   );
+}
+
+async function readPartitionSource(
+  sourcePath: string,
+  assetId: string,
+): Promise<{
+  readonly source: Awaited<ReturnType<typeof readSource>>;
+  readonly warnings: readonly string[];
+}> {
+  if (['.gltf', '.glb'].includes(extname(sourcePath).toLowerCase())) {
+    return {
+      source: await readSource(sourcePath),
+      warnings: [],
+    };
+  }
+  const registry = createImporterRegistry(
+    await loadSourceImporters('auto'),
+  );
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ice3-partition-'));
+  try {
+    const imported = await registry.import({
+      path: resolve(sourcePath),
+      requestedAdapter: 'auto',
+    }, {
+      temporaryDirectory,
+      assetId,
+    });
+    return {
+      source: await readSource(imported.sourceGlbPath),
+      warnings: imported.warnings,
+    };
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
 }
 
 function printHelp(): void {
@@ -775,7 +828,7 @@ function printHelp(): void {
     '',
     'Commands:',
     '  build SOURCE --output FILE',
-    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step]',
+    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc]',
     '  inspect SOURCE',
     '  validate FILE',
     '  partition SOURCE --output DIRECTORY --asset-id ID',

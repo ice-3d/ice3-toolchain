@@ -113,6 +113,48 @@ try {
     ['validate', importedOutput, '--json'],
     consumer,
   ), 'published STEP output validation');
+  const ifcFixture = join(
+    root,
+    'tests',
+    'fixtures',
+    'ifc',
+    'synthetic-plant.ifc',
+  );
+  const ifcOutput = join(consumer, 'synthetic-plant.glb');
+  const ifcReport = join(consumer, 'synthetic-plant.report.json');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      ifcFixture,
+      '--output',
+      ifcOutput,
+      '--report',
+      ifcReport,
+      '--asset-id',
+      'synthetic-plant',
+      '--json',
+    ],
+    consumer,
+  ), 'published IFC import');
+  const ifcReportDocument = JSON.parse(await readFile(ifcReport, 'utf8'));
+  if (ifcReportDocument.adapter?.id !== 'ifc') {
+    throw new Error('ICE3_RELEASE_IFC_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', ifcOutput, '--json'],
+    consumer,
+  ), 'published IFC output validation');
+  const ifcWasmRuntime = await stat(join(
+    consumer,
+    'node_modules',
+    'web-ifc',
+    'web-ifc-node.wasm',
+  ));
+  if (ifcWasmRuntime.size === 0) {
+    throw new Error('ICE3_RELEASE_IFC_WASM_MISSING');
+  }
   const wasmRuntime = await stat(join(
     consumer,
     'node_modules',
@@ -131,8 +173,11 @@ try {
     !notices.includes('occt-import-js')
     || !notices.includes('LGPL-2.1')
     || !notices.includes('occt-import-js.wasm')
+    || !notices.includes('web-ifc')
+    || !notices.includes('MPL-2.0')
+    || !notices.includes('web-ifc-node.wasm')
   ) {
-    throw new Error('ICE3_RELEASE_STEP_NOTICE_INVALID');
+    throw new Error('ICE3_RELEASE_SOURCE_NOTICE_INVALID');
   }
   await writeFile(
     join(consumer, 'index.ts'),

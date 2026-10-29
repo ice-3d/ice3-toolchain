@@ -9,6 +9,9 @@
     },
     {
       "path": "./packages/step-importer"
+    },
+    {
+      "path": "./packages/ifc-importer"
     }
   ]
 }

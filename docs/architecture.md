@@ -12,7 +12,7 @@ Toolchain 将 model-authoring format 转换为有界 Runtime format。它是离�
 Browser Runtime 永不导入。
 
 ```text
-source glTF / GLB / STEP AP242
+source glTF / GLB / STEP AP242 / IFC 4.3
        ↓
 adapter registry → standard source GLB
        ↓
@@ -55,6 +55,11 @@ Source importer 是一次性构建边界，不进入 Browser package。首期 ST
 的 CAD/WASM 依赖，在 Node process 内完成单位、坐标和三角网格转换。后续格式通过相同
 `ICESourceImporter` contract 注册，不得增加 Runtime conversion path。
 
+IFC 4.3 adapter 在独立 Toolchain package 内解析 spatial hierarchy、产品字段、
+Property Set、Quantity Set 和 System membership。它把 georeferenced Geometry 转换到
+统一的米制 y-up document-local 坐标系，并将原始原点与 IFC metadata 写入 source GLB。
+IFC parser 和 WASM 不进入 Engine package 或 Browser bundle。
+
 ## Source Import 边界
 
 | 等级 | 能力 | STEP 首期 |
@@ -66,6 +71,10 @@ Source importer 是一次性构建边界，不进入 Browser package。首期 ST
 
 Success 输出始终是 Prepared GLB。Import adapter 返回的 source GLB 和临时 workspace
 只存在于构建过程中，不作为发布格式。
+
+`partition` 对 STEP 和 IFC 直接调用同一 adapter，在临时 workspace 获得 source GLB 后
+继续 spatial partition、LOD 和 Tileset publication。调用方不需要自行保存或传递中间
+source GLB。
 
 ## 确定性
 
@@ -95,6 +104,10 @@ Blender output。
 - 可选 adapter 未安装时返回 `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE`。
 - STEP 没有可用 triangle Geometry 时返回 `ICE3_TOOL_IMPORT_EMPTY_GEOMETRY`。
 - Adapter 解析失败时返回 `ICE3_TOOL_STEP_IMPORT_FAILED`，且不发布目标 output。
+- IFC schema 或单位不支持时分别返回 `ICE3_TOOL_IFC_SCHEMA_UNSUPPORTED` 和
+  `ICE3_TOOL_IFC_UNIT_UNSUPPORTED`。
+- IFC parser 或 Geometry 失败时返回稳定 `ICE3_TOOL_IFC_*` Diagnostic，不泄漏
+  temporary path 或 parser handle。
 - Directory publication 失败时恢复上一个 Asset root。
 - 无论成功或失败，temporary workspace 都会被删除。
 

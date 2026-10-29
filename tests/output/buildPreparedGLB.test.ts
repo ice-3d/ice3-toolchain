@@ -327,6 +327,55 @@ test('preserves equipment business metadata for prepared nodes', () => {
   });
 });
 
+test('preserves explicit IFC source metadata for prepared nodes', () => {
+  const source = createPartitionSource();
+  const nodes = source.json.nodes as Array<Record<string, unknown>>;
+  nodes[0] = {
+    ...nodes[0],
+    extras: {
+      ice3: {
+        id: 'ifc-demo/source/0',
+        selectionId: 'ifc-demo/ifc/2O2Fr$t4X7Zf8NOew3FLKr',
+        ifc: {
+          schema: 'IFC4X3',
+          expressId: 42,
+          ifcType: 'IFCPUMP',
+          globalId: '2O2Fr$t4X7Zf8NOew3FLKr',
+          propertySets: [{
+            name: 'Pset_PumpTypeCommon',
+            properties: { FlowRate: 12.5 },
+          }],
+          systems: [{
+            globalId: '1AbC...',
+            name: 'Sludge Transfer',
+            ifcType: 'IFCDISTRIBUTIONSYSTEM',
+          }],
+        },
+      },
+    },
+  };
+
+  const built = buildPreparedGLB(source, {
+    assetId: 'ifc-demo',
+    edges: false,
+  });
+  const document = readDocument(built.bytes) as {
+    nodes: Array<{
+      extras: {
+        ice3: {
+          ifc?: Record<string, unknown>;
+        };
+      };
+    }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3.ifc).toEqual(
+    nodes[0]!.extras &&
+      (nodes[0]!.extras as { ice3: { ifc: Record<string, unknown> } })
+        .ice3.ifc,
+  );
+});
+
 test('reports contract bounds from replaced mesh geometry', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const built = buildPreparedGLB(source, {
