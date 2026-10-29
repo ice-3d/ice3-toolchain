@@ -2,6 +2,7 @@
   "name": "ice3-tool",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "bin": {
     "ice3-tool": "./dist/main.js"
