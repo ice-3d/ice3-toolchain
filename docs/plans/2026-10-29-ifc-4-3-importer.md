@@ -846,7 +846,7 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 5：整分支审查**
+- [x] **步骤 5：整分支审查**
 
 执行 executing-plans 的最终审查，重点检查：
 
