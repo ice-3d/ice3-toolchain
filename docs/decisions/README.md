@@ -1,4 +1,4 @@
-# ICE3 Toolchain Architecture Decision Index
+# ICE3 Toolchain 架构决策索引
 
 > Document ID: ICE3-TOOL-IDX-002
 >
@@ -6,15 +6,15 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Decisions
+## 决策
 
-| ID | Decision | Status | Purpose |
+| ID | 决策 | Status | 用途 |
 |---|---|---|---|
-| `ICE3-TOOL-ADR-001` | [Offline standard output](0001-offline-standard-output.md) | Active | Keep conversion outside runtime and preserve standard formats |
-| `ICE3-TOOL-ADR-002` | [Deterministic atomic publication](0002-deterministic-atomic-publication.md) | Active | Publish only complete, repeatable artifacts |
-| `ICE3-TOOL-ADR-003` | [Content-addressed generation cache](0003-content-addressed-generation-cache.md) | Active | Avoid repeated expensive authored source generation |
+| `ICE3-TOOL-ADR-001` | [离线标准输出](0001-offline-standard-output.md) | Active | Conversion 留在 Runtime 外，并保持标准格式 |
+| `ICE3-TOOL-ADR-002` | [确定性原子 Publication](0002-deterministic-atomic-publication.md) | Active | 只发布完整、可重复 artifact |
+| `ICE3-TOOL-ADR-003` | [Content-Addressed Generation Cache](0003-content-addressed-generation-cache.md) | Active | 避免重复昂贵的 authored source generation |
 
-## Related Documents
+## 关联文档
 
-- `ICE3-TOOL-IDX-001` — [Toolchain documentation index](../README.md)
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
+- `ICE3-TOOL-IDX-001` — [Toolchain 文档索引](../README.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)

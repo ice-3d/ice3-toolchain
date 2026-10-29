@@ -1,4 +1,4 @@
-# Deterministic Atomic Publication
+# 确定性原子 Publication
 
 > Document ID: ICE3-TOOL-ADR-002
 >
@@ -6,51 +6,46 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Context
+## 背景
 
-Interrupted builds must not leave a partially valid asset directory. Repeated
-builds should also be comparable and cacheable so geometry changes can be
-reviewed reliably.
+中断的 build 不得留下部分有效的 Asset directory。重复 build 还应可比较、可缓存，
+以便可靠审查 Geometry 变化。
 
-## Decision
+## 决策
 
-For identical input bytes, options, dependency versions, and tool version, all
-ordering and generated content are deterministic. Files are written to unique
-temporary paths, validated, and published only after the complete operation
-succeeds.
+相同 input bytes、option、dependency version 和 tool version 下，所有顺序和生成内容都
+具有确定性。文件写入唯一 temporary path，通过 validation 后才在完整 operation 成功
+时发布。
 
-Replacement of the example asset root preserves the previous directory until
-the new staged directory is ready.
+替换 example Asset root 时，直到新 staged directory 就绪才替换旧目录。
 
-## Considered Alternatives
+## 备选方案
 
-- Write directly into the final paths.
-- Delete the old output before writing the new output.
-- Permit nondeterministic object and triangle ordering.
+- 直接写入 final path。
+- 写新输出前删除旧输出。
+- 允许不确定的 object 和 triangle 顺序。
 
-These alternatives create partial artifacts, unstable diffs, and unreliable
-caches.
+这些方案会产生部分 artifact、不稳定 diff 和不可靠 cache。
 
-## Consequences
+## 影响
 
-- Failed builds leave no new partial final output.
-- Existing consumers keep the previous complete asset tree until replacement.
-- Build comparisons and content hashes are useful.
-- Temporary disk usage must be available for staging.
+- Build 失败时不留下新的部分 final output。
+- 既有 consumer 在 replacement 前继续使用上一个完整 Asset tree。
+- Build comparison 和 content hash 具有实用价值。
+- Staging 需要可用 temporary disk。
 
-## Compatibility
+## 兼容性
 
-Deterministic output is part of the release and cache contract. Any intentionally
-nondeterministic feature requires a superseding decision.
+确定性输出属于 release 和 cache contract。任何有意不确定的功能必须由新决策替代。
 
-## Verification
+## 验证
 
 ```bash
 npm test -- tests/output
 npm test -- tests/partition
 ```
 
-## Related Documents
+## 关联文档
 
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
-- `ICE3-TOOL-GUIDE-001` — [Build, validate, and partition](../guides/build-validate-partition.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
+- `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](../guides/build-validate-partition.md)

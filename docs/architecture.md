@@ -1,4 +1,4 @@
-# ICE3 Toolchain Architecture
+# ICE3 Toolchain 架构
 
 > Document ID: ICE3-TOOL-ARC-001
 >
@@ -6,10 +6,10 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## System Context
+## 系统上下文
 
-The toolchain converts model-authoring formats into a bounded runtime format.
-It is an offline build component and is never imported by the browser runtime.
+Toolchain 将 model-authoring format 转换为有界 Runtime format。它是离线构建组件，
+Browser Runtime 永不导入。
 
 ```text
 source glTF / GLB
@@ -27,61 +27,58 @@ fine GLBs + coarse LOD + batches
 OGC 3D Tiles 1.1
 ```
 
-## Components
+## 组件
 
-| Component | Responsibility |
+| 组件 | 职责 |
 |---|---|
-| Source adapter | Reads supported glTF/GLB content and decompresses declared mesh compression |
-| Geometry preparation | Bakes node transforms, normalizes triangle data, preserves display colors, and optionally generates edges |
-| Profile builder | Emits deterministic single-JSON/single-BIN GLB with ICE3 metadata |
-| Partition planner | Groups atomic semantic units into a spatial tree |
-| LOD generator | Produces proportional or adaptive coarse geometry and chunks |
-| Semantic proxy generator | Offers conservative OBB and cylinder candidates |
-| Render-batch builder | Groups compatible static geometry without changing semantic nodes |
-| Validator | Checks accessors, profile fields, bounds, budgets, and Tileset references |
-| Publisher | Writes to staging and atomically replaces a completed output |
+| Source adapter | 读取受支持 glTF/GLB，并解压声明支持的 mesh compression |
+| Geometry preparation | 烘焙 Node transform、归一化 triangle data、保留 display color，并可选生成 edge |
+| Profile builder | 生成带 ICE3 metadata 的确定性 single-JSON/single-BIN GLB |
+| Partition planner | 将原子 semantic unit 组织为 spatial tree |
+| LOD generator | 生成 proportional 或 adaptive coarse Geometry 与 chunk |
+| Semantic proxy generator | 生成保守 OBB 和 cylinder candidate |
+| Render-batch builder | 合并不改变 semantic Node 的兼容 static Geometry |
+| Validator | 检查 accessor、profile field、Bounds、budget 和 Tileset reference |
+| Publisher | 写入 staging，并原子替换已完成 output |
 
-## Source And Prepared Boundaries
+## Source 与 Prepared 边界
 
-The browser receives only the Prepared profile. Source-format parsing,
-compression decoding, transforms, simplification, and material conversion stay
-in this repository.
+Browser 只接收 Prepared profile。Source-format parsing、compression decoding、
+transform、simplification 和 Material conversion 都留在本仓库。
 
-The contract is owned by `ICE3-DOC-CTR-001`; this toolchain defines the local
-implementation but not a competing format.
+Contract 由 `ICE3-DOC-CTR-001` 管理；本 Toolchain 只定义本地实现，不定义竞争格式。
 
-## Determinism
+## 确定性
 
-For identical input bytes, options, dependency versions, and tool version:
+对于相同 input bytes、option、dependency version 和 tool version：
 
-- JSON object key order is stable.
-- Collection order is stable.
-- Generated node and partition IDs are stable.
-- Prepared bytes and reports are deterministic.
-- Final files publish only through temporary paths followed by rename.
+- JSON object key 顺序稳定。
+- Collection 顺序稳定。
+- 生成的 Node 和 partition ID 稳定。
+- Prepared bytes 和 report 具有确定性。
+- 最终文件只通过临时路径写入，再 rename 发布。
 
-## Memory And Concurrency
+## 内存与并发
 
-LOD geometry is normalized into a bounded workspace. Geometry that exceeds the
-configured in-memory budget spills to unique temporary files. The authored
-example uses a 512 MiB workspace, while the CLI default is 64 MiB.
+LOD Geometry 被归一化到有界 workspace。超过配置 in-memory budget 的 Geometry 写入
+唯一 temporary file。Authoring example 使用 512 MiB workspace，CLI 默认值为 64 MiB。
 
-The authored build runs full-model preparation and spatial/LOD generation
-concurrently after the source model is ready. The source generation cache uses
-content-addressed keys to avoid rebuilding unchanged Blender output.
+Source model 就绪后，authoring build 并行执行 full-model preparation 和 spatial/LOD
+generation。Source generation cache 使用 content-addressed key，避免重建未变化的
+Blender output。
 
-## Failure Behavior
+## 失败行为
 
-- Invalid input fails before any final output path is created.
-- Hard budget violations fail the build.
-- A failed validation prevents publication.
-- A failed directory publication restores the previous asset root.
-- Temporary workspaces are removed after success or failure.
+- 无效 input 在任何 final output path 创建前失败。
+- Hard budget violation 使 build 失败。
+- Validation 失败阻止 publication。
+- Directory publication 失败时恢复上一个 Asset root。
+- 无论成功或失败，temporary workspace 都会被删除。
 
-## Related Documents
+## 关联文档
 
 - `ICE3-TOOL-RM-001` — [README](../README.md)
-- `ICE3-TOOL-IDX-001` — [Documentation index](README.md)
-- `ICE3-TOOL-GUIDE-001` — [Build, validate, and partition](guides/build-validate-partition.md)
-- `ICE3-TOOL-REF-001` — [CLI reference](reference/cli.md)
+- `ICE3-TOOL-IDX-001` — [文档索引](README.md)
+- `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](guides/build-validate-partition.md)
+- `ICE3-TOOL-REF-001` — [CLI 参考](reference/cli.md)
 - `ICE3-DOC-CTR-001` — [Asset Preparation Contract v1](https://github.com/ice-3d/ice3-doc/blob/main/docs/contracts/asset-preparation-contract-v1.md)

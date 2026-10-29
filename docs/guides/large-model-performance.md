@@ -1,4 +1,4 @@
-# Large-Model Performance
+# 大型模型性能
 
 > Document ID: ICE3-TOOL-GUIDE-002
 >
@@ -6,14 +6,14 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-## Intended Outcome
+## 目标结果
 
-Reduce repeated preprocessing time and keep large-model builds within bounded
-memory without moving heavy conversion into the browser.
+减少重复 preprocessing 时间，并让大型模型 build 保持有界内存，同时不把重型
+conversion 移入浏览器。
 
-## Measure First
+## 先测量
 
-Run each stage separately when diagnosing a slow build:
+诊断缓慢 build 时，分别运行每个阶段：
 
 ```bash
 time node packages/cli/dist/main.js build source.glb --output /tmp/prepared.glb
@@ -23,19 +23,18 @@ time node packages/cli/dist/main.js partition source.glb \
   --lod
 ```
 
-On the authored wastewater sample, approximate timings were:
+人工设计的污水处理厂 sample 近似耗时如下：
 
-- full Prepared GLB: 1.9 seconds;
-- 1.89M-triangle partition, LOD, and static batching: 16.7 seconds;
-- cold authored Blender scene generation: 9 minutes 18 seconds.
+- 完整 Prepared GLB：1.9 秒。
+- 1.89M triangle partition、LOD 和 static batching：16.7 秒。
+- Cold authored Blender Scene generation：9 分 18 秒。
 
-The cold source generator is the dominant cost.
+Cold source generator 是主要成本。
 
 ## Source Cache
 
-The authored source cache stores final deterministic GLB output by content key.
-The key covers generator inputs, scene specification, pinned Blender version, and
-the package lockfile.
+Authored source cache 按 content key 保存最终确定性 GLB output。Key 覆盖 generator
+input、Scene specification、固定 Blender version 和 package lockfile。
 
 ```bash
 # Default platform cache
@@ -48,31 +47,30 @@ ICE3_BLENDER_CACHE_DIR=/var/tmp/ice3-cache npm run build:wastewater-demo
 ICE3_BLENDER_SOURCE_CACHE=0 npm run build:wastewater-demo
 ```
 
-A cache hit uses the operating system copy-on-write clone when available and
-reports `ICE3_WWTP_SOURCE_CACHE_HIT`.
+Cache hit 在可用时使用 operating system copy-on-write clone，并报告
+`ICE3_WWTP_SOURCE_CACHE_HIT`。
 
-## Memory
+## 内存
 
-The partition command accepts:
+Partition command 接受：
 
 ```bash
 --lod-max-memory-bytes 536870912
 ```
 
-This value is a soft boundary for geometry retained in memory before spilling.
-Increasing it can reduce temporary I/O, but it does not create CPU parallelism.
+该值是 Geometry spill 前保留在内存中的 soft boundary。增加该值可减少 temporary I/O，
+但不会增加 CPU parallelism。
 
-The authored example build runs full preparation and tiled/LOD generation
-concurrently and uses a 512 MiB workspace.
+Authored example build 并行执行 full preparation 与 tiled/LOD generation，并使用
+512 MiB workspace。
 
-## Expected Result
+## 预期结果
 
-With an unchanged authored source, a warm full demonstration build is about 17
-seconds rather than nine minutes. A source or generator change invalidates the
-cache and requires a new cold Blender build.
+Authored source 未变化时，warm full demonstration build 约 17 秒，而不是九分钟。
+Source 或 generator 变化会使 cache 失效，需要新的 cold Blender build。
 
-## Related Documents
+## 关联文档
 
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
-- `ICE3-TOOL-GUIDE-001` — [Build, validate, and partition](build-validate-partition.md)
+- `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
+- `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](build-validate-partition.md)
 - `ICE3-TOOL-ADR-003` — [Content-addressed generation cache](../decisions/0003-content-addressed-generation-cache.md)
