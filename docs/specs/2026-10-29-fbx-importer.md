@@ -2,13 +2,13 @@
 
 > Document ID: ICE3-TOOL-SPEC-003
 >
-> Status: Draft
+> Status: Approved
 >
 > Owner: ICE3 Toolchain maintainers
 
 | 项目 | 内容 |
 | --- | --- |
-| 状态 | 待评审 |
+| 状态 | 已批准 |
 | 版本 | 1.0 |
 | 日期 | 2026-10-29 |
 | 适用范围 | `ice3-toolchain` 的 FBX source adapter、Blender bridge 和发布验证 |
