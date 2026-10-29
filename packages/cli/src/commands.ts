@@ -2,17 +2,20 @@ import { createHash, randomUUID } from 'node:crypto';
 import {
   access,
   mkdir,
+  mkdtemp,
   readFile,
   rename,
   rm,
   unlink,
   writeFile,
 } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import {
   BUDGET_PROFILES,
   buildPreparedGLB,
   createAssetReport,
+  createImporterRegistry,
   partitionAsset,
   readSource,
   validatePreparedGLB,
@@ -33,6 +36,10 @@ interface ParsedArguments {
 
 export async function runCli(argv: readonly string[]): Promise<number> {
   try {
+    if (argv.includes('--help') || argv[0] === 'help') {
+      printHelp();
+      return 0;
+    }
     const args = parseArguments(argv);
     if (!args.command) {
       throw new Error('ICE3_TOOL_INVALID_COMMAND: command is required');
@@ -49,6 +56,10 @@ export async function runCli(argv: readonly string[]): Promise<number> {
       await validateCommand(args);
       return 0;
     }
+    if (args.command === 'import') {
+      await importCommand(args);
+      return 0;
+    }
     if (args.command === 'partition') {
       await partitionCommand(args);
       return 0;
@@ -58,6 +69,137 @@ export async function runCli(argv: readonly string[]): Promise<number> {
     console.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
+}
+
+async function importCommand(args: ParsedArguments): Promise<void> {
+  if (args.positionals.length !== 1) {
+    throw new Error(
+      'ICE3_TOOL_INVALID_OPTIONS: import requires exactly one source',
+    );
+  }
+  const sourcePath = resolve(requiredPositional(args, 0, 'source'));
+  const outputPath = resolve(requiredValue(args, '--output'));
+  const assetId = requiredValue(args, '--asset-id').trim();
+  if (!assetId) {
+    throw new Error('ICE3_TOOL_INVALID_OPTIONS: assetId must not be empty');
+  }
+  const requestedAdapter = args.values.get('--adapter') ?? 'auto';
+  const reportPath = args.values.get('--report');
+  const resolvedReportPath = reportPath ? resolve(reportPath) : undefined;
+  const budget = await resolveBudget(args.values.get('--budget'));
+  const importers = await loadSourceImporters(requestedAdapter);
+  const registry = createImporterRegistry(importers);
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ice3-import-'));
+  let adapterResult;
+  let source;
+  let sourceReport;
+  try {
+    adapterResult = await registry.import({
+      path: sourcePath,
+      requestedAdapter,
+    }, {
+      temporaryDirectory,
+      assetId,
+    });
+    source = await readSource(adapterResult.sourceGlbPath);
+    sourceReport = validateSource(source);
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+  if (sourceReport.errors.length > 0) {
+    throw new Error(
+      `ICE3_TOOL_SOURCE_UNSUPPORTED: ${sourceReport.errors.join(', ')}`,
+    );
+  }
+  const warnings = [
+    ...new Set([...adapterResult.warnings, ...sourceReport.warnings]),
+  ];
+  if (warnings.length > 0 && args.flags.has('--warnings-as-errors')) {
+    throw new Error(`ICE3_TOOL_BUDGET_WARNING: ${warnings[0]}`);
+  }
+  const built = buildPreparedGLB(source, {
+    assetId,
+    creaseAngleDegrees: Number(args.values.get('--crease-angle') ?? 30),
+    edges: !args.flags.has('--skip-edges'),
+    budget,
+  });
+  if (built.budget.status === 'error') {
+    throw new Error(`ICE3_TOOL_BUDGET_EXCEEDED: ${budget.id}`);
+  }
+  if (built.budget.status === 'warning' && args.flags.has('--warnings-as-errors')) {
+    throw new Error(`ICE3_TOOL_BUDGET_WARNING: ${budget.id}`);
+  }
+  const validation = validatePreparedGLB(built.bytes);
+  if (validation.errors.length > 0) {
+    throw new Error(
+      `ICE3_TOOL_OUTPUT_INVALID: ${validation.errors.join(', ')}`,
+    );
+  }
+  const adapterImporter = registry.resolve(sourcePath, requestedAdapter);
+  const report = resolvedReportPath
+    ? {
+        ...createAssetReport({
+          toolVersion: await readToolVersion(),
+          sourceFormat: 'gltf-2.0',
+          sourceDigest: `sha256:${
+            createHash('sha256').update(await readFile(sourcePath)).digest('hex')
+          }`,
+          assetId,
+          profileVersion: '1.0',
+          contractVersion: '1.0',
+          contentDigest: `sha256:${built.contentDigest}`,
+          metrics: built.metrics,
+          budget: built.budget,
+          diagnostics: warnings.map((message) => ({
+            code: 'ICE3_TOOL_RECOVERABLE_WARNING',
+            severity: 'warning' as const,
+            message,
+          })),
+        }),
+        adapter: {
+          id: adapterResult.adapterId,
+          sourceFormat: adapterResult.sourceFormat,
+          capabilities: { ...adapterImporter.capabilities },
+          warnings: [...adapterResult.warnings],
+        },
+      }
+    : undefined;
+  await mkdir(dirname(outputPath), { recursive: true });
+  const outputTemporary = `${outputPath}.${process.pid}.${randomUUID()}.tmp`;
+  const reportTemporary = resolvedReportPath
+    ? `${resolvedReportPath}.${process.pid}.${randomUUID()}.tmp`
+    : undefined;
+  try {
+    if (resolvedReportPath && reportTemporary && report) {
+      await mkdir(dirname(resolvedReportPath), { recursive: true });
+      await writeFile(
+        reportTemporary,
+        `${JSON.stringify(report, null, 2)}\n`,
+      );
+    }
+    await writeFile(outputTemporary, built.bytes);
+    if (resolvedReportPath && reportTemporary) {
+      await rename(reportTemporary, resolvedReportPath);
+    }
+    await rename(outputTemporary, outputPath);
+  } catch (error) {
+    await unlink(outputTemporary).catch(() => {});
+    if (reportTemporary) await unlink(reportTemporary).catch(() => {});
+    throw error;
+  }
+  printResult(args, {
+    command: 'import',
+    output: outputPath,
+    ...(resolvedReportPath ? { report: resolvedReportPath } : {}),
+    adapter: {
+      id: adapterResult.adapterId,
+      sourceFormat: adapterResult.sourceFormat,
+    },
+    errors: [],
+    warnings,
+    stats: built.stats,
+    budget: built.budget,
+  });
 }
 
 async function partitionCommand(args: ParsedArguments): Promise<void> {
@@ -446,6 +588,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments {
   const valued = new Set([
     '--output',
     '--asset-id',
+    '--adapter',
     '--crease-angle',
     '--report',
     '--budget',
@@ -600,8 +743,43 @@ async function resolveBudget(value: string | undefined): Promise<ICEBudgetProfil
 
 async function readToolVersion(): Promise<string> {
   const packageJson = JSON.parse(await readFile(
-    new URL('../../../package.json', import.meta.url),
+    new URL('../package.json', import.meta.url),
     'utf8',
   )) as { version: string };
   return packageJson.version;
+}
+
+async function loadSourceImporters(
+  requestedAdapter: string,
+): Promise<readonly import('@ice3/toolchain-core').ICESourceImporter[]> {
+  if (requestedAdapter === 'auto' || requestedAdapter === 'step') {
+    try {
+      const module = await import('../../step-importer/src/index.js');
+      return [module.createStepImporter()];
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: step (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
+  throw new Error(
+    `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
+  );
+}
+
+function printHelp(): void {
+  console.log([
+    'ICE3 Toolchain CLI',
+    '',
+    'Commands:',
+    '  build SOURCE --output FILE',
+    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step]',
+    '  inspect SOURCE',
+    '  validate FILE',
+    '  partition SOURCE --output DIRECTORY --asset-id ID',
+    '',
+    'Use --json for machine-readable output.',
+  ].join('\n'));
 }

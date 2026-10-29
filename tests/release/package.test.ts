@@ -17,5 +17,6 @@ test('publishes the bundled toolchain as one scoped CLI package', () => {
     '@gltf-transform/functions': '4.5.1',
     'draco3dgltf': '1.5.9',
     'meshoptimizer': '1.3.0',
+    'occt-import-js': '0.0.23',
   });
 });

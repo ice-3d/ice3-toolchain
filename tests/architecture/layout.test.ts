@@ -5,6 +5,7 @@ import { expect } from '#test-expect';
 test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(existsSync('packages/toolchain-core/package.json')).toBe(true);
   expect(existsSync('packages/cli/package.json')).toBe(true);
+  expect(existsSync('packages/step-importer/package.json')).toBe(true);
 
   const root = JSON.parse(readFileSync('package.json', 'utf8')) as {
     private?: boolean;
@@ -12,6 +13,15 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   };
   expect(root.private).toBe(true);
   expect(root.workspaces).toEqual(['packages/*']);
+
+  const stepImporter = JSON.parse(
+    readFileSync('packages/step-importer/package.json', 'utf8'),
+  ) as {
+    private?: boolean;
+    dependencies?: Record<string, string>;
+  };
+  expect(stepImporter.private).toBe(true);
+  expect(stepImporter.dependencies?.['occt-import-js']).toBe('0.0.23');
 });
 
 test('GLB authoring stays inside build-time tooling', () => {

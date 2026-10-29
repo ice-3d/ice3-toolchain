@@ -9,7 +9,7 @@
 ## Command 语法
 
 ```text
-ice3-tool <build|inspect|validate|partition> [arguments]
+ice3-tool <build|import|inspect|validate|partition> [arguments]
 ```
 
 安装后的 binary 为 `ice3-tool`；仓库示例使用 `node packages/cli/dist/main.js`。
@@ -22,8 +22,47 @@ ice3-tool <build|inspect|validate|partition> [arguments]
 | `--crease-angle` | 有限数值，默认 `30` | 设置 generated edge threshold |
 | `--skip-edges` | flag | 省略 generated edge Geometry |
 
-`build` 和 `partition` 接受 `--budget` 与 `--warnings-as-errors`。`build` 接受
-`--report`。
+`build`、`import` 和 `partition` 接受 `--budget` 与 `--warnings-as-errors`。
+`build` 和 `import` 接受 `--report`。
+
+## `import`
+
+```bash
+ice3-tool import SOURCE \
+  --output FILE \
+  --asset-id ID \
+  [--adapter auto|step] \
+  [--report FILE] \
+  [--budget PROFILE|FILE] \
+  [--warnings-as-errors] \
+  [--json]
+```
+
+`import` 在 Toolchain 内把受支持的源模型转换成临时 source GLB，随后复用 `build`
+的 Geometry preparation 和 Prepared GLB validation。成功发布的 `--output` 始终是
+Prepared GLB，而不是源模型或中间 source GLB。
+
+首期 adapter：
+
+| Adapter | 扩展名 | 源能力 |
+|---|---|---|
+| `step` | `.step`、`.stp` | STEP AP242 Geometry、层级、名称、颜色和米制 conversion |
+
+`--adapter auto` 按 extension 选择 adapter。`--report` 在标准 Asset Report 顶层增加
+`adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
+转换、Source validation、budget 或 Prepared GLB validation 失败时不会发布 output。
+
+### Import Diagnostic
+
+| Code | 含义 |
+|---|---|
+| `ICE3_TOOL_IMPORT_UNSUPPORTED` | `--adapter auto` 无法从 extension 选择 adapter |
+| `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE` | 显式 adapter 不存在、不可用，或 extension 不匹配 |
+| `ICE3_TOOL_IMPORT_EMPTY_GEOMETRY` | adapter 成功解析，但没有可用 triangle Geometry |
+| `ICE3_TOOL_STEP_IMPORT_FAILED` | STEP 文件语法、解析或三角化失败 |
+
+Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
+warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
 
 ## `inspect`
 

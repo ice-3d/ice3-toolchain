@@ -1,24 +1,52 @@
-# Third-Party Notices
+# 第三方声明
 
 > Document ID: ICE3-TOOL-NOTICE-001
 >
 > Status: Active
 >
 > Owner: ICE3 Toolchain maintainers
+
 ## OGC 3D Tiles 1.1 JSON Schema
 
-The files under `tests/fixtures/3d-tiles-1.1-schema/` are copied from Annex B of
-OGC 22-025r4, *OGC 3D Tiles 1.1*.
+`tests/fixtures/3d-tiles-1.1-schema/` 中的文件复制自 OGC 22-025r4，*OGC 3D Tiles
+1.1* 的 Annex B。
 
-Copyright © 2023 Open Geospatial Consortium.
+Copyright © 2023 Open Geospatial Consortium。
 
-Use of the OGC material is subject to the OGC Document License Agreement:
+OGC 材料的使用受 OGC Document License Agreement 约束：
 https://www.ogc.org/license
 
-The MIT License in this repository applies to ICE3-owned code and documentation.
-It does not replace the upstream license for these OGC schema fixtures.
+本仓库的 MIT License 适用于 ICE3 自有代码和文档，但不替换这些 OGC schema fixture
+的上游许可证。
 
-## Related Documents
+## STEP Adapter Runtime
 
-- `ICE3-TOOL-IDX-001` — [Documentation index](docs/README.md)
-- `ICE3-TOOL-REF-002` — [OGC schema source](tests/fixtures/3d-tiles-1.1-schema/SOURCE.md)
+`@ice3/toolchain` 的 STEP adapter 依赖：
+
+| 项目 | 版本 | 许可证 |
+|---|---|---|
+| `occt-import-js` | `0.0.23` | LGPL-2.1 |
+
+该依赖提供 STEP 解析、B-Rep 三角化和 CAD/WASM 运行时。发布 package 将
+`occt-import-js` 保留为独立 runtime dependency，不把其 WASM binary 嵌入 ICE3 自有
+source。安装后，相关文件位于 package 的 `dist/` 目录：
+
+- `dist/occt-import-js.js`
+- `dist/occt-import-js.wasm`
+- `dist/license.occt-import-js.txt`
+- `dist/license.occt.txt`
+
+精确对应版本的完整源码、构建文件和许可证可从 npm registry 分发的 package tarball
+取得：
+
+```bash
+npm pack occt-import-js@0.0.23
+```
+
+ICE3 未修改该依赖。其 LGPL-2.1 义务由独立依赖及其许可证文本承担，不改变 ICE3 自有
+代码采用的 MIT License。
+
+## 关联文档
+
+- `ICE3-TOOL-IDX-001` — [文档索引](docs/README.md)
+- `ICE3-TOOL-REF-002` — [OGC schema 来源](tests/fixtures/3d-tiles-1.1-schema/SOURCE.md)
