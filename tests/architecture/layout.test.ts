@@ -10,6 +10,7 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(existsSync('packages/fbx-importer/package.json')).toBe(true);
   expect(existsSync('packages/usd-importer/package.json')).toBe(true);
   expect(existsSync('packages/obj-importer/package.json')).toBe(true);
+  expect(existsSync('packages/jt-importer/package.json')).toBe(true);
 
   const root = JSON.parse(readFileSync('package.json', 'utf8')) as {
     private?: boolean;
@@ -77,6 +78,16 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(objImporter.dependencies?.['assimpjs']).toBe('0.0.10');
   expect(objImporter.dependencies?.blender).toBeUndefined();
   expect(cli.dependencies?.['@ice3/obj-importer']).toBe('0.0.0');
+
+  const jtImporter = JSON.parse(
+    readFileSync('packages/jt-importer/package.json', 'utf8'),
+  ) as {
+    private?: boolean;
+    dependencies?: Record<string, string>;
+  };
+  expect(jtImporter.private).toBe(true);
+  expect(jtImporter.dependencies?.blender).toBeUndefined();
+  expect(cli.dependencies?.['@ice3/jt-importer']).toBe('0.0.0');
 });
 
 test('GLB authoring stays inside build-time tooling', () => {

@@ -108,6 +108,9 @@ npm pack assimpjs@0.0.10
 
 https://github.com/kovacsv/assimpjs
 
+JT adapter 不捆绑 parser 或 converter，由部署方通过 `ICE3_JT_CONVERTER` 提供并自行确认
+许可与分发范围。
+
 ICE3 未修改该依赖。
 
 ## 关联文档

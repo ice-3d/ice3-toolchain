@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX、USD、OBJ |
+| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX、USD、OBJ、JT |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -78,6 +78,12 @@ node packages/cli/dist/main.js import tests/fixtures/obj/synthetic-plant.obj \
   --report /tmp/prepared-obj.report.json \
   --asset-id synthetic-obj
 
+ICE3_JT_CONVERTER=/path/to/approved-jt-converter \
+  node packages/cli/dist/main.js import assembly.jt \
+  --output /tmp/prepared-jt.glb \
+  --report /tmp/prepared-jt.report.json \
+  --asset-id jt-assembly
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -110,13 +116,13 @@ node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc 
 | 当前 | FBX `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
 | 当前 | USD `.usda` / `.usdc` | 层级、Geometry、基础颜色、实例和 custom properties |
 | 当前 | OBJ `.obj` | Geometry、object/group 名称和同目录基础 MTL |
-| 后续 | JT | 独立 adapter 任务，不在当前版本承诺 |
+| 当前 | JT `.jt` | 通过组织批准的离线 converter 接入层级、Geometry、材质和 metadata |
 
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
 执行格式转换。
 
-`partition` 对 glTF/GLB 直接读取；对 STEP、IFC、FBX、USD 和 OBJ 会先在临时目录执行对应
+`partition` 对 glTF/GLB 直接读取；对 STEP、IFC、FBX、USD、OBJ 和 JT 会先在临时目录执行对应
 importer，完成切分与 LOD 后删除中间 source GLB。
 
 STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
@@ -143,6 +149,11 @@ OBJ adapter 在进程内完成 Geometry 和多边形三角化，并只读取同�
 sidecar。OBJ 没有标准单位，因此固定按米解释并返回
 `ICE3_TOOL_OBJ_UNIT_ASSUMED_METERS` warning；启用 `--warnings-as-errors` 时会阻止
 publication。复杂材质、texture、绝对路径、URL 和目录外资源不支持。
+
+JT 不内置 parser。通过 `ICE3_JT_CONVERTER` 指向组织批准的离线转换器，调用参数固定为
+`--input` 和 `--output`；`ICE3_JT_TIMEOUT_MS` 控制 timeout。Converter 必须输出米制、
+right-handed y-up 标准 GLB，并可把 object ID、assembly path 和 properties 写入
+`node.extras.jt`。Converter 不进入 npm package、Runtime 或版本库 release tarball。
 
 ## 污水处理厂演示
 

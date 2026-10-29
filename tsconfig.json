@@ -21,6 +21,9 @@
     },
     {
       "path": "./packages/obj-importer"
+    },
+    {
+      "path": "./packages/jt-importer"
     }
   ]
 }
