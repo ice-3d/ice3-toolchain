@@ -376,6 +376,39 @@ test('preserves explicit IFC source metadata for prepared nodes', () => {
   );
 });
 
+test('preserves explicit FBX source metadata for prepared nodes', () => {
+  const source = createPartitionSource();
+  source.json.nodes = [{
+    ...(source.json.nodes as Array<Record<string, unknown>>)[0],
+    extras: {
+      ice3: {
+        selectionId: 'fbx-demo/fbx/node/0',
+        fbx: {
+          objectType: 'MESH',
+          meshData: 'Cube',
+          instanceGroup: 'fbx/mesh-data/0',
+          customProperties: { EquipmentTag: 'P-101' },
+        },
+      },
+    },
+  }];
+  source.json.scenes = [{ nodes: [0] }];
+  const built = buildPreparedGLB(source, {
+    assetId: 'fbx-demo',
+    edges: false,
+  });
+  const document = readDocument(built.bytes) as {
+    nodes: Array<{ extras: { ice3: Record<string, unknown> } }>;
+  };
+
+  expect(document.nodes[0]!.extras.ice3.fbx).toEqual({
+    objectType: 'MESH',
+    meshData: 'Cube',
+    instanceGroup: 'fbx/mesh-data/0',
+    customProperties: { EquipmentTag: 'P-101' },
+  });
+});
+
 test('reports contract bounds from replaced mesh geometry', async () => {
   const source = await readSource('tests/fixtures/minimal.gltf');
   const built = buildPreparedGLB(source, {

@@ -124,6 +124,10 @@ export function analyzePartitionUnits(
       (total, unit) => total + unit.triangleCount,
       0,
     ),
+    renderedTriangleCount: units.reduce(
+      (total, unit) => total + unit.triangleCount * unit.nodeIndices.length,
+      0,
+    ),
     units,
   };
 }

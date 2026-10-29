@@ -72,6 +72,7 @@ export function createFbxImporter(): ICESourceImporter {
               }, {
                 blenderBinary,
                 scriptPath: await resolveBridgeScript(),
+                timeoutMs: fbxTimeoutMs(),
               });
             })()
           : await convertAsciiFbx(input.path, rawGlbPath);
@@ -122,4 +123,14 @@ function safeAssetId(value: string): string {
     '',
   );
   return safe || 'source';
+}
+
+function fbxTimeoutMs(): number {
+  const value = process.env.ICE3_FBX_TIMEOUT_MS;
+  if (value === undefined) return 120_000;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error('ICE3_TOOL_FBX_IMPORT_FAILED');
+  }
+  return parsed;
 }

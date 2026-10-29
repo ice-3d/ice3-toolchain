@@ -25,6 +25,7 @@ test('keeps all nodes sharing one mesh in one atomic unit', () => {
   expect(analysis.units).toHaveLength(1);
   expect(analysis.units[0]!.nodeIndices).toEqual([0, 1, 2, 3]);
   expect(analysis.units[0]!.meshIndices).toEqual([0]);
+  expect(analysis.renderedTriangleCount).toBe(4);
   expect(analysis.units[0]!.bounds).toEqual({
     min: [0, 0, 0],
     max: [31, 1, 0],
