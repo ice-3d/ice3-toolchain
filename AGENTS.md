@@ -14,6 +14,7 @@
 - Toolchain 不导入 engine 私有源码路径。
 - Toolchain 输出必须保持为带 ICE3 Prepared GLB Profile 的标准 GLB。
 - Runtime format conversion 不进入浏览器；重型 preprocessing 留在 command 或 authoring tool。
+- npm 公开发布 package 为 `@ice3/toolchain`，可执行文件为 `ice3-tool`；`@ice3/toolchain-core` 保持私有并打入发布产物。
 - 只支持服务目标工业工作流的当前及次新 source feature 和 format。
 - 构建失败时不得在最终目标位置留下部分输出。
 

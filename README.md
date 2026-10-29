@@ -41,6 +41,13 @@ npm install
 npm run build
 ```
 
+作为 npm package 安装：
+
+```bash
+npm install --save-dev @ice3/toolchain
+npx ice3-tool inspect tests/fixtures/minimal.gltf --json
+```
+
 检查、构建、验证并拆分 Asset：
 
 ```bash
