@@ -26,6 +26,9 @@
     },
     {
       "path": "../obj-importer"
+    },
+    {
+      "path": "../jt-importer"
     }
   ]
 }

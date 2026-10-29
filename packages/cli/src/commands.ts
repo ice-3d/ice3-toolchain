@@ -818,6 +818,18 @@ async function loadSourceImporters(
       );
     }
   }
+  if (requestedAdapter === 'auto' || requestedAdapter === 'jt') {
+    try {
+      const module = await import('../../jt-importer/src/index.js');
+      importers.push(module.createJtImporter());
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: jt (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
   if (importers.length > 0) return importers;
   throw new Error(
     `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
@@ -864,7 +876,7 @@ function printHelp(): void {
     '',
     'Commands:',
     '  build SOURCE --output FILE',
-    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc|fbx|usd|obj]',
+    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc|fbx|usd|obj|jt]',
     '  inspect SOURCE',
     '  validate FILE',
     '  partition SOURCE --output DIRECTORY --asset-id ID',

@@ -42,6 +42,7 @@
 | `ICE3-TOOL-SPEC-003` | [FBX Source Importer 规格](specs/2026-10-29-fbx-importer.md) | Approved | 定义 Blender bridge、FBX 层级、实例、属性和发布边界 |
 | `ICE3-TOOL-SPEC-004` | [USD Source Importer 规格](specs/2026-10-29-usd-importer.md) | Approved | 定义 USD ASCII/Binary、实例、属性和发布边界 |
 | `ICE3-TOOL-SPEC-005` | [OBJ Source Importer 规格](specs/2026-10-29-obj-importer.md) | Approved | 定义 OBJ/MTL、单位 warning、资源边界和发布验证 |
+| `ICE3-TOOL-SPEC-006` | [JT Source Importer 规格](specs/2026-10-29-jt-importer.md) | Approved | 定义外部 converter contract、metadata 和发布边界 |
 
 ## 决策
 
@@ -61,3 +62,4 @@
 | `ICE3-TOOL-PLAN-004` | [FBX Source Importer](plans/2026-10-29-fbx-importer.md) | Implemented | Blender bridge、FBX 实例、metadata、CLI 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-005` | [USD Source Importer](plans/2026-10-29-usd-importer.md) | Implemented | USD bridge、实例、metadata、CLI 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-006` | [OBJ Source Importer](plans/2026-10-29-obj-importer.md) | Implemented | OBJ/MTL、metadata、CLI 和发布验证的实施记录 |
+| `ICE3-TOOL-PLAN-007` | [JT Source Importer](plans/2026-10-29-jt-importer.md) | Active | 外部 converter、metadata、CLI 和发布验证的实施计划 |

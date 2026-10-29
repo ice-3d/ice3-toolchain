@@ -25,6 +25,7 @@
     "@ice3/fbx-importer": "0.0.0",
     "@ice3/usd-importer": "0.0.0",
     "@ice3/obj-importer": "0.0.0",
+    "@ice3/jt-importer": "0.0.0",
     "@ice3/toolchain-core": "0.0.0",
     "assimpjs": "0.0.10",
     "occt-import-js": "0.0.23",

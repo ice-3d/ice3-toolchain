@@ -31,7 +31,7 @@ ice3-tool <build|import|inspect|validate|partition> [arguments]
 ice3-tool import SOURCE \
   --output FILE \
   --asset-id ID \
-  [--adapter auto|step|ifc|fbx|usd|obj] \
+  [--adapter auto|step|ifc|fbx|usd|obj|jt] \
   [--report FILE] \
   [--budget PROFILE|FILE] \
   [--warnings-as-errors] \
@@ -51,6 +51,7 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `fbx` | `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
 | `usd` | `.usda`、`.usdc` | USD 层级、Geometry、基础颜色、实例、prim path 和 custom properties |
 | `obj` | `.obj` | OBJ Geometry、object/group 名称和同目录基础 MTL |
+| `jt` | `.jt` | 通过 `ICE3_JT_CONVERTER` 接入的 JT 层级、Geometry、材质和 metadata |
 
 `--adapter auto` 按 extension 选择 adapter。`--report` 在标准 Asset Report 顶层增加
 `adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
@@ -86,6 +87,11 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `ICE3_TOOL_OBJ_MATERIAL_UNAVAILABLE` | 引用的 MTL 缺失或不可读取 |
 | `ICE3_TOOL_OBJ_RESOURCE_IGNORED` | 不安全或越界 sidecar 被忽略 |
 | `ICE3_TOOL_OBJ_VERTEX_COLORS_UNSUPPORTED` | OBJ vertex color extension 被省略 |
+| `ICE3_TOOL_JT_CONVERTER_UNAVAILABLE` | `ICE3_JT_CONVERTER` 未配置或不可执行 |
+| `ICE3_TOOL_JT_TIMEOUT` | JT converter 超时 |
+| `ICE3_TOOL_JT_CONVERT_FAILED` | JT converter 返回非零或未生成 GLB |
+| `ICE3_TOOL_JT_EXPORT_INVALID` | Converter output 不是有效标准 GLB |
+| `ICE3_TOOL_JT_GEOMETRY_INVALID` | JT Geometry、Bounds 或 transform 无效 |
 
 Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
 warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
@@ -107,6 +113,11 @@ custom properties 会保留；animation、skeleton、camera、light、volume 和
 OBJ 在进程内转换，不依赖 Blender。只读取 OBJ 同目录的相对 MTL；没有内建单位，固定按米
 解释并返回 warning。object/group 名称、基础 `Kd` display color 和稳定 Selection ID
 会保留。texture、复杂材质、绝对路径、URL 和目录外资源不支持。
+
+JT parser 不在 Toolchain 中。配置 `ICE3_JT_CONVERTER` 后，adapter 以固定
+`--input SOURCE.jt --output RAW.glb` 启动 converter，`ICE3_JT_TIMEOUT_MS` 设置超时。
+Converter 必须输出米制、right-handed y-up 标准 GLB；`node.extras.jt` 可提供 objectId、
+assemblyPath 和 customProperties。Converter binary 不随 npm package 分发。
 
 ## `inspect`
 
@@ -170,7 +181,7 @@ ice3-tool partition SOURCE \
 ```
 
 `SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp`、`.ifc`、`.fbx`、`.usda`、
-`.usdc` 或 `.obj`。非 glTF source 会先由
+`.usdc`、`.obj` 或 `.jt`。非 glTF source 会先由
 对应 adapter 转为临时标准 source GLB，再执行同一 partition/LOD pipeline；中间文件
 不会进入最终 Tileset。
 

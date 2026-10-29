@@ -15,11 +15,12 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const packageRoot = join(root, 'release', 'toolchain');
 const artifacts = join(root, 'release', 'artifacts');
 
-function run(command, args, cwd) {
+function run(command, args, cwd, env = process.env) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
     stdio: 'pipe',
+    env,
   });
   return result;
 }
@@ -80,6 +81,7 @@ try {
     || !publishedSource.includes('step-ap242')
     || !publishedSource.includes('occt-import-js')
     || !publishedSource.includes('ICE3_TOOL_OBJ_IMPORT_FAILED')
+    || !publishedSource.includes('ICE3_TOOL_JT_CONVERTER_UNAVAILABLE')
   ) {
     throw new Error('ICE3_RELEASE_SOURCE_ADAPTER_MISSING');
   }
@@ -320,6 +322,45 @@ try {
     ['validate', objOutput, '--json'],
     consumer,
   ), 'published OBJ output validation');
+  const jtConverter = join(
+    root,
+    'tests',
+    'fixtures',
+    'jt',
+    'fake-converter.mjs',
+  );
+  const jtOutput = join(consumer, 'synthetic-jt.glb');
+  const jtReport = join(consumer, 'synthetic-jt.report.json');
+  const jtEnvironment = {
+    ...process.env,
+    ICE3_JT_CONVERTER: jtConverter,
+  };
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      join(root, 'tests', 'fixtures', 'jt', 'synthetic-contract.jt'),
+      '--output',
+      jtOutput,
+      '--report',
+      jtReport,
+      '--asset-id',
+      'synthetic-jt',
+      '--json',
+    ],
+    consumer,
+    jtEnvironment,
+  ), 'published JT import');
+  const jtReportDocument = JSON.parse(await readFile(jtReport, 'utf8'));
+  if (jtReportDocument.adapter?.id !== 'jt') {
+    throw new Error('ICE3_RELEASE_JT_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', jtOutput, '--json'],
+    consumer,
+    jtEnvironment,
+  ), 'published JT output validation');
   const wasmRuntime = await stat(join(
     consumer,
     'node_modules',
