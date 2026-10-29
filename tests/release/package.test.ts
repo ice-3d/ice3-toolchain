@@ -15,6 +15,7 @@ test('publishes the bundled toolchain as one scoped CLI package', () => {
     '@gltf-transform/core': '4.5.1',
     '@gltf-transform/extensions': '4.5.1',
     '@gltf-transform/functions': '4.5.1',
+    'assimpjs': '0.0.10',
     'draco3dgltf': '1.5.9',
     'meshoptimizer': '1.3.0',
     'occt-import-js': '0.0.23',

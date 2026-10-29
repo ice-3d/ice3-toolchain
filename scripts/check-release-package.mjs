@@ -155,6 +155,83 @@ try {
   if (ifcWasmRuntime.size === 0) {
     throw new Error('ICE3_RELEASE_IFC_WASM_MISSING');
   }
+  const fbxFixture = join(
+    root,
+    'tests',
+    'fixtures',
+    'fbx',
+    'synthetic-binary.fbx',
+  );
+  const fbxOutput = join(consumer, 'synthetic-fbx.glb');
+  const fbxReport = join(consumer, 'synthetic-fbx.report.json');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      fbxFixture,
+      '--output',
+      fbxOutput,
+      '--report',
+      fbxReport,
+      '--asset-id',
+      'synthetic-fbx',
+      '--json',
+    ],
+    consumer,
+  ), 'published FBX import');
+  const fbxReportDocument = JSON.parse(await readFile(fbxReport, 'utf8'));
+  if (fbxReportDocument.adapter?.id !== 'fbx') {
+    throw new Error('ICE3_RELEASE_FBX_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', fbxOutput, '--json'],
+    consumer,
+  ), 'published FBX output validation');
+  const fbxAsciiOutput = join(consumer, 'synthetic-fbx-ascii.glb');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      join(
+        root,
+        'tests',
+        'fixtures',
+        'fbx',
+        'synthetic-ascii.fbx',
+      ),
+      '--output',
+      fbxAsciiOutput,
+      '--asset-id',
+      'synthetic-fbx-ascii',
+      '--json',
+    ],
+    consumer,
+  ), 'published ASCII FBX import');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', fbxAsciiOutput, '--json'],
+    consumer,
+  ), 'published ASCII FBX output validation');
+  const assimpWasmRuntime = await stat(join(
+    consumer,
+    'node_modules',
+    'assimpjs',
+    'dist',
+    'assimpjs.wasm',
+  ));
+  if (assimpWasmRuntime.size === 0) {
+    throw new Error('ICE3_RELEASE_FBX_WASM_MISSING');
+  }
+  await stat(join(
+    consumer,
+    'node_modules',
+    '@ice3',
+    'toolchain',
+    'dist',
+    'fbx',
+    'fbx-to-glb.py',
+  ));
   const wasmRuntime = await stat(join(
     consumer,
     'node_modules',
@@ -176,6 +253,9 @@ try {
     || !notices.includes('web-ifc')
     || !notices.includes('MPL-2.0')
     || !notices.includes('web-ifc-node.wasm')
+    || !notices.includes('assimpjs')
+    || !notices.includes('assimpjs.wasm')
+    || !notices.includes('Blender `5.2.3`')
   ) {
     throw new Error('ICE3_RELEASE_SOURCE_NOTICE_INVALID');
   }

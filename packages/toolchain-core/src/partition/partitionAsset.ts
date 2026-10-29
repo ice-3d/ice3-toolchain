@@ -210,9 +210,12 @@ export async function partitionAsset(
       (total, leaf) => total + (leaf.stats?.triangleCount ?? 0),
       0,
     );
-    if (triangleCount !== analysis.triangleCount) {
+    const expectedTriangleCount = renderBatch === 'off'
+      ? analysis.triangleCount
+      : analysis.renderedTriangleCount;
+    if (triangleCount !== expectedTriangleCount) {
       throw new Error(
-        `ICE3_TOOL_TILESET_INVALID: triangle count ${triangleCount} does not match ${analysis.triangleCount}`,
+        `ICE3_TOOL_TILESET_INVALID: triangle count ${triangleCount} does not match ${expectedTriangleCount}`,
       );
     }
     const nodeCount = leaves.reduce(

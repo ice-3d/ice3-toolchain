@@ -782,6 +782,18 @@ async function loadSourceImporters(
       );
     }
   }
+  if (requestedAdapter === 'auto' || requestedAdapter === 'fbx') {
+    try {
+      const module = await import('../../fbx-importer/src/index.js');
+      importers.push(module.createFbxImporter());
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: fbx (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
   if (importers.length > 0) return importers;
   throw new Error(
     `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,

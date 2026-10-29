@@ -18,6 +18,7 @@ const runtimeDependencies = {
   '@gltf-transform/core': '4.5.1',
   '@gltf-transform/extensions': '4.5.1',
   '@gltf-transform/functions': '4.5.1',
+  'assimpjs': '0.0.10',
   'draco3dgltf': '1.5.9',
   'meshoptimizer': '1.3.0',
   'occt-import-js': '0.0.23',
@@ -47,6 +48,7 @@ export function createPublicPackageManifest() {
       'dist/**/*.js',
       'dist/**/*.d.ts',
       'dist/**/*.map',
+      'dist/fbx/*.py',
       'THIRD_PARTY_NOTICES.md',
     ],
     dependencies: runtimeDependencies,
@@ -76,9 +78,14 @@ export function createPublicPackageManifest() {
 export async function buildReleasePackage() {
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputDist, { recursive: true });
+  await mkdir(join(outputDist, 'fbx'), { recursive: true });
   await cp(
     join(packageRoot, 'README.md'),
     join(outputRoot, 'README.md'),
+  );
+  await cp(
+    join(root, 'packages', 'fbx-importer', 'scripts', 'fbx-to-glb.py'),
+    join(outputDist, 'fbx', 'fbx-to-glb.py'),
   );
   await cp(
     join(root, 'LICENSE'),
@@ -113,6 +120,7 @@ export async function buildReleasePackage() {
       '@gltf-transform/core',
       '@gltf-transform/extensions',
       '@gltf-transform/functions',
+      'assimpjs',
       'draco3dgltf',
       'meshoptimizer',
       'occt-import-js',
