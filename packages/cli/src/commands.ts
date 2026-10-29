@@ -84,11 +84,6 @@ async function importCommand(args: ParsedArguments): Promise<void> {
     throw new Error('ICE3_TOOL_INVALID_OPTIONS: assetId must not be empty');
   }
   const requestedAdapter = args.values.get('--adapter') ?? 'auto';
-  if (requestedAdapter !== 'auto' && requestedAdapter !== 'step') {
-    throw new Error(
-      'ICE3_TOOL_INVALID_OPTIONS: --adapter must be auto or step',
-    );
-  }
   const reportPath = args.values.get('--report');
   const resolvedReportPath = reportPath ? resolve(reportPath) : undefined;
   const budget = await resolveBudget(args.values.get('--budget'));
@@ -770,7 +765,7 @@ async function loadSourceImporters(
     }
   }
   throw new Error(
-    `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}`,
+    `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
   );
 }
 
