@@ -52,4 +52,4 @@
 | ID | 标题 | Status | 用途 |
 |---|---|---|---|
 | `ICE3-TOOL-PLAN-001` | [M1 GLB Pipeline](plans/2026-10-27-toolchain-m1-glb-pipeline.md) | Implemented | core GLB pipeline 的历史实施记录 |
-| `ICE3-TOOL-PLAN-002` | [多格式 Source Import 与 STEP AP242](plans/2026-10-29-source-import-adapters.md) | Active | 实施 adapter contract、STEP import 和发布验证 |
+| `ICE3-TOOL-PLAN-002` | [多格式 Source Import 与 STEP AP242](plans/2026-10-29-source-import-adapters.md) | Implemented | adapter contract、STEP import 和发布验证的实施记录 |

@@ -6,8 +6,8 @@
 >
 > Owner: ICE3 Toolchain maintainers
 
-`@ice3/toolchain` 在浏览器外准备大型工业 GLB，提供 inspect、build、validate 和
-partition 命令，并生成 Prepared GLB 与 OGC 3D Tiles 1.1 Tileset。
+`@ice3/toolchain` 在浏览器外准备大型工业模型，提供 import、inspect、build、
+validate 和 partition 命令，并生成 Prepared GLB 与 OGC 3D Tiles 1.1 Tileset。
 
 ## 安装
 
@@ -18,11 +18,16 @@ npm install --save-dev @ice3/toolchain
 ## 命令
 
 ```bash
+npx ice3-tool import source.step --output prepared.glb --asset-id example
 npx ice3-tool inspect source.glb --json
 npx ice3-tool build source.glb --output prepared.glb
 npx ice3-tool validate prepared.glb
 npx ice3-tool partition source.glb --output tiles --asset-id example
 ```
+
+当前 source import 支持 STEP AP242 的 `.step` / `.stp`。转换在本机离线完成，输出
+标准 source GLB 后继续进入 Prepared GLB 与 Tileset pipeline；Browser Runtime 不需要
+任何 CAD 或 WASM 转换依赖。
 
 作为程序入口使用：
 

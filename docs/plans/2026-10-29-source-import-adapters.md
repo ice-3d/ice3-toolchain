@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-002
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -63,7 +63,7 @@ CLI 在临时 workspace 编排 import、Prepared GLB build、validation 和原�
 - 产出：`ICEImporterRegistry.resolve(path, requestedAdapter?)`
 - 产出：`ICEImporterRegistry.import(input, context)`
 
-- [ ] **步骤 1：编写 registry 失败测试**
+- [x] **步骤 1：编写 registry 失败测试**
 
 ```ts
 import { createImporterRegistry } from
@@ -103,18 +103,18 @@ test('rejects an unsupported format and mismatched explicit adapter', () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/import/importerRegistry.test.ts`
 
 预期：FAIL，因为 importer registry module 尚不存在。
 
-- [ ] **步骤 3：实现最小 contract 和 registry**
+- [x] **步骤 3：实现最小 contract 和 registry**
 
 Registry 使用 `extname(path).toLowerCase()`，拒绝重复 importer ID 和重复扩展名。
 `auto` 仅选择第一个匹配扩展名；显式选择不匹配时返回稳定错误码。
 
-- [ ] **步骤 4：运行契约测试**
+- [x] **步骤 4：运行契约测试**
 
 运行：`npm test -- tests/import/importerRegistry.test.ts`
 
@@ -138,7 +138,7 @@ Registry 使用 `extname(path).toLowerCase()`，拒绝重复 importer ID 和重�
 - 产出：`convertOcctResult(document, outputPath): Promise<ICEImportedGeometryStats>`
 - 使用：`occt-import-js.ReadStepFile(bytes, params)`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 test('maps OCCT hierarchy, meshes and colors into ICE3 source GLB', async () => {
@@ -183,13 +183,13 @@ test('rejects successful STEP results with no triangle geometry', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/step/convertOcctResult.test.ts`
 
 预期：FAIL，因为 STEP importer module 尚不存在。
 
-- [ ] **步骤 3：增加私有 workspace package**
+- [x] **步骤 3：增加私有 workspace package**
 
 `@ice3/step-importer` 保持 `private: true`，只作为 `@ice3/toolchain` 的传递依赖。
 运行：
@@ -199,18 +199,18 @@ npm install --workspace packages/step-importer \
   occt-import-js@0.0.23 @gltf-transform/core@4.5.1
 ```
 
-- [ ] **步骤 4：实现 STEP 读取和转换**
+- [x] **步骤 4：实现 STEP 读取和转换**
 
 `ReadStepFile()` 使用 `linearUnit: 'meter'` 和 bounded triangulation 参数。
 OCCT mesh 写入 `@gltf-transform/core`，保留节点名称、层级、mesh 和颜色；输出采用
 右手 y-up。`NodeIO.writeBinary()` 写入临时 source GLB。
 
-- [ ] **步骤 5：实现稳定身份**
+- [x] **步骤 5：实现稳定身份**
 
 空名称使用 `step/node/<ordinal>`；重复名称追加稳定索引。不得按显示名称做设备
 identity。输出 mesh 至少包含 POSITION 和 triangle indices。
 
-- [ ] **步骤 6：运行 STEP converter 测试**
+- [x] **步骤 6：运行 STEP converter 测试**
 
 运行：`npm test -- tests/step/convertOcctResult.test.ts`
 
@@ -232,7 +232,7 @@ identity。输出 mesh 至少包含 POSITION 和 triangle indices。
 - 消费：`ICEImporterRegistry.import()`
 - 产出：`ice3-tool import SOURCE --output FILE --asset-id ID [--adapter step]`
 
-- [ ] **步骤 1：编写 CLI 失败测试**
+- [x] **步骤 1：编写 CLI 失败测试**
 
 ```ts
 test('import publishes a validated Prepared GLB', async () => {
@@ -272,19 +272,19 @@ test('import does not publish output when an adapter fails', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：`npm test -- tests/cli/importCommand.test.ts`
 
 预期：FAIL，因为 CLI 没有 `import` command。
 
-- [ ] **步骤 3：实现临时 workspace**
+- [x] **步骤 3：实现临时 workspace**
 
 Import command 使用 `mkdtemp()`；adapter 把 source GLB 写入该目录。完成后用现有
 `readSource()`、`validateSource()`、`buildPreparedGLB()` 和 atomic write 发布 Prepared
 GLB。`finally` 删除 workspace。
 
-- [ ] **步骤 4：实现选项和 JSON output**
+- [x] **步骤 4：实现选项和 JSON output**
 
 支持 `--adapter auto|step`、`--report`、`--budget`、`--warnings-as-errors` 和
 `--json`。Report 顶层增加：
@@ -299,12 +299,12 @@ GLB。`finally` 删除 workspace。
 }
 ```
 
-- [ ] **步骤 5：更新 CLI help 与 package assembly**
+- [x] **步骤 5：更新 CLI help 与 package assembly**
 
 `@ice3/toolchain` 发布包把 `@ice3/step-importer` bundle 进 CLI，external 化
 `occt-import-js` 及其 wasm runtime。`@ice3/step-importer` 不单独发布。
 
-- [ ] **步骤 6：运行 CLI 测试**
+- [x] **步骤 6：运行 CLI 测试**
 
 运行：`npm test -- tests/cli/importCommand.test.ts`
 
@@ -324,25 +324,25 @@ GLB。`finally` 删除 workspace。
 - 消费：公开 `import` command 和 STEP importer。
 - 产出：可重复的 STEP-to-Prepared GLB 端到端证据。
 
-- [ ] **步骤 1：创建完全合成的 fixture**
+- [x] **步骤 1：创建完全合成的 fixture**
 
 Fixture 包含两个命名 assembly component、两个实体、毫米单位和两种颜色。不得包含
 真实设备、厂商或客户名称。
 
-- [ ] **步骤 2：编写端到端测试**
+- [x] **步骤 2：编写端到端测试**
 
 验证 Prepared GLB 的 node、triangle、Bounds、颜色和 Selection fallback 均可读取；
 `validatePreparedGLB()` 无 errors。
 
-- [ ] **步骤 3：编写确定性测试**
+- [x] **步骤 3：编写确定性测试**
 
 连续 import 两次，比较 output bytes 和 report 中除目标路径外的内容完全一致。
 
-- [ ] **步骤 4：验证错误路径**
+- [x] **步骤 4：验证错误路径**
 
 断言空 Geometry、截断 STEP 和不匹配 adapter 都返回稳定错误码，且不发布输出。
 
-- [ ] **步骤 5：运行 STEP suite**
+- [x] **步骤 5：运行 STEP suite**
 
 运行：`npm test -- tests/step`
 
@@ -362,16 +362,16 @@ Fixture 包含两个命名 assembly component、两个实体、毫米单位和�
 
 - 产出：未来 IFC、FBX、USD、OBJ、JT adapter 可注册的稳定 contract。
 
-- [ ] **步骤 1：编写扩展注册测试**
+- [x] **步骤 1：编写扩展注册测试**
 
 用一个非 STEP fake adapter 注册 `.ifc`，断言 registry 能解析且不会加载 STEP dependency。
 
-- [ ] **步骤 2：实现按需加载**
+- [x] **步骤 2：实现按需加载**
 
 Registry 不直接导入任何具体 adapter；CLI 根据 adapter ID 动态加载对应模块。未安装
 adapter 依赖时返回 `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE`，并给出安装提示。
 
-- [ ] **步骤 3：运行 registry suite**
+- [x] **步骤 3：运行 registry suite**
 
 运行：`npm test -- tests/import`
 
@@ -393,15 +393,15 @@ adapter 依赖时返回 `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE`，并给出安装
 - 产出：可安装的 `@ice3/toolchain` STEP import 能力。
 - 产出：完整且可审计的第三方依赖声明。
 
-- [ ] **步骤 1：更新公开文档**
+- [x] **步骤 1：更新公开文档**
 
 记录支持格式表、CLI 示例、STEP 能力等级、警告语义、失败码和发布边界。
 
-- [ ] **步骤 2：更新第三方声明**
+- [x] **步骤 2：更新第三方声明**
 
 加入 `occt-import-js` 的 LGPL-2.1 归属、wasm runtime 文件和获取源的方式。
 
-- [ ] **步骤 3：更新发布检查**
+- [x] **步骤 3：更新发布检查**
 
 在 `scripts/check-release-package.mjs` 中安装 tarball 后执行：
 
@@ -413,7 +413,7 @@ ice3-tool import tests/fixtures/step/synthetic-skid.step \
 
 同时确认 tarball 包含 adapter code、wasm dependency 声明和第三方声明。
 
-- [ ] **步骤 4：运行完整门禁**
+- [x] **步骤 4：运行完整门禁**
 
 ```bash
 nvm use

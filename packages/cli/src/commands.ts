@@ -743,7 +743,7 @@ async function resolveBudget(value: string | undefined): Promise<ICEBudgetProfil
 
 async function readToolVersion(): Promise<string> {
   const packageJson = JSON.parse(await readFile(
-    new URL('../../../package.json', import.meta.url),
+    new URL('../package.json', import.meta.url),
     'utf8',
   )) as { version: string };
   return packageJson.version;

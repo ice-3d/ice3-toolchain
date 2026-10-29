@@ -52,6 +52,18 @@ Prepared GLB，而不是源模型或中间 source GLB。
 `adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
 转换、Source validation、budget 或 Prepared GLB validation 失败时不会发布 output。
 
+### Import Diagnostic
+
+| Code | 含义 |
+|---|---|
+| `ICE3_TOOL_IMPORT_UNSUPPORTED` | `--adapter auto` 无法从 extension 选择 adapter |
+| `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE` | 显式 adapter 不存在、不可用，或 extension 不匹配 |
+| `ICE3_TOOL_IMPORT_EMPTY_GEOMETRY` | adapter 成功解析，但没有可用 triangle Geometry |
+| `ICE3_TOOL_STEP_IMPORT_FAILED` | STEP 文件语法、解析或三角化失败 |
+
+Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
+warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
+
 ## `inspect`
 
 ```bash

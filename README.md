@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0 JSON 和受支持 mesh-compression extension 的 GLB |
+| 输入 | glTF 2.0，以及通过 `import` 接收的 STEP AP242 |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -53,6 +53,11 @@ npx ice3-tool inspect tests/fixtures/minimal.gltf --json
 ```bash
 node packages/cli/dist/main.js inspect tests/fixtures/minimal.gltf --json
 
+node packages/cli/dist/main.js import tests/fixtures/step/synthetic-skid.step \
+  --output /tmp/prepared-skid.glb \
+  --report /tmp/prepared-skid.report.json \
+  --asset-id synthetic-skid
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -70,6 +75,22 @@ node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
 
 每条命令都会校验输入，并拒绝发布不完整输出。完整选项和默认值见
 [CLI 参考](docs/reference/cli.md)。
+
+## Source 格式
+
+| 阶段 | 格式 | 支持范围 |
+|---|---|---|
+| 当前 | glTF 2.0 `.gltf` / `.glb` | 原生 source reader；可选 mesh compression |
+| 当前 | STEP AP242 `.step` / `.stp` | 三角化 Geometry、装配层级、节点名称、颜色和米制 conversion |
+| 后续 | IFC 4.3、FBX、USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
+
+`import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
+partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
+执行格式转换。
+
+STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
+设备 identity、端口和连接时，不猜测业务语义。未知格式、不可用 adapter、空 Geometry
+和无效 Prepared GLB 分别返回稳定的 `ICE3_TOOL_IMPORT_*` Diagnostic。
 
 ## 污水处理厂演示
 
@@ -92,10 +113,10 @@ Authoring source generator 使用 content-addressed cache；缓存 key 包含 ge
 source、Scene specification、Blender version 和 package lockfile。
 
 ```bash
-# Override the cache directory
+# 指定不同的缓存目录
 ICE3_BLENDER_CACHE_DIR=/tmp/ice3-cache npm run build:wastewater-demo
 
-# Force a clean Blender generation
+# 强制重新生成
 ICE3_BLENDER_SOURCE_CACHE=0 npm run build:wastewater-demo
 ```
 

@@ -4,6 +4,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  stat,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -73,6 +74,65 @@ try {
   );
   if (publishedSource.includes('@ice3/toolchain-core')) {
     throw new Error('ICE3_RELEASE_PRIVATE_IMPORT');
+  }
+  if (
+    !publishedSource.includes('ICE3_TOOL_STEP_IMPORT_FAILED')
+    || !publishedSource.includes('step-ap242')
+    || !publishedSource.includes('occt-import-js')
+  ) {
+    throw new Error('ICE3_RELEASE_STEP_ADAPTER_MISSING');
+  }
+  const fixture = join(root, 'tests', 'fixtures', 'step', 'synthetic-skid.step');
+  const importedOutput = join(consumer, 'synthetic-skid.glb');
+  const importedReport = join(consumer, 'synthetic-skid.report.json');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      fixture,
+      '--output',
+      importedOutput,
+      '--report',
+      importedReport,
+      '--asset-id',
+      'synthetic-skid',
+      '--json',
+    ],
+    consumer,
+  ), 'published STEP import');
+  const importedBytes = await readFile(importedOutput);
+  if (importedBytes.subarray(0, 4).toString('ascii') !== 'glTF') {
+    throw new Error('ICE3_RELEASE_STEP_OUTPUT_INVALID');
+  }
+  const adapterReport = JSON.parse(await readFile(importedReport, 'utf8'));
+  if (adapterReport.adapter?.id !== 'step') {
+    throw new Error('ICE3_RELEASE_STEP_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', importedOutput, '--json'],
+    consumer,
+  ), 'published STEP output validation');
+  const wasmRuntime = await stat(join(
+    consumer,
+    'node_modules',
+    'occt-import-js',
+    'dist',
+    'occt-import-js.wasm',
+  ));
+  if (wasmRuntime.size === 0) {
+    throw new Error('ICE3_RELEASE_STEP_WASM_MISSING');
+  }
+  const notices = await readFile(
+    join(consumer, 'node_modules', '@ice3', 'toolchain', 'THIRD_PARTY_NOTICES.md'),
+    'utf8',
+  );
+  if (
+    !notices.includes('occt-import-js')
+    || !notices.includes('LGPL-2.1')
+    || !notices.includes('occt-import-js.wasm')
+  ) {
+    throw new Error('ICE3_RELEASE_STEP_NOTICE_INVALID');
   }
   await writeFile(
     join(consumer, 'index.ts'),
