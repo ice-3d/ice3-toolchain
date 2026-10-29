@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-007
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -63,7 +63,7 @@ runJtConverter(request, {
 }): Promise<void>
 ```
 
-- [ ] **步骤 1：编写 converter 失败与成功测试**
+- [x] **步骤 1：编写 converter 失败与成功测试**
 
 ```ts
 await expect(runJtConverter(request, {
@@ -73,21 +73,21 @@ await runJtConverter(request, { converterBinary, runner });
 expect((await stat(output)).size).toBeGreaterThan(20);
 ```
 
-- [ ] **步骤 2：确认缺失实现**
+- [x] **步骤 2：确认缺失实现**
 
 运行：`npm test -- tests/jt/converter.test.ts`
 
 预期：FAIL，module 不存在。
 
-- [ ] **步骤 3：实现 converter bridge**
+- [x] **步骤 3：实现 converter bridge**
 
 固定 `--input/--output`，有界 buffer，timeout 发送 `SIGTERM`，一秒后 `SIGKILL`。
 
-- [ ] **步骤 4：实现合成 converter**
+- [x] **步骤 4：实现合成 converter**
 
 读取 contract marker，生成带两个设备、材质、层级、JT metadata 和共享 mesh 的 GLB。
 
-- [ ] **步骤 5：运行并提交**
+- [x] **步骤 5：运行并提交**
 
 ```bash
 npm test -- tests/jt/converter.test.ts
@@ -109,7 +109,7 @@ git commit -m "feat(toolchain): add controlled JT converter bridge"
 - 消费 converter 输出的标准 GLB。
 - 产出标准 source GLB、stats 和 `extras.ice3.jt`。
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 expect(names).toEqual(expect.arrayContaining(['PrimaryPump', 'BufferTank']));
@@ -117,18 +117,18 @@ expect(pump.extras.ice3.jt.objectId).toBe('JT-PUMP-101');
 expect(pump.extras.ice3.jt.customProperties.EquipmentTag).toBe('P-101');
 ```
 
-- [ ] **步骤 2：确认失败并实现**
+- [x] **步骤 2：确认失败并实现**
 
 运行：`npm test -- tests/jt/canonicalizeJtGlb.test.ts`
 
 实现层级、材质、instanceGroup、Selection、property sanitization、local origin 和
 unit contract metadata。
 
-- [ ] **步骤 3：验证空 Geometry 与 metadata**
+- [x] **步骤 3：验证空 Geometry 与 metadata**
 
 空 GLB 返回 `ICE3_TOOL_IMPORT_EMPTY_GEOMETRY`。
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git add packages/jt-importer tests/jt
@@ -155,7 +155,7 @@ git commit -m "feat(toolchain): canonicalize JT source GLB"
 - `createJtImporter()` 注册 `.jt`，使用 `ICE3_JT_CONVERTER` 与 `ICE3_JT_TIMEOUT_MS`。
 - auto、显式 `jt`、partition 和 batching 全部可用。
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 expect(await runCli([
@@ -165,13 +165,13 @@ expect(await runCli([
 expect(JSON.parse(await readFile(report, 'utf8')).adapter.id).toBe('jt');
 ```
 
-- [ ] **步骤 2：确认失败**
+- [x] **步骤 2：确认失败**
 
 运行：`npm test -- tests/cli/jtImportCommand.test.ts tests/jt/jtPipeline.test.ts`
 
-- [ ] **步骤 3：注册 adapter 与 metadata preservation**
+- [x] **步骤 3：注册 adapter 与 metadata preservation**
 
-- [ ] **步骤 4：运行并提交**
+- [x] **步骤 4：运行并提交**
 
 ```bash
 git add packages/jt-importer packages/cli packages/toolchain-core tsconfig.json tests
@@ -194,14 +194,14 @@ git commit -m "feat(toolchain): expose JT import command"
 - Tarball 包含 JT adapter code，不包含 converter。
 - Release check 使用合成 contract converter 验证 adapter integration。
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 覆盖 unavailable、timeout、non-zero、invalid output、empty geometry 和
 `warnings-as-errors`。
 
-- [ ] **步骤 2：实现并对失败进行稳定映射**
+- [x] **步骤 2：实现并对失败进行稳定映射**
 
-- [ ] **步骤 3：运行 release check**
+- [x] **步骤 3：运行 release check**
 
 ```bash
 npm run test:architecture
@@ -209,7 +209,7 @@ npm test -- tests/jt tests/cli/jtImportCommand.test.ts
 npm run release:check
 ```
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git add tests scripts
@@ -230,12 +230,12 @@ git commit -m "test(toolchain): verify JT import boundaries"
 - 修改：`packages/cli/README.md`
 - 修改：本计划
 
-- [ ] **步骤 1：更新文档**
+- [x] **步骤 1：更新文档**
 
 明确 `ICE3_JT_CONVERTER`、`ICE3_JT_TIMEOUT_MS`、converter contract、Diagnostic 和
 “JT parser 不在 Toolchain/Runtime”的边界。
 
-- [ ] **步骤 2：完整门禁**
+- [x] **步骤 2：完整门禁**
 
 ```bash
 nvm use
@@ -247,11 +247,11 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 3：整分支审查**
+- [x] **步骤 3：整分支审查**
 
 检查 process lifecycle、output validation、metadata、实例、坐标、敏感路径和禁用名称。
 
-- [ ] **步骤 4：提交并合并**
+- [x] **步骤 4：提交并合并**
 
 确认 Git author/committer，完整门禁通过后：
 

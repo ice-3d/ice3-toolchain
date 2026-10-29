@@ -62,4 +62,4 @@
 | `ICE3-TOOL-PLAN-004` | [FBX Source Importer](plans/2026-10-29-fbx-importer.md) | Implemented | Blender bridge、FBX 实例、metadata、CLI 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-005` | [USD Source Importer](plans/2026-10-29-usd-importer.md) | Implemented | USD bridge、实例、metadata、CLI 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-006` | [OBJ Source Importer](plans/2026-10-29-obj-importer.md) | Implemented | OBJ/MTL、metadata、CLI 和发布验证的实施记录 |
-| `ICE3-TOOL-PLAN-007` | [JT Source Importer](plans/2026-10-29-jt-importer.md) | Active | 外部 converter、metadata、CLI 和发布验证的实施计划 |
+| `ICE3-TOOL-PLAN-007` | [JT Source Importer](plans/2026-10-29-jt-importer.md) | Implemented | 外部 converter、metadata、CLI 和发布验证的实施记录 |
