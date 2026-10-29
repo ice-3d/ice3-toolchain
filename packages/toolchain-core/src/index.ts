@@ -1,5 +1,14 @@
 export const TOOLCHAIN_PACKAGE = '@ice3/toolchain-core';
 export {
+  createImporterRegistry,
+  type ICEImporterRegistry,
+  type ICESourceImportContext,
+  type ICESourceImportInput,
+  type ICESourceImportResult,
+  type ICESourceImporter,
+  type ICESourceImporterCapabilities,
+} from './import/index.js';
+export {
   readSource,
   type ICESourceDocument,
 } from './source/index.js';
