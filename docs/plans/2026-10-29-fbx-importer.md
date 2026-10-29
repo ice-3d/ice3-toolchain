@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-004
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -880,7 +880,7 @@ npm run verify
 - 大型坐标 local origin。
 - partition 和 batching 后 FBX metadata。
 
-- [ ] **步骤 6：提交并合并**
+- [x] **步骤 6：提交并合并**
 
 确认 Git author/committer 为：
 
