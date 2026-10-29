@@ -15,6 +15,9 @@
     },
     {
       "path": "./packages/fbx-importer"
+    },
+    {
+      "path": "./packages/usd-importer"
     }
   ]
 }

@@ -58,13 +58,13 @@ test('an unavailable optional adapter reports an installable extension point', a
   try {
     const code = await runCli([
       'import',
-      join(root, 'spatial-model.usd'),
+      join(root, 'spatial-model.jt'),
       '--output',
       output,
       '--asset-id',
       'spatial-model',
       '--adapter',
-      'usd',
+      'jt',
     ]);
 
     expect(code).toBe(1);

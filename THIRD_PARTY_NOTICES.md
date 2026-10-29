@@ -75,11 +75,11 @@ https://github.com/ThatOpen/engine_web-ifc
 ICE3 未修改该依赖。其 MPL-2.0 义务适用于该独立依赖及其文件，不改变 ICE3 自有代码采用
 的 MIT License。
 
-## FBX Adapter Dependencies
+## DCC Adapter Dependencies
 
 ### Blender
 
-FBX Binary adapter 使用外部 Blender `5.2.3` 完成 DCC import 和 raw GLB export。
+FBX Binary 和 USD adapter 使用外部 Blender `5.2.3` 完成 DCC import 和 raw GLB export。
 Blender executable 不随 ICE3 package 分发，用户需自行安装并配置 `BLENDER_BIN`。
 ICE3 只调用仓库内白名单脚本，不修改或重新分发 Blender。
 

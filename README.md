@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX |
+| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX、USD |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -68,6 +68,11 @@ node packages/cli/dist/main.js import tests/fixtures/fbx/synthetic-binary.fbx \
   --report /tmp/prepared-fbx.report.json \
   --asset-id synthetic-fbx
 
+node packages/cli/dist/main.js import tests/fixtures/usd/synthetic-plant.usda \
+  --output /tmp/prepared-usd.glb \
+  --report /tmp/prepared-usd.report.json \
+  --asset-id synthetic-usd
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -98,14 +103,15 @@ node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc 
 | 当前 | STEP AP242 `.step` / `.stp` | 三角化 Geometry、装配层级、节点名称、颜色和米制 conversion |
 | 当前 | IFC 4.3 `.ifc` | 空间结构、产品 identity、Property Set、Quantity Set、System membership |
 | 当前 | FBX `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
-| 后续 | USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
+| 当前 | USD `.usda` / `.usdc` | 层级、Geometry、基础颜色、实例和 custom properties |
+| 后续 | OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
 
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
 执行格式转换。
 
-`partition` 对 glTF/GLB 直接读取；对 STEP 和 IFC 会先在临时目录执行对应 importer，
-完成切分与 LOD 后删除中间 source GLB。
+`partition` 对 glTF/GLB 直接读取；对 STEP、IFC、FBX 和 USD 会先在临时目录执行对应
+importer，完成切分与 LOD 后删除中间 source GLB。
 
 STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
 设备 identity、端口和连接时，不猜测业务语义。未知格式、不可用 adapter、空 Geometry
@@ -120,6 +126,12 @@ FBX Binary 使用固定的 Blender `5.2.3` headless bridge；ASCII FBX 使用进
 fallback。Blender 是可选系统依赖，不进入 npm package 或 Runtime。通过 `BLENDER_BIN`
 指定 executable，通过 `ICE3_FBX_TIMEOUT_MS` 设置 bridge timeout。对象层级、基础颜色、
 shared-mesh instance 和可序列化 custom properties 会保留在 Prepared GLB metadata。
+
+USD source 通过固定版本 Blender `5.2.3` headless bridge 导入 `.usda` 和 `.usdc`。
+`ICE3_USD_TIMEOUT_MS` 控制 bridge timeout；`BLENDER_BIN` 指定可执行文件。层级、
+基础颜色、shared-mesh instance、USD prim path 和可序列化 custom properties 会写入
+Prepared GLB metadata。首期不支持 `.usdz`、animation、camera、light、复杂材质和
+Runtime conversion。
 
 ## 污水处理厂演示
 

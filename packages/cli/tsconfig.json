@@ -20,6 +20,9 @@
     },
     {
       "path": "../fbx-importer"
+    },
+    {
+      "path": "../usd-importer"
     }
   ]
 }
