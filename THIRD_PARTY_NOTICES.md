@@ -1,5 +1,10 @@
 # Third-Party Notices
 
+> Document ID: ICE3-TOOL-NOTICE-001
+>
+> Status: Active
+>
+> Owner: ICE3 Toolchain maintainers
 ## OGC 3D Tiles 1.1 JSON Schema
 
 The files under `tests/fixtures/3d-tiles-1.1-schema/` are copied from Annex B of

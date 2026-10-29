@@ -1,12 +1,17 @@
 # ICE3 Toolchain
 
+> Document ID: ICE3-TOOL-RM-001
+>
+> Status: Active
+>
+> Owner: ICE3 Toolchain maintainers
 ICE3 Toolchain performs all source-model parsing, normalization, triangle
 preparation, crease-edge generation, and deterministic GLB packing outside the
 browser runtime.
 
 Cross-repository formats, shared metrics, budgets, compatibility rules, and
 diagnostic codes are defined by the canonical
-[Asset Preparation Contract v1](../ice3-doc/docs/contracts/asset-preparation-contract-v1.md).
+[Asset Preparation Contract v1](https://github.com/ice-3d/ice3-doc/blob/main/docs/contracts/asset-preparation-contract-v1.md).
 
 ## Requirements
 
