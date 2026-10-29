@@ -17,7 +17,7 @@
 
 - Develop on a feature branch; merge to `main` only after the full verification gate passes.
 - Every behavioral change follows RED-GREEN-REFACTOR.
-- Use the Node version from `.nvmrc`.
+- Use Node.js 24.22.1 LTS from `.nvmrc`.
 - No legacy or broad-format compatibility is added without an explicit design decision.
 - Failed builds never leave a partial output file at the final destination.
 

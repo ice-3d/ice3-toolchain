@@ -11,7 +11,7 @@
 
 **Architecture:** The toolchain repository uses npm workspaces with a pure preprocessing core and a thin CLI. The core consumes glTF JSON or GLB input, normalizes the supported subset, bakes node matrices, prepares triangle and edge buffers, adds the ICE3 profile metadata, and writes a standard single-BIN GLB. No engine runtime package is imported.
 
-**Tech Stack:** Node.js 24 LTS, TypeScript 7, ESM, native Node APIs, Node test runner through `tsx`, npm workspaces.
+**Tech Stack:** Node.js 24.22.1 LTS, TypeScript 7, ESM, native Node APIs, Node test runner through `tsx`, npm workspaces.
 
 **Spec:** [ICE3 Engine M1 Asset Design](https://github.com/ice-3d/ice3-engine/blob/main/docs/specs/2026-10-27-engine-m1-asset-design.md)
 
@@ -48,7 +48,7 @@ ice3-toolchain/
 ├─ package.json                         workspace scripts and tool versions
 ├─ package-lock.json                    reproducible dependency graph
 ├─ .gitignore                           build and temporary output
-├─ .nvmrc                               Node 24
+├─ .nvmrc                               Node.js 24.22.1
 ├─ tsconfig.base.json                   shared strict TypeScript settings
 ├─ tsconfig.json                        workspace build graph
 ├─ AGENTS.md                            repository-local engineering rules
@@ -705,7 +705,7 @@ test('checked-in contract fixture remains valid and deterministic', async () => 
 
 - [ ] **Step 3: Document the command surface and profile boundary**
 
-README documents Node 24, install, inspect/build/validate examples, atomic output, source-format scope, profile rejection behavior, and the rule that no source adapter is used at runtime.
+README documents Node.js 24.22.1 LTS, install, inspect/build/validate examples, atomic output, source-format scope, profile rejection behavior, and the rule that no source adapter is used at runtime.
 
 - [ ] **Step 4: Run complete verification**
 
