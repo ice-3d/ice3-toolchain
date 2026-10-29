@@ -10,7 +10,7 @@
 后得到的 Prepared GLB；Browser Runtime 不读取原始源格式。
 
 ```bash
-npm run build && node tools/conformance/build.mjs
+npm run build:conformance
 ```
 
 `manifest.json` 记录 adapter、预算统计、期望 Node 名称、warning 和格式能力。JT case

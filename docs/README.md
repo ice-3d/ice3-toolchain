@@ -25,6 +25,7 @@
 | `ICE3-TOOL-GUIDE-003` | [从 GLB 到 Engine 的完整接入流程](guides/glb-to-engine.md) | Active | partition、coarse LOD、发布和 Runtime loading 的端到端说明 |
 | `ICE3-TOOL-GUIDE-004` | [AI 控制 Blender 建模工作流](guides/ai-blender-modeling.md) | Active | 受控 AI authoring、Scene Specification、Blender build 和验证闭环 |
 | `ICE3-TOOL-GUIDE-005` | [跨格式 Conformance Assets](../tools/conformance/README.md) | Active | 七种 source format 的 Prepared GLB 与浏览器验收入口 |
+| `ICE3-TOOL-GUIDE-006` | [Toolchain 功能指南](guides/capabilities.md) | Active | 用户能力、格式、输出、依赖和使用边界总览 |
 
 ## 参考与声明
 
