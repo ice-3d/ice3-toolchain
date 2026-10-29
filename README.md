@@ -120,6 +120,7 @@ npm run verify
 - [处理架构](docs/architecture.md)
 - [构建、验证与拆分](docs/guides/build-validate-partition.md)
 - [从 GLB 到 Engine 的完整接入流程](docs/guides/glb-to-engine.md)
+- [AI 控制 Blender 建模工作流](docs/guides/ai-blender-modeling.md)
 - [大型模型性能](docs/guides/large-model-performance.md)
 - [CLI 参考](docs/reference/cli.md)
 - [架构决策](docs/decisions/README.md)
@@ -130,7 +131,9 @@ npm run verify
 
 ## AI 辅助开发
 
-本项目在设计和实现过程中大量使用了 AI 辅助开发。
+本项目在设计和实现过程中大量使用了 AI 辅助开发。AI 参与建模的安全集成方式见
+[AI 控制 Blender 建模工作流](docs/guides/ai-blender-modeling.md)；AI 不直接执行任意
+Blender Python，也不进入 Browser Runtime。
 
 ## 许可证
 

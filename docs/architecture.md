@@ -81,5 +81,6 @@ Blender output。
 - `ICE3-TOOL-IDX-001` — [文档索引](README.md)
 - `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](guides/build-validate-partition.md)
 - `ICE3-TOOL-GUIDE-003` — [从 GLB 到 Engine 的完整接入流程](guides/glb-to-engine.md)
+- `ICE3-TOOL-GUIDE-004` — [AI 控制 Blender 建模工作流](guides/ai-blender-modeling.md)
 - `ICE3-TOOL-REF-001` — [CLI 参考](reference/cli.md)
 - `ICE3-DOC-CTR-001` — [Asset Preparation Contract v1](https://github.com/ice-3d/ice3-doc/blob/main/docs/contracts/asset-preparation-contract-v1.md)
