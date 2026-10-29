@@ -69,3 +69,54 @@ test('canonicalizes FBX hierarchy, instances and custom properties', async () =>
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('omits complex and oversized custom properties deterministically', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-fbx-properties-'));
+  try {
+    const rawGlbPath = join(root, 'raw.glb');
+    const reportPath = join(root, 'bridge.json');
+    const bridgeReport = await runFbxBridge({
+      inputPath: resolve('tests/fixtures/fbx/synthetic-binary.fbx'),
+      outputPath: rawGlbPath,
+      reportPath,
+    }, {
+      blenderBinary: resolveBlenderBinary(),
+      scriptPath: resolve('packages/fbx-importer/scripts/fbx-to-glb.py'),
+    });
+    const first = bridgeReport.objects[0]!;
+    const outputPath = join(root, 'source.glb');
+    await canonicalizeFbxGlb(rawGlbPath, outputPath, {
+      assetId: 'synthetic-fbx',
+      bridgeReport: {
+        ...bridgeReport,
+        objects: [{
+          ...first,
+          customProperties: {
+            Safe: [1, 'value', true],
+            Nested: { unsupported: true },
+            Oversized: Array.from({ length: 257 }, () => 1),
+          },
+        }, ...bridgeReport.objects.slice(1)],
+      },
+    });
+    const source = await readSource(outputPath);
+    const node = source.json.nodes?.find(
+      (candidate) => candidate.name === first.name,
+    ) as {
+      extras?: {
+        ice3?: {
+          fbx?: {
+            customProperties?: Record<string, unknown>;
+          };
+        };
+      };
+    };
+
+    const properties = node.extras?.ice3?.fbx?.customProperties;
+    expect(properties?.Safe).toEqual([1, 'value', true]);
+    expect(properties).not.toHaveProperty('Nested');
+    expect(properties).not.toHaveProperty('Oversized');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

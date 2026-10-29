@@ -144,6 +144,7 @@ function cleanNodeName(value: string, ordinal: number): string {
   const normalized = value
     .replace(/::Model$/u, '')
     .trim();
+  if (normalized === 'RootNode') return 'FBX Root';
   return normalized || `fbx/node/${ordinal}`;
 }
 

@@ -23,12 +23,17 @@ test('imports Binary and ASCII FBX into standard source GLB', async () => {
       });
       expect(result.adapterId).toBe('fbx');
       const source = await readSource(result.sourceGlbPath);
-      expect(source.json.nodes?.map((node) => node.name))
+      const names = source.json.nodes?.map((node) => node.name) ?? [];
+      expect(names)
         .toEqual(expect.arrayContaining([
           'Primary Pump',
           'Pump Instance A',
           'Buffer Tank',
         ]));
+      if (fixture.includes('ascii')) {
+        expect(names).not.toContain('RootNode');
+        expect(names).toContain('FBX Root');
+      }
       const pump = source.json.nodes?.find(
         (node) => node.name === 'Primary Pump',
       ) as {
@@ -45,5 +50,40 @@ test('imports Binary and ASCII FBX into standard source GLB', async () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  }
+});
+
+test('uses one local origin for georeferenced FBX', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-fbx-origin-'));
+  try {
+    const result = await createFbxImporter().import({
+      path: resolve('tests/fixtures/fbx/large-origin.fbx'),
+    }, {
+      temporaryDirectory: root,
+      assetId: 'large-fbx',
+    });
+    const source = await readSource(result.sourceGlbPath);
+    const ice3 = source.json.asset?.extras?.ice3 as {
+      fbx?: {
+        sourceOrigin?: number[];
+      };
+    };
+    expect(ice3.fbx?.sourceOrigin?.[0]).toBeGreaterThan(1_000_000);
+
+    const positions: number[] = [];
+    for (const mesh of source.json.meshes ?? []) {
+      for (const primitive of mesh.primitives ?? []) {
+        const accessor = source.json.accessors?.[
+          primitive.attributes?.POSITION ?? -1
+        ];
+        if (accessor?.min && accessor.max) {
+          positions.push(...accessor.min, ...accessor.max);
+        }
+      }
+    }
+    expect(positions.length).toBeGreaterThan(0);
+    expect(Math.max(...positions.map(Math.abs))).toBeLessThan(20);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

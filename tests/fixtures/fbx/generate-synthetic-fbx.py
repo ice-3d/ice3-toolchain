@@ -53,9 +53,10 @@ def export_fbx(path: Path) -> None:
     )
 
 
-def create_synthetic(path: Path) -> None:
+def create_synthetic(path: Path, origin_offset: float = 0.0) -> None:
     reset_scene()
     root = add_empty("Root")
+    root.location = (origin_offset, 0.0, -origin_offset)
     line = add_empty("TreatmentLine", root)
     equipment = add_empty("Equipment", line)
     steel = add_material("Pump Steel", (0.12, 0.42, 0.78))
@@ -167,6 +168,7 @@ def main(directory: str) -> None:
     binary = root / "synthetic-binary.fbx"
     create_synthetic(binary)
     write_ascii(binary, root / "synthetic-ascii.fbx")
+    create_synthetic(root / "large-origin.fbx", 1_000_000.0)
     create_empty(root / "empty.fbx")
     write_truncated(binary, root / "truncated.fbx")
 
