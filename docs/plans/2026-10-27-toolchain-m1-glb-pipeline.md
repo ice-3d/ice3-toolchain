@@ -1,47 +1,47 @@
-# ICE3 Toolchain M1 GLB Pipeline Implementation Plan
+# ICE3 工具链 M1 GLB 管线实施计划
 
 > Document ID: ICE3-TOOL-PLAN-001
 >
 > Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **面向智能体执行者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐项执行此计划。使用复选框（`- [ ]`）语法跟踪进度。
 
-**Goal:** Build a standalone toolchain that converts source glTF 2.0 assets into deterministic ICE3 Prepared GLB Profile v1 files without introducing a runtime conversion pipeline.
+**目标：** 构建一个独立工具链，将源 glTF 2.0 资产转换为确定性的 ICE3 Prepared GLB Profile v1 文件，同时不引入运行时转换管线。
 
-**Architecture:** The toolchain repository uses npm workspaces with a pure preprocessing core and a thin CLI. The core consumes glTF JSON or GLB input, normalizes the supported subset, bakes node matrices, prepares triangle and edge buffers, adds the ICE3 profile metadata, and writes a standard single-BIN GLB. No engine runtime package is imported.
+**架构：** 该工具链仓库使用 npm 工作区，包含纯预处理核心和轻量 CLI。核心接受 glTF JSON 或 GLB 输入，规范化受支持的子集，烘焙节点矩阵，准备三角形和边缓冲区，添加 ICE3 Profile 元数据，并写出标准的单 BIN GLB。不导入任何引擎运行时包。
 
-**Tech Stack:** Node.js 24.22.1 LTS, TypeScript 7, ESM, native Node APIs, Node test runner through `tsx`, npm workspaces.
+**技术栈：** Node.js 24.22.1 LTS、TypeScript 7、ESM、原生 Node API、通过 `tsx` 使用的 Node 测试运行器、npm 工作区。
 
-**Spec:** [ICE3 Engine M1 Asset Design](https://github.com/ice-3d/ice3-engine/blob/main/docs/specs/2026-10-27-engine-m1-asset-design.md)
+**规范：** [ICE3 引擎 M1 资产设计](https://github.com/ice-3d/ice3-engine/blob/main/docs/specs/2026-10-27-engine-m1-asset-design.md)
 
-## Global Constraints
+## 全局约束
 
-- Source-format parsing and all heavy transformations occur only in this toolchain.
-- M1 source formats are glTF 2.0 JSON and GLB only.
-- Output is a standard GLB with one JSON chunk and one BIN chunk.
-- Every output carries `asset.extras.ice3` with `profile: "ice3-prepared"` and `profileVersion: "1.0"`.
-- Output nodes use standard 16-element `matrix` values; no node TRS is emitted.
-- Triangle primitives use mode `4`; generated edge primitives use mode `1`.
-- Positions are non-normalized `FLOAT` `VEC3`; indices are non-normalized `UNSIGNED_SHORT` or `UNSIGNED_INT`.
-- Textures, images, animations, skins, Morph targets, cameras, lights, sparse accessors, external URIs, and required extensions are rejected.
-- Node, mesh, geometry, and material IDs are stable across identical builds.
-- Identical source and options produce byte-identical output.
-- No old or legacy transport compatibility is added.
-- No document, source file, identifier, or test output contains blocked product or vendor names.
+- 源格式解析以及所有重型变换仅在此工具链中执行。
+- M1 源格式仅为 glTF 2.0 JSON 和 GLB。
+- 输出为带一个 JSON 块和一个 BIN 块的标准 GLB。
+- 每个输出均携带 `asset.extras.ice3`，其中包含 `profile: "ice3-prepared"` 和 `profileVersion: "1.0"`。
+- 输出节点使用标准的 16 元素 `matrix` 值；不输出节点 TRS。
+- 三角形图元使用模式 `4`；生成的边图元使用模式 `1`。
+- 位置为非规范化的 `FLOAT` `VEC3`；索引为非规范化的 `UNSIGNED_SHORT` 或 `UNSIGNED_INT`。
+- 拒绝纹理、图像、动画、蒙皮、变形目标、相机、光源、稀疏访问器、外部 URI 和必需的扩展。
+- 节点、网格、几何体和材质 ID 在相同构建之间保持稳定。
+- 相同的源和选项生成逐字节一致的输出。
+- 不增加旧版或遗留传输兼容性。
+- 任何文档、源文件、标识符或测试输出均不得包含受限的产品或供应商名称。
 
-## Review Focus
+## 审查重点
 
-- A source GLB is truncated inside its JSON or BIN chunk: conversion fails with a structured error and no output file.
-- A source node contains quaternion TRS: the toolchain bakes it into a matrix and the runtime never sees TRS.
-- A cube is triangulated with diagonal edges: only boundary or above-threshold crease edges become visible line primitives.
-- An unsupported animation or texture is present: `inspect` reports it and `build` refuses rather than silently dropping it.
-- The same input is built twice: JSON ordering, padding, IDs, and SHA-256 remain identical.
-- A build is interrupted before completion: the final output path is never left with a partial GLB.
+- 一个源 GLB 在其 JSON 或 BIN 块内部被截断：转换以结构化错误失败，且不生成输出文件。
+- 一个源节点包含四元数 TRS：工具链将其烘焙为矩阵，运行时永远不会看到 TRS。
+- 一个立方体使用对角边进行三角化：只有边界边或超过阈值的折痕边会成为可见线图元。
+- 存在不支持的动画或纹理：`inspect` 会报告该问题，`build` 会拒绝构建，而不会静默丢弃。
+- 同一输入被构建两次：JSON 顺序、填充、ID 和 SHA-256 保持一致。
+- 构建在完成前被中断：最终输出路径绝不会留下部分 GLB。
 
 ---
 
-## File Structure
+## 文件结构
 
 ```text
 ice3-toolchain/
@@ -98,27 +98,27 @@ ice3-toolchain/
    └─ prepared-cube.glb                checked-in cross-repository contract artifact
 ```
 
-### Task 1: Scaffold the independent toolchain workspace
+### 任务 1：搭建独立的工具链工作区
 
-**Files:**
-- Create: `package.json`
-- Create: `.nvmrc`
-- Create: `.gitignore`
-- Create: `tsconfig.base.json`
-- Create: `tsconfig.json`
-- Create: `AGENTS.md`
-- Create: `packages/toolchain-core/package.json`
-- Create: `packages/toolchain-core/tsconfig.json`
-- Create: `packages/toolchain-core/src/index.ts`
-- Create: `packages/cli/package.json`
-- Create: `packages/cli/tsconfig.json`
-- Create: `tests/architecture/layout.test.ts`
+**文件：**
+- 创建：`package.json`
+- 创建：`.nvmrc`
+- 创建：`.gitignore`
+- 创建：`tsconfig.base.json`
+- 创建：`tsconfig.json`
+- 创建：`AGENTS.md`
+- 创建：`packages/toolchain-core/package.json`
+- 创建：`packages/toolchain-core/tsconfig.json`
+- 创建：`packages/toolchain-core/src/index.ts`
+- 创建：`packages/cli/package.json`
+- 创建：`packages/cli/tsconfig.json`
+- 创建：`tests/architecture/layout.test.ts`
 
-**Interfaces:**
-- Consumes: no repository code.
-- Produces: npm workspace commands `build`, `typecheck`, `test`, `test:architecture`, and `verify`; package entry points `@ice3/toolchain-core` and `ice3-tool`.
+**接口：**
+- 使用：无仓库代码。
+- 生成：npm 工作区命令 `build`、`typecheck`、`test`、`test:architecture` 和 `verify`；包入口 `@ice3/toolchain-core` 和 `ice3-tool`。
 
-- [ ] **Step 1: Write the failing layout test**
+- [ ] **步骤 1：编写失败的布局测试**
 
 ```ts
 import { test } from 'node:test';
@@ -135,15 +135,15 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and confirm the workspace is absent**
+- [ ] **步骤 2：运行测试并确认工作区不存在**
 
-Run: `npm test -- tests/architecture/layout.test.ts`
+运行：`npm test -- tests/architecture/layout.test.ts`
 
-Expected: FAIL because `test runner setup is absent.
+预期：FAIL，因为 `test runner setup is absent.
 
-- [ ] **Step 3: Create the workspace manifests and strict TypeScript configuration**
+- [ ] **步骤 3：创建工作区清单和严格的 TypeScript 配置**
 
-Root `package.json`:
+根目录 `package.json`：
 
 ```json
 {
@@ -173,7 +173,7 @@ Root `package.json`:
 }
 ```
 
-`tsconfig.base.json`:
+`tsconfig.base.json`：
 
 ```json
 {
@@ -194,7 +194,7 @@ Root `package.json`:
 }
 ```
 
-Create both package manifests with `"type": "module"`, `"private": true`, and `"version": "0.0.0"`. The CLI manifest declares:
+创建两个包清单，包含 `"type": "module"`、`"private": true` 和 `"version": "0.0.0"`。CLI 清单声明：
 
 ```json
 {
@@ -208,15 +208,15 @@ Create both package manifests with `"type": "module"`, `"private": true`, and `"
 }
 ```
 
-- [ ] **Step 4: Add repository rules and build graph**
+- [ ] **步骤 4：添加仓库规则和构建图**
 
-`AGENTS.md` records the same dependency, naming, current-technology, branch-and-merge, and verification rules as the engine repository, plus the additional rule that source-format adaptation belongs only in this repository.
+`AGENTS.md` 记录与引擎仓库相同的依赖、命名、当前技术、分支与合并以及验证规则，并额外规定源格式适配仅属于此仓库。
 
-Root `tsconfig.json` references `packages/toolchain-core` and `packages/cli`.
+根目录 `tsconfig.json` 引用 `packages/toolchain-core` 和 `packages/cli`。
 
-- [ ] **Step 5: Install and verify**
+- [ ] **步骤 5：安装并验证**
 
-Run:
+运行：
 
 ```bash
 nvm use
@@ -224,27 +224,27 @@ npm install
 npm run verify
 ```
 
-Expected: all checks pass with one architecture test and an empty TypeScript build.
+预期：所有检查均通过，包含一个架构测试和一次空的 TypeScript 构建。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add .
 git commit -m "chore: scaffold ICE3 toolchain workspace"
 ```
 
-### Task 2: Read glTF JSON and GLB containers
+### 任务 2：读取 glTF JSON 和 GLB 容器
 
-**Files:**
-- Create: `packages/toolchain-core/src/source/readSource.ts`
-- Create: `packages/toolchain-core/src/source/index.ts`
-- Modify: `packages/toolchain-core/src/index.ts`
-- Create: `tests/fixtures/create-fixtures.ts`
-- Create: `tests/fixtures/minimal.gltf`
-- Create: `tests/fixtures/minimal.bin`
-- Create: `tests/source/readSource.test.ts`
+**文件：**
+- 创建：`packages/toolchain-core/src/source/readSource.ts`
+- 创建：`packages/toolchain-core/src/source/index.ts`
+- 修改：`packages/toolchain-core/src/index.ts`
+- 创建：`tests/fixtures/create-fixtures.ts`
+- 创建：`tests/fixtures/minimal.gltf`
+- 创建：`tests/fixtures/minimal.bin`
+- 创建：`tests/source/readSource.test.ts`
 
-**Interfaces:**
+**接口：**
 
 ```ts
 export interface ICESourceDocument {
@@ -256,11 +256,11 @@ export interface ICESourceDocument {
 export async function readSource(path: string): Promise<ICESourceDocument>;
 ```
 
-- [ ] **Step 1: Generate a minimal source fixture**
+- [ ] **步骤 1：生成最小源测试夹具**
 
-`create-fixtures.ts` writes one triangle position buffer and a JSON document with one mesh, one material, one node, and one scene. The JSON buffer uses `minimal.bin` as its URI.
+`create-fixtures.ts` 写入一个三角形位置缓冲区，以及一个包含一个网格、一个材质、一个节点和一个场景的 JSON 文档。JSON 缓冲区使用 `minimal.bin` 作为其 URI。
 
-- [ ] **Step 2: Write failing container tests**
+- [ ] **步骤 2：编写失败的容器测试**
 
 ```ts
 import { test } from 'node:test';
@@ -280,17 +280,17 @@ test('rejects a truncated GLB JSON chunk', async () => {
 });
 ```
 
-- [ ] **Step 3: Run the tests and verify failure**
+- [ ] **步骤 3：运行测试并验证失败**
 
-Run: `npm test -- tests/source/readSource.test.ts`
+运行：`npm test -- tests/source/readSource.test.ts`
 
-Expected: FAIL because resource loading and GLB framing are absent.
+预期：FAIL，因为缺少资源加载和 GLB 分帧。
 
-- [ ] **Step 4: Implement strict JSON and GLB framing**
+- [ ] **步骤 4：实现严格的 JSON 和 GLB 分帧**
 
-The JSON path rejects absolute or parent-traversing resource URIs. Data URIs are decoded with Node `Buffer`. Relative paths resolve against the source directory.
+JSON 路径拒绝绝对资源 URI 或穿越父目录的资源 URI。数据 URI 使用 Node `Buffer` 解码。相对路径相对于源目录解析。
 
-The GLB path validates:
+GLB 路径验证：
 
 ```ts
 const GLB_MAGIC = 0x46546c67;
@@ -298,31 +298,31 @@ const JSON_CHUNK = 0x4e4f534a;
 const BIN_CHUNK = 0x004e4942;
 ```
 
-It requires version `2`, a bounded total length, JSON as the first chunk, at most one BIN chunk, and four-byte-aligned chunk lengths. Unknown chunks are ignored. JSON padding is trimmed using UTF-8 space bytes; BIN padding is preserved only as bytes and excluded through declared buffer lengths when accessors are read.
+它要求版本为 `2`、总长度受限、JSON 作为第一个块、最多一个 BIN 块，并且块长度按四字节对齐。未知块会被忽略。JSON 填充使用 UTF-8 空格字节去除；BIN 填充仅作为字节保留，并在读取访问器时通过声明的缓冲区长度排除。
 
-- [ ] **Step 5: Run the tests**
+- [ ] **步骤 5：运行测试**
 
-Run: `npm test -- tests/source/readSource.test.ts`
+运行：`npm test -- tests/source/readSource.test.ts`
 
-Expected: PASS for valid JSON and GLB input, malformed headers, bad chunk order, truncated chunks, missing resources, and unsafe URI traversal.
+预期：针对有效的 JSON 和 GLB 输入、格式错误的头部、错误的块顺序、截断的块、缺失资源以及不安全的 URI 穿越的测试均返回 PASS。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add packages/toolchain-core tests/fixtures tests/source
 git commit -m "feat(toolchain): read glTF source containers"
 ```
 
-### Task 3: Decode accessors and validate the supported source subset
+### 任务 3：解码访问器并验证受支持的源子集
 
-**Files:**
-- Create: `packages/toolchain-core/src/source/readAccessor.ts`
-- Create: `packages/toolchain-core/src/scene/validateSource.ts`
-- Create: `tests/source/readAccessor.test.ts`
-- Create: `tests/scene/validateSource.test.ts`
-- Modify: `packages/toolchain-core/src/index.ts`
+**文件：**
+- 创建：`packages/toolchain-core/src/source/readAccessor.ts`
+- 创建：`packages/toolchain-core/src/scene/validateSource.ts`
+- 创建：`tests/source/readAccessor.test.ts`
+- 创建：`tests/scene/validateSource.test.ts`
+- 修改：`packages/toolchain-core/src/index.ts`
 
-**Interfaces:**
+**接口：**
 
 ```ts
 export type ICEAccessorData =
@@ -343,7 +343,7 @@ export interface ICESourceReport {
 export function validateSource(document: ICESourceDocument): ICESourceReport;
 ```
 
-- [ ] **Step 1: Write failing accessor tests**
+- [ ] **步骤 1：编写失败的访问器测试**
 
 ```ts
 test('decodes a non-interleaved float position accessor', () => {
@@ -359,17 +359,17 @@ test('rejects an accessor that exceeds its buffer view', () => {
 });
 ```
 
-- [ ] **Step 2: Run and observe RED**
+- [ ] **步骤 2：运行并观察 RED**
 
-Run: `npm test -- tests/source/readAccessor.test.ts`
+运行：`npm test -- tests/source/readAccessor.test.ts`
 
-Expected: FAIL because accessor decoding is missing.
+预期：FAIL，因为缺少访问器解码。
 
-- [ ] **Step 3: Implement accessor decoding**
+- [ ] **步骤 3：实现访问器解码**
 
-Support accessor component types used for positions and indices, buffer-view byte offsets and strides, and `byteOffset`. Return typed arrays copied into toolchain-owned memory; runtime zero-copy guarantees do not apply to input preprocessing.
+支持位置和索引使用的访问器分量类型、缓冲区视图字节偏移和步长，以及 `byteOffset`。返回复制到工具链自有内存中的类型化数组；运行时零拷贝保证不适用于输入预处理。
 
-- [ ] **Step 4: Write failing subset validation tests**
+- [ ] **步骤 4：编写失败的子集验证测试**
 
 ```ts
 test('reports animations and textures as unsupported', () => {
@@ -385,31 +385,31 @@ test('rejects a cyclic node graph', () => {
 });
 ```
 
-- [ ] **Step 5: Implement validation and run tests**
+- [ ] **步骤 5：实现验证并运行测试**
 
-Validation checks every node, mesh, primitive, material, accessor, buffer view, and scene reference. It reports, rather than silently skipping, animations, skins, morph targets, cameras, textures, images, samplers, sparse accessors, compressed extensions, and external output requirements.
+验证会检查每个节点、网格、图元、材质、访问器、缓冲区视图和场景引用。它会报告动画、蒙皮、变形目标、相机、纹理、图像、采样器、稀疏访问器、压缩扩展和外部输出要求，而不会静默跳过。
 
-Run: `npm test -- tests/source/readAccessor.test.ts tests/scene/validateSource.test.ts`
+运行：`npm test -- tests/source/readAccessor.test.ts tests/scene/validateSource.test.ts`
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add packages/toolchain-core tests/source tests/scene/validateSource.test.ts
 git commit -m "feat(toolchain): validate source geometry subset"
 ```
 
-### Task 4: Prepare matrices, triangles, materials, and crease edges
+### 任务 4：准备矩阵、三角形、材质和折痕边
 
-**Files:**
-- Create: `packages/toolchain-core/src/scene/bakeMatrix.ts`
-- Create: `packages/toolchain-core/src/scene/prepareMesh.ts`
-- Create: `tests/scene/bakeMatrix.test.ts`
-- Create: `tests/scene/prepareMesh.test.ts`
-- Modify: `packages/toolchain-core/src/index.ts`
+**文件：**
+- 创建：`packages/toolchain-core/src/scene/bakeMatrix.ts`
+- 创建：`packages/toolchain-core/src/scene/prepareMesh.ts`
+- 创建：`tests/scene/bakeMatrix.test.ts`
+- 创建：`tests/scene/prepareMesh.test.ts`
+- 修改：`packages/toolchain-core/src/index.ts`
 
-**Interfaces:**
+**接口：**
 
 ```ts
 export interface ICEPreparedNode {
@@ -449,7 +449,7 @@ export function prepareMesh(
 ): ICEPreparedGeometry;
 ```
 
-- [ ] **Step 1: Write failing matrix tests**
+- [ ] **步骤 1：编写失败的矩阵测试**
 
 ```ts
 test('bakes source TRS into a local matrix', () => {
@@ -468,13 +468,13 @@ test('preserves a source matrix without decomposing it', () => {
 });
 ```
 
-- [ ] **Step 2: Run and implement matrix baking**
+- [ ] **步骤 2：运行并实现矩阵烘焙**
 
-Run: `npm test -- tests/scene/bakeMatrix.test.ts`
+运行：`npm test -- tests/scene/bakeMatrix.test.ts`
 
-Expected: RED first, then PASS after implementing column-major TRS composition and matrix passthrough.
+预期：首先为 RED，然后在实现列主序 TRS 组合和矩阵直通后变为 PASS。
 
-- [ ] **Step 3: Write failing triangle and edge tests**
+- [ ] **步骤 3：编写失败的三角形和边测试**
 
 ```ts
 test('triangulates a quad into two triangles', () => {
@@ -488,41 +488,41 @@ test('keeps cube boundary and crease edges but drops face diagonals', () => {
 });
 ```
 
-- [ ] **Step 4: Implement triangle preparation**
+- [ ] **步骤 4：实现三角形准备**
 
-Accept triangle, triangle-strip, and triangle-fan modes. Emit indexed triangles. Compute finite bounds and reject non-finite positions.
+接受 triangle、triangle-strip 和 triangle-fan 模式。输出索引三角形。计算有限边界，并拒绝非有限位置。
 
-- [ ] **Step 5: Implement crease-edge generation**
+- [ ] **步骤 5：实现折痕边生成**
 
-Uniformly quantize positions before welding adjacency. Count triangle-edge occurrences and compute adjacent face normals. Emit an edge when:
+在焊接相邻关系之前，对位置进行均匀量化。统计三角形边的出现次数，并计算相邻面的法线。满足以下条件时输出一条边：
 
-- it belongs to one triangle;
-- its two adjacent face normals differ by at least `creaseAngleDegrees`;
-- cached output has not already emitted the same unordered vertex pair.
+- 它属于一个三角形；
+- 其两个相邻面的法线差异至少为 `creaseAngleDegrees`；
+- 缓存的输出尚未发出相同的无序顶点对。
 
-The default crease angle is `30`, controlled by `--crease-angle`.
+默认折痕角为 `30`，由 `--crease-angle` 控制。
 
-- [ ] **Step 6: Run tests and commit**
+- [ ] **步骤 6：运行测试并提交**
 
-Run: `npm test -- tests/scene/bakeMatrix.test.ts tests/scene/prepareMesh.test.ts`
+运行：`npm test -- tests/scene/bakeMatrix.test.ts tests/scene/prepareMesh.test.ts`
 
-Expected: PASS, including cube edges without triangulation diagonals.
+预期：PASS，其中立方体边不包含三角化对角线。
 
 ```bash
 git add packages/toolchain-core tests/scene
 git commit -m "feat(toolchain): prepare geometry and crease edges"
 ```
 
-### Task 5: Emit deterministic ICE3 Prepared GLB
+### 任务 5：生成确定性的 ICE3 Prepared GLB
 
-**Files:**
-- Create: `packages/toolchain-core/src/output/buildPreparedGLB.ts`
-- Create: `packages/toolchain-core/src/output/validatePreparedGLB.ts`
-- Create: `tests/output/buildPreparedGLB.test.ts`
-- Create: `tests/output/validatePreparedGLB.test.ts`
-- Modify: `packages/toolchain-core/src/index.ts`
+**文件：**
+- 创建：`packages/toolchain-core/src/output/buildPreparedGLB.ts`
+- 创建：`packages/toolchain-core/src/output/validatePreparedGLB.ts`
+- 创建：`tests/output/buildPreparedGLB.test.ts`
+- 创建：`tests/output/validatePreparedGLB.test.ts`
+- 修改：`packages/toolchain-core/src/index.ts`
 
-**Interfaces:**
+**接口：**
 
 ```ts
 export interface ICEBuildOptions {
@@ -548,7 +548,7 @@ export function buildPreparedGLB(
 export function validatePreparedGLB(bytes: Uint8Array): ICESourceReport;
 ```
 
-- [ ] **Step 1: Write the failing deterministic build test**
+- [ ] **步骤 1：编写失败的确定性构建测试**
 
 ```ts
 test('builds byte-identical prepared GLB output', () => {
@@ -558,17 +558,17 @@ test('builds byte-identical prepared GLB output', () => {
 });
 ```
 
-- [ ] **Step 2: Run and observe RED**
+- [ ] **步骤 2：运行并观察 RED**
 
-Run: `npm test -- tests/output/buildPreparedGLB.test.ts`
+运行：`npm test -- tests/output/buildPreparedGLB.test.ts`
 
-Expected: FAIL because GLB output building is absent.
+预期：FAIL，因为缺少 GLB 输出构建。
 
-- [ ] **Step 3: Implement deterministic JSON and binary packing**
+- [ ] **步骤 3：实现确定性的 JSON 和二进制打包**
 
-Emit stable key order, unique IDs, one scene, baked matrix nodes, triangle primitives, independently indexed edge primitives, and flat-color materials. Write one JSON chunk and one BIN chunk with required padding. Compute SHA-256 over the BIN chunk and place it in `asset.extras.ice3.contentDigest.value`.
+输出稳定的键顺序、唯一 ID、一个场景、烘焙后的矩阵节点、三角形图元、独立索引的边图元以及纯色材质。写入一个 JSON 块和一个带所需填充的 BIN 块。对 BIN 块计算 SHA-256，并将其放入 `asset.extras.ice3.contentDigest.value`。
 
-- [ ] **Step 4: Write failing profile validation tests**
+- [ ] **步骤 4：编写失败的 Profile 验证测试**
 
 ```ts
 test('accepts a generated ICE3 profile', () => {
@@ -583,36 +583,36 @@ test('rejects ordinary GLB without ICE3 profile metadata', () => {
 });
 ```
 
-- [ ] **Step 5: Implement profile validation and run tests**
+- [ ] **步骤 5：实现 Profile 验证并运行测试**
 
-Validate GLB framing, profile metadata, one scene, one buffer, no external URI, node matrices, triangle/line primitive modes, accessor types and alignment, index ranges, forbidden features, ID uniqueness, digest, bounds, and stats.
+验证 GLB 分帧、Profile 元数据、一个场景、一个缓冲区、无外部 URI、节点矩阵、三角形/线图元模式、访问器类型和对齐、索引范围、禁止的特性、ID 唯一性、摘要、边界和统计信息。
 
-Run: `npm test -- tests/output`
+运行：`npm test -- tests/output`
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```bash
 git add packages/toolchain-core tests/output
 git commit -m "feat(toolchain): emit prepared GLB profile"
 ```
 
-### Task 6: Add inspect, build, and validate CLI commands
+### 任务 6：添加 inspect、build 和 validate CLI 命令
 
-**Files:**
-- Create: `packages/cli/src/main.ts`
-- Create: `packages/cli/src/commands.ts`
-- Create: `tests/cli/commands.test.ts`
-- Modify: `packages/cli/package.json`
+**文件：**
+- 创建：`packages/cli/src/main.ts`
+- 创建：`packages/cli/src/commands.ts`
+- 创建：`tests/cli/commands.test.ts`
+- 修改：`packages/cli/package.json`
 
-**Interfaces:**
+**接口：**
 
 ```ts
 export async function runCli(argv: readonly string[]): Promise<number>;
 ```
 
-- [ ] **Step 1: Write failing CLI tests**
+- [ ] **步骤 1：编写失败的 CLI 测试**
 
 ```ts
 test('build writes a prepared GLB atomically', async () => {
@@ -634,52 +634,52 @@ test('build returns non-zero for unsupported input', async () => {
 });
 ```
 
-- [ ] **Step 2: Run and observe RED**
+- [ ] **步骤 2：运行并观察 RED**
 
-Run: `npm test -- tests/cli/commands.test.ts`
+运行：`npm test -- tests/cli/commands.test.ts`
 
-Expected: FAIL because CLI commands are absent.
+预期：FAIL，因为缺少 CLI 命令。
 
-- [ ] **Step 3: Implement commands**
+- [ ] **步骤 3：实现命令**
 
-`inspect` prints report and statistics. `build` writes to a same-directory temporary file, validates the generated bytes, renames atomically, and removes temporary files on failure. `validate` prints the profile report.
+`inspect` 输出报告和统计信息。`build` 写入同一目录中的临时文件，验证生成的字节，原子重命名，并在失败时删除临时文件。`validate` 输出 Profile 报告。
 
-Support `--json`, `--asset-id`, and `--crease-angle`.
+支持 `--json`、`--asset-id` 和 `--crease-angle`。
 
-- [ ] **Step 4: Run CLI tests and full toolchain verification**
+- [ ] **步骤 4：运行 CLI 测试和完整工具链验证**
 
-Run:
+运行：
 
 ```bash
 npm test -- tests/cli
 npm run verify
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add packages/cli tests/cli package.json package-lock.json
 git commit -m "feat(cli): add ICE3 GLB asset commands"
 ```
 
-### Task 7: Freeze the cross-repository contract fixture
+### 任务 7：冻结跨仓库契约测试夹具
 
-**Files:**
-- Create: `fixtures/prepared-cube.glb`
-- Create: `fixtures/prepared-cube.report.json`
-- Create: `tests/fixtures/contract.test.ts`
-- Create: `tests/fixtures/cube.gltf`
-- Create: `README.md`
+**文件：**
+- 创建：`fixtures/prepared-cube.glb`
+- 创建：`fixtures/prepared-cube.report.json`
+- 创建：`tests/fixtures/contract.test.ts`
+- 创建：`tests/fixtures/cube.gltf`
+- 创建：`README.md`
 
-**Interfaces:**
-- Consumes: complete toolchain CLI.
-- Produces: repository example, profile report, and checked-in GLB consumed by the engine plan.
+**接口：**
+- 使用：完整的工具链 CLI。
+- 生成：仓库示例、Profile 报告，以及由引擎计划使用的已入库 GLB。
 
-- [ ] **Step 1: Build the contract fixture**
+- [ ] **步骤 1：构建契约测试夹具**
 
-Run:
+运行：
 
 ```bash
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
@@ -689,7 +689,7 @@ node packages/cli/dist/main.js inspect fixtures/prepared-cube.glb \
   --json > fixtures/prepared-cube.report.json
 ```
 
-- [ ] **Step 2: Write contract assertions**
+- [ ] **步骤 2：编写契约断言**
 
 ```ts
 test('checked-in contract fixture remains valid and deterministic', async () => {
@@ -703,29 +703,29 @@ test('checked-in contract fixture remains valid and deterministic', async () => 
 });
 ```
 
-- [ ] **Step 3: Document the command surface and profile boundary**
+- [ ] **步骤 3：记录命令接口与 Profile 边界**
 
-README documents Node.js 24.22.1 LTS, install, inspect/build/validate examples, atomic output, source-format scope, profile rejection behavior, and the rule that no source adapter is used at runtime.
+README 记录 Node.js 24.22.1 LTS、安装、inspect/build/validate 示例、原子输出、源格式范围、Profile 拒绝行为，以及运行时不得使用源适配器的规则。
 
-- [ ] **Step 4: Run complete verification**
+- [ ] **步骤 4：运行完整验证**
 
-Run:
+运行：
 
 ```bash
 npm run verify
 ```
 
-Expected: all tests pass and the contract fixture validates.
+预期：所有测试均通过，且契约测试夹具验证通过。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add README.md fixtures tests/fixtures/contract.test.ts
 git commit -m "test: freeze prepared GLB contract fixture"
 ```
 
-## Related Documents
+## 相关文档
 
-- `ICE3-TOOL-IDX-001` — [Documentation index](../README.md)
-- `ICE3-TOOL-ARC-001` — [Toolchain architecture](../architecture.md)
-- `ICE3-TOOL-REF-001` — [CLI reference](../reference/cli.md)
+- `ICE3-TOOL-IDX-001` — [文档索引](../README.md)
+- `ICE3-TOOL-ARC-001` — [工具链架构](../architecture.md)
+- `ICE3-TOOL-REF-001` — [CLI 参考](../reference/cli.md)
