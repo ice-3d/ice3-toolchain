@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, test } from 'node:test';
@@ -68,6 +68,29 @@ test('import does not publish output when an adapter fails', async () => {
     output,
     '--asset-id',
     'broken',
+  ]);
+
+  expect(code).toBe(1);
+  await expect(readFile(output)).rejects.toThrow();
+});
+
+test('import keeps the target output unpublished when report publication fails', async () => {
+  mockApi.spyOn(console, 'error').mockImplementation(() => {});
+  const root = await mkdtemp(join(tmpdir(), 'ice3-import-report-failure-'));
+  directories.push(root);
+  const output = join(root, 'prepared.glb');
+  const report = join(root, 'report-directory');
+  await mkdir(report);
+
+  const code = await runCli([
+    'import',
+    'tests/fixtures/step/synthetic-skid.step',
+    '--output',
+    output,
+    '--report',
+    report,
+    '--asset-id',
+    'synthetic-skid',
   ]);
 
   expect(code).toBe(1);

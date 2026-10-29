@@ -178,10 +178,10 @@ async function importCommand(args: ParsedArguments): Promise<void> {
       );
     }
     await writeFile(outputTemporary, built.bytes);
-    await rename(outputTemporary, outputPath);
     if (resolvedReportPath && reportTemporary) {
       await rename(reportTemporary, resolvedReportPath);
     }
+    await rename(outputTemporary, outputPath);
   } catch (error) {
     await unlink(outputTemporary).catch(() => {});
     if (reportTemporary) await unlink(reportTemporary).catch(() => {});

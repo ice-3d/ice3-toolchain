@@ -64,6 +64,48 @@ test('rejects successful STEP results with no triangle geometry', async () => {
   }
 });
 
+test('preserves distinct per-face colors as separate source primitives', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ice3-step-faces-'));
+  try {
+    const output = join(root, 'source.glb');
+    await convertOcctResult({
+      success: true,
+      root: {
+        name: 'root',
+        meshes: [],
+        children: [{ name: 'ColoredFacePair', meshes: [0], children: [] }],
+      },
+      meshes: [{
+        name: 'ColoredFacePair',
+        attributes: {
+          position: {
+            array: [
+              0, 0, 0, 1, 0, 0, 0, 1, 0,
+              1, 1, 0, 2, 1, 0, 1, 2, 0,
+            ],
+          },
+        },
+        index: { array: [0, 1, 2, 3, 4, 5] },
+        brep_faces: [
+          { first: 0, last: 0, color: [1, 0, 0] },
+          { first: 1, last: 1, color: [0, 1, 0] },
+        ],
+      }],
+    }, output);
+
+    const source = await readSource(output);
+    expect(source.json.meshes?.[0]?.primitives).toHaveLength(2);
+    const colors = source.json.materials
+      ?.map((material) => material.pbrMetallicRoughness?.baseColorFactor);
+    expect(colors).toEqual(expect.arrayContaining([
+      [1, 0, 0, 1],
+      [0, 1, 0, 1],
+    ]));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('gives unnamed and duplicate hierarchy nodes stable names', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ice3-step-names-'));
   try {

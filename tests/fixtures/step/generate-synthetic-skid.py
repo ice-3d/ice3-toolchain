@@ -32,6 +32,7 @@ def main(output_path: str, empty_geometry: bool = False) -> None:
         document.recompute()
         Import.export([assembly], output_path)
         App.closeDocument(document.Name)
+        normalize_step_file(Path(output_path))
         return
 
     tank_shape = Part.makeBox(1200.0, 700.0, 900.0)
@@ -65,8 +66,9 @@ def set_shape_color(feature, color) -> None:
         view_object.ShapeColor = color
 
 
-def add_ap242_colors(output_path: Path) -> None:
+def normalize_step_file(output_path: Path) -> None:
     source = output_path.read_text(encoding="utf-8")
+    source = "\n".join(line.rstrip() for line in source.splitlines()) + "\n"
     source = re.sub(
         r"FILE_SCHEMA\(\(.*?\)\);",
         "FILE_SCHEMA(('AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF'));",
@@ -79,6 +81,12 @@ def add_ap242_colors(output_path: Path) -> None:
         "'managed_model_based_3d_engineering',2014",
         1,
     )
+    output_path.write_text(source, encoding="utf-8")
+
+
+def add_ap242_colors(output_path: Path) -> None:
+    normalize_step_file(output_path)
+    source = output_path.read_text(encoding="utf-8")
     solid_ids = [
         int(value)
         for value in re.findall(
