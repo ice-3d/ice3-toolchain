@@ -4,3 +4,5 @@ dist/
 /release/
 *.tgz
 *.tmp
+__pycache__/
+*.py[cod]
