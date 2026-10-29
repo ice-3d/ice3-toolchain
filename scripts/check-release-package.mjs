@@ -228,6 +228,9 @@ try {
     || !notices.includes('web-ifc')
     || !notices.includes('MPL-2.0')
     || !notices.includes('web-ifc-node.wasm')
+    || !notices.includes('assimpjs')
+    || !notices.includes('assimpjs.wasm')
+    || !notices.includes('Blender `5.2.3`')
   ) {
     throw new Error('ICE3_RELEASE_SOURCE_NOTICE_INVALID');
   }

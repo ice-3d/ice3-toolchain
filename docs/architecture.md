@@ -12,7 +12,7 @@ Toolchain 将 model-authoring format 转换为有界 Runtime format。它是离�
 Browser Runtime 永不导入。
 
 ```text
-source glTF / GLB / STEP AP242 / IFC 4.3
+source glTF / GLB / STEP AP242 / IFC 4.3 / FBX
        ↓
 adapter registry → standard source GLB
        ↓
@@ -59,6 +59,11 @@ IFC 4.3 adapter 在独立 Toolchain package 内解析 spatial hierarchy、产品
 Property Set、Quantity Set 和 System membership。它把 georeferenced Geometry 转换到
 统一的米制 y-up document-local 坐标系，并将原始原点与 IFC metadata 写入 source GLB。
 IFC parser 和 WASM 不进入 Engine package 或 Browser bundle。
+
+FBX Binary 使用固定版本的无界面 Blender bridge；白名单 Python 脚本只负责 DCC import 和
+raw GLB export。ASCII FBX 使用进程内 WASM fallback。两条路径最终都经过同一个
+TypeScript canonicalizer，由其负责实例、Selection、custom properties、坐标和确定性。
+Blender 与 FBX parser 都不进入 Engine package 或 Browser bundle。
 
 ## Source Import 边界
 
@@ -108,6 +113,8 @@ Blender output。
   `ICE3_TOOL_IFC_UNIT_UNSUPPORTED`。
 - IFC parser 或 Geometry 失败时返回稳定 `ICE3_TOOL_IFC_*` Diagnostic，不泄漏
   temporary path 或 parser handle。
+- FBX Blender 缺失、版本错误、timeout 和导入失败分别返回稳定 `ICE3_TOOL_FBX_*`
+  Diagnostic，且不发布 output。
 - Directory publication 失败时恢复上一个 Asset root。
 - 无论成功或失败，temporary workspace 都会被删除。
 

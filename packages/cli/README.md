@@ -20,16 +20,20 @@ npm install --save-dev @ice3/toolchain
 ```bash
 npx ice3-tool import source.step --output prepared.glb --asset-id example
 npx ice3-tool import plant.ifc --output prepared-plant.glb --asset-id plant
+npx ice3-tool import equipment.fbx --output prepared-equipment.glb --asset-id equipment
 npx ice3-tool inspect source.glb --json
 npx ice3-tool build source.glb --output prepared.glb
 npx ice3-tool validate prepared.glb
 npx ice3-tool partition source.glb --output tiles --asset-id example
 ```
 
-当前 source import 支持 STEP AP242 的 `.step` / `.stp` 和 IFC 4.3 的 `.ifc`。转换在
-本机离线完成，输出标准 source GLB 后继续进入 Prepared GLB 与 Tileset pipeline；
-Browser Runtime 不需要任何 CAD 或 WASM 转换依赖。IFC 的空间层级、产品身份、
-Property Set、Quantity Set 和 System membership 会保留在 Prepared GLB metadata。
+当前 source import 支持 STEP AP242、IFC 4.3 和 FBX。转换在本机离线完成，输出标准
+source GLB 后继续进入 Prepared GLB 与 Tileset pipeline；Browser Runtime 不需要任何
+CAD、DCC 或 WASM 转换依赖。IFC 和 FBX 的层级、业务属性、实例和 Selection metadata
+会保留在 Prepared GLB。
+
+FBX Binary 需要本机安装 Blender `5.2.3`，并通过 `BLENDER_BIN` 指向 executable。
+FBX ASCII 使用随包安装的进程内 WASM fallback。
 
 作为程序入口使用：
 

@@ -8,7 +8,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps
-> use checkbox (`- [ ]`) syntax for tracking.
+> use checkbox (`- [x]`) syntax for tracking.
 
 **目标：** 通过固定版本 Blender headless bridge 将 ASCII/Binary FBX 转换为标准 source
 GLB，并接入现有 Prepared GLB、partition、LOD、Tileset 和发布流程。
@@ -101,7 +101,7 @@ async function runFbxBridge(
 ): Promise<IFbxBridgeReport>;
 ```
 
-- [ ] **步骤 1：编写 runtime 与 bridge 失败测试**
+- [x] **步骤 1：编写 runtime 与 bridge 失败测试**
 
 ```ts
 test('accepts the pinned Blender version', () => {
@@ -141,7 +141,7 @@ test('passes paths as separate arguments and reads a private report', async () =
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 运行：
 
@@ -151,7 +151,7 @@ npm test -- tests/fbx/blenderRuntime.test.ts tests/fbx/runBridge.test.ts
 
 预期：FAIL，module 尚不存在。
 
-- [ ] **步骤 3：增加私有 workspace package**
+- [x] **步骤 3：增加私有 workspace package**
 
 `package.json` 固定：
 
@@ -175,7 +175,7 @@ npm install --workspace packages/fbx-importer \
   @gltf-transform/core@4.5.1
 ```
 
-- [ ] **步骤 4：实现 executable 与版本检查**
+- [x] **步骤 4：实现 executable 与版本检查**
 
 `resolveBlenderBinary()`：
 
@@ -186,7 +186,7 @@ npm install --workspace packages/fbx-importer \
 
 `assertSupportedBlender(binary)` 调用 `--version`，精确匹配 `5.2.3`。
 
-- [ ] **步骤 5：实现 bridge process runner**
+- [x] **步骤 5：实现 bridge process runner**
 
 默认 runner 使用 `node:child_process.spawn`，收集有界 stdout/stderr，不直接输出。
 
@@ -213,7 +213,7 @@ Blender 参数：
 timeout 默认 `120_000`；超时发送 SIGTERM，短暂等待后 SIGKILL，并返回
 `ICE3_TOOL_FBX_TIMEOUT`。
 
-- [ ] **步骤 6：验证 report 与 output**
+- [x] **步骤 6：验证 report 与 output**
 
 - exit code 非零返回 `ICE3_TOOL_FBX_IMPORT_FAILED`。
 - report 不存在、JSON 无效或 `success !== true` 时返回稳定错误。
@@ -221,7 +221,7 @@ timeout 默认 `120_000`；超时发送 SIGTERM，短暂等待后 SIGKILL，并�
 - raw GLB 必须存在且大于 20 bytes。
 - stdout/stderr、绝对路径和 Blender stack trace不进入最终 Diagnostic。
 
-- [ ] **步骤 7：运行测试**
+- [x] **步骤 7：运行测试**
 
 ```bash
 npm test -- tests/fbx/blenderRuntime.test.ts tests/fbx/runBridge.test.ts
@@ -229,7 +229,7 @@ npm test -- tests/fbx/blenderRuntime.test.ts tests/fbx/runBridge.test.ts
 
 预期：PASS。
 
-- [ ] **步骤 8：提交**
+- [x] **步骤 8：提交**
 
 ```bash
 git add packages/fbx-importer tests/fbx/blenderRuntime.test.ts tests/fbx/runBridge.test.ts \
@@ -258,7 +258,7 @@ git commit -m "feat(toolchain): add FBX Blender bridge runner"
 }
 ```
 
-- [ ] **步骤 1：编写 bridge 失败测试**
+- [x] **步骤 1：编写 bridge 失败测试**
 
 ```ts
 test('bridge writes a report for an import failure', async () => {
@@ -276,7 +276,7 @@ test('bridge writes a report for an import failure', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 ```bash
 npm test -- tests/fbx/bridgeScript.test.ts
@@ -284,7 +284,7 @@ npm test -- tests/fbx/bridgeScript.test.ts
 
 预期：FAIL，script/fixture 尚不存在。
 
-- [ ] **步骤 3：实现参数解析与 scene reset**
+- [x] **步骤 3：实现参数解析与 scene reset**
 
 脚本只使用 `argparse` 读取三个路径。启动后：
 
@@ -294,7 +294,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 
 不加载用户 startup file、add-on 或工作区外资源。
 
-- [ ] **步骤 4：固定 FBX import 参数**
+- [x] **步骤 4：固定 FBX import 参数**
 
 ```python
 bpy.ops.import_scene.fbx(
@@ -316,7 +316,7 @@ bpy.ops.import_scene.fbx(
 )
 ```
 
-- [ ] **步骤 5：删除不支持对象并生成 report**
+- [x] **步骤 5：删除不支持对象并生成 report**
 
 只保留 `MESH` 和 `EMPTY`。
 
@@ -331,7 +331,7 @@ bpy.ops.import_scene.fbx(
 
 Report 不记录 input/output absolute path。
 
-- [ ] **步骤 6：固定 glTF export 参数**
+- [x] **步骤 6：固定 glTF export 参数**
 
 ```python
 bpy.ops.export_scene.gltf(
@@ -352,14 +352,14 @@ bpy.ops.export_scene.gltf(
 )
 ```
 
-- [ ] **步骤 7：原子写 report 和错误映射**
+- [x] **步骤 7：原子写 report 和错误映射**
 
 - 先写同目录 temp file，再 `os.replace()`。
 - 成功时才允许报告 `success: true`。
 - 捕获异常后删除部分 raw GLB，写稳定错误 report，进程非零退出。
 - 不把 exception traceback 写入 report。
 
-- [ ] **步骤 8：运行 script 失败测试**
+- [x] **步骤 8：运行 script 失败测试**
 
 ```bash
 npm test -- tests/fbx/bridgeScript.test.ts
@@ -367,7 +367,7 @@ npm test -- tests/fbx/bridgeScript.test.ts
 
 预期：PASS；失败 report 稳定，raw GLB 不存在。
 
-- [ ] **步骤 9：提交**
+- [x] **步骤 9：提交**
 
 ```bash
 git add packages/fbx-importer/scripts/fbx-to-glb.py \
@@ -392,7 +392,7 @@ git commit -m "feat(toolchain): add controlled FBX bridge"
 
 - 产出：不含客户信息的 synthetic FBX，供 bridge、adapter、CLI 和 release 测试复用。
 
-- [ ] **步骤 1：编写 fixture 失败测试**
+- [x] **步骤 1：编写 fixture 失败测试**
 
 ```ts
 test('fixtures contain binary and ASCII FBX', async () => {
@@ -404,7 +404,7 @@ test('fixtures contain binary and ASCII FBX', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 ```bash
 npm test -- tests/fbx/fixture.test.ts
@@ -412,7 +412,7 @@ npm test -- tests/fbx/fixture.test.ts
 
 预期：FAIL，fixtures 尚不存在。
 
-- [ ] **步骤 3：生成 Binary fixture**
+- [x] **步骤 3：生成 Binary fixture**
 
 Blender generator 创建：
 
@@ -440,7 +440,7 @@ bpy.ops.export_scene.fbx(
 )
 ```
 
-- [ ] **步骤 4：创建 ASCII fixture**
+- [x] **步骤 4：创建 ASCII fixture**
 
 ASCII fixture 是独立编写的最小合法 FBX 7.4 文档，包含：
 
@@ -454,12 +454,12 @@ ASCII fixture 是独立编写的最小合法 FBX 7.4 文档，包含：
 
 不得从第三方测试包复制。Blender importer 必须成功读取。
 
-- [ ] **步骤 5：创建空与截断 fixture**
+- [x] **步骤 5：创建空与截断 fixture**
 
 - `empty.fbx` 只包含合法 `Root` empty，不含 Geometry。
 - `truncated.fbx` 在 Binary fixture 的 Objects section 中间截断。
 
-- [ ] **步骤 6：运行 fixture 与 parser smoke test**
+- [x] **步骤 6：运行 fixture 与 parser smoke test**
 
 ```bash
 npm test -- tests/fbx/fixture.test.ts
@@ -467,7 +467,7 @@ npm test -- tests/fbx/fixture.test.ts
 
 预期：PASS，ASCII/Binary 都能被固定 Blender 读取。
 
-- [ ] **步骤 7：提交**
+- [x] **步骤 7：提交**
 
 ```bash
 git add tests/fixtures/fbx tests/fbx/fixture.test.ts
@@ -510,7 +510,7 @@ async function canonicalizeFbxGlb(
 ): Promise<IFbxSourceStats>;
 ```
 
-- [ ] **步骤 1：编写 canonicalizer 失败测试**
+- [x] **步骤 1：编写 canonicalizer 失败测试**
 
 ```ts
 test('canonicalizes FBX hierarchy, instances and custom properties', async () => {
@@ -532,7 +532,7 @@ test('canonicalizes FBX hierarchy, instances and custom properties', async () =>
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 ```bash
 npm test -- tests/fbx/canonicalizeFbxGlb.test.ts
@@ -540,7 +540,7 @@ npm test -- tests/fbx/canonicalizeFbxGlb.test.ts
 
 预期：FAIL，module 尚不存在。
 
-- [ ] **步骤 3：清理 raw GLB**
+- [x] **步骤 3：清理 raw GLB**
 
 使用 `@gltf-transform/core` `NodeIO`：
 
@@ -549,7 +549,7 @@ npm test -- tests/fbx/canonicalizeFbxGlb.test.ts
 - 材质 metallic 设为 `0`，roughness 设为 `1`。
 - 保留场景 hierarchy、mesh 和 display color。
 
-- [ ] **步骤 4：合并 bridge report**
+- [x] **步骤 4：合并 bridge report**
 
 按 node name 与 report object name 匹配。匹配失败时：
 
@@ -572,7 +572,7 @@ extras.ice3 = {
 };
 ```
 
-- [ ] **步骤 5：保证 shared mesh instance**
+- [x] **步骤 5：保证 shared mesh instance**
 
 根据 bridge report 的 `meshData`：
 
@@ -581,7 +581,7 @@ extras.ice3 = {
 - 如果 raw GLB 复制 mesh，canonicalizer 按 accessor bytes/material 重新关联到首个 mesh。
 - 无法安全复用时保留独立 mesh并 warning，`instanceNodeCount` 不虚报。
 
-- [ ] **步骤 6：建立 local origin**
+- [x] **步骤 6：建立 local origin**
 
 计算全部 world-space position bounds，统一平移 x/z 到局部原点；y 保留模型高度。
 
@@ -591,12 +591,12 @@ const sourceOrigin = [bounds.min[0], 0, bounds.min[2]];
 
 所有 node 使用同一个 origin，不逐 node 选择。
 
-- [ ] **步骤 7：确定性写 GLB**
+- [x] **步骤 7：确定性写 GLB**
 
 稳定 node、mesh、material 和 accessor 顺序。`NodeIO.write` 到 output path。相同 raw
 semantic content、report 和 options 必须产生 byte-identical source GLB。
 
-- [ ] **步骤 8：运行测试**
+- [x] **步骤 8：运行测试**
 
 ```bash
 npm test -- tests/fbx/canonicalizeFbxGlb.test.ts
@@ -604,7 +604,7 @@ npm test -- tests/fbx/canonicalizeFbxGlb.test.ts
 
 预期：PASS，instance group、custom property 和 hierarchy 正确。
 
-- [ ] **步骤 9：提交**
+- [x] **步骤 9：提交**
 
 ```bash
 git add packages/fbx-importer/src tests/fbx/canonicalizeFbxGlb.test.ts
@@ -630,7 +630,7 @@ git commit -m "feat(toolchain): canonicalize FBX source GLB"
 - CLI：`import SOURCE.fbx --output FILE --asset-id ID`
 - Partition：直接接受 `.fbx`
 
-- [ ] **步骤 1：编写 importer/CLI 失败测试**
+- [x] **步骤 1：编写 importer/CLI 失败测试**
 
 ```ts
 test('imports FBX through the controlled Blender bridge', async () => {
@@ -650,7 +650,7 @@ test('imports FBX through the controlled Blender bridge', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 ```bash
 npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
@@ -658,7 +658,7 @@ npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
 
 预期：FAIL，adapter/CLI 尚未接入。
 
-- [ ] **步骤 3：实现 importer orchestration**
+- [x] **步骤 3：实现 importer orchestration**
 
 `createFbxImporter().import(input, context)`：
 
@@ -670,7 +670,7 @@ npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
 
 任何异常均清理 raw GLB 和 report。
 
-- [ ] **步骤 4：扩展 CLI dynamic loader**
+- [x] **步骤 4：扩展 CLI dynamic loader**
 
 `loadSourceImporters()` 支持：
 
@@ -681,17 +681,17 @@ npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
 `auto` 加载已实现的全部 adapter。显式 fbx 失败时返回
 `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE` 或更具体的 `ICE3_TOOL_FBX_*`。
 
-- [ ] **步骤 5：扩展 partition source import**
+- [x] **步骤 5：扩展 partition source import**
 
 现有 `readPartitionSource()` 对非 glTF 调用 `loadSourceImporters('auto')`。确认
 `.fbx` 使用相同路径，不增加第二套临时目录逻辑。
 
-- [ ] **步骤 6：验证 public package asset**
+- [x] **步骤 6：验证 public package asset**
 
 公开 package 的 esbuild 将 FBX TypeScript adapter 打包进 `main.js`，并把
 `fbx-to-glb.py` 复制到 `dist/fbx/`。Blender binary 不进入 tarball。
 
-- [ ] **步骤 7：运行 CLI 测试**
+- [x] **步骤 7：运行 CLI 测试**
 
 ```bash
 npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
@@ -699,7 +699,7 @@ npm test -- tests/cli/fbxImportCommand.test.ts tests/fbx/fbxImporter.test.ts
 
 预期：PASS。
 
-- [ ] **步骤 8：提交**
+- [x] **步骤 8：提交**
 
 ```bash
 git add packages/fbx-importer packages/cli tests/cli/fbxImportCommand.test.ts \
@@ -723,7 +723,7 @@ git commit -m "feat(toolchain): expose FBX import command"
 - 消费：公开 import/partition command。
 - 产出：稳定失败、实例、batching metadata 和 byte determinism 证据。
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 test('reports Blender unavailable without publishing output', async () => {
@@ -743,7 +743,7 @@ test('reports bridge timeout without publishing output', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认测试失败**
+- [x] **步骤 2：确认测试失败**
 
 ```bash
 npm test -- tests/fbx/fbxFailures.test.ts
@@ -751,14 +751,14 @@ npm test -- tests/fbx/fbxFailures.test.ts
 
 预期：FAIL，稳定错误和测试注入尚不存在。
 
-- [ ] **步骤 3：实现可测试的环境边界**
+- [x] **步骤 3：实现可测试的环境边界**
 
 - `BLENDER_BIN`
 - `ICE3_FBX_TIMEOUT_MS`
 
 只允许这两项 adapter option，不允许任意 Blender CLI 参数透传。
 
-- [ ] **步骤 4：覆盖损坏与空 Geometry**
+- [x] **步骤 4：覆盖损坏与空 Geometry**
 
 Assertions：
 
@@ -767,7 +767,7 @@ Assertions：
 - Blender version mismatch → `ICE3_TOOL_FBX_BLENDER_VERSION_INVALID`
 - 失败时 raw GLB、report 和 final output 均不存在
 
-- [ ] **步骤 5：编写 determinism test**
+- [x] **步骤 5：编写 determinism test**
 
 ```ts
 test('repeated FBX imports are byte-identical', async () => {
@@ -779,7 +779,7 @@ test('repeated FBX imports are byte-identical', async () => {
 });
 ```
 
-- [ ] **步骤 6：验证 partition 与 batching metadata**
+- [x] **步骤 6：验证 partition 与 batching metadata**
 
 直接对 Binary FBX 执行：
 
@@ -793,7 +793,7 @@ ice3-tool partition synthetic-binary.fbx \
 
 分片 node 必须继续包含 `extras.ice3.fbx.customProperties`、Selection ID 和 instanceGroup。
 
-- [ ] **步骤 7：运行 FBX suite**
+- [x] **步骤 7：运行 FBX suite**
 
 ```bash
 npm test -- tests/fbx tests/cli/fbxImportCommand.test.ts
@@ -801,7 +801,7 @@ npm test -- tests/fbx tests/cli/fbxImportCommand.test.ts
 
 预期：PASS。
 
-- [ ] **步骤 8：提交**
+- [x] **步骤 8：提交**
 
 ```bash
 git add tests/fbx tests/cli/fbxImportCommand.test.ts packages/fbx-importer
@@ -829,7 +829,7 @@ git commit -m "test(toolchain): verify FBX import boundaries"
 
 - 产出：公开 FBX 支持说明、Blender 外部依赖说明和发布验证记录。
 
-- [ ] **步骤 1：更新公开文档**
+- [x] **步骤 1：更新公开文档**
 
 记录：
 
@@ -841,14 +841,14 @@ git commit -m "test(toolchain): verify FBX import boundaries"
 - Import/partition 使用示例。
 - 安全边界：只运行白名单 bridge。
 
-- [ ] **步骤 2：更新发布 package**
+- [x] **步骤 2：更新发布 package**
 
 - bundle FBX TypeScript adapter。
 - 复制 `fbx-to-glb.py` 到 `dist/fbx/`。
 - 不把 Blender binary 放入 tarball。
 - 发布 tarball 安装后，在 Blender 可用环境执行 Binary FBX import 和 Prepared validation。
 
-- [ ] **步骤 3：更新架构检查**
+- [x] **步骤 3：更新架构检查**
 
 断言：
 
@@ -857,7 +857,7 @@ git commit -m "test(toolchain): verify FBX import boundaries"
 - bridge script存在并在发布文件列表中。
 - Engine/workspace 不引用 FBX adapter。
 
-- [ ] **步骤 4：运行完整门禁**
+- [x] **步骤 4：运行完整门禁**
 
 ```bash
 nvm use

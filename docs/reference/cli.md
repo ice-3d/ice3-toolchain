@@ -48,6 +48,7 @@ Prepared GLB，而不是源模型或中间 source GLB。
 |---|---|---|
 | `step` | `.step`、`.stp` | STEP AP242 Geometry、层级、名称、颜色和米制 conversion |
 | `ifc` | `.ifc` | IFC 4.3 spatial hierarchy、identity、Pset、Qto、System 和米制 conversion |
+| `fbx` | `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
 
 `--adapter auto` 按 extension 选择 adapter。`--report` 在标准 Asset Report 顶层增加
 `adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
@@ -65,6 +66,12 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `ICE3_TOOL_IFC_UNIT_UNSUPPORTED` | IFC 长度单位缺失、未知或冲突 |
 | `ICE3_TOOL_IFC_IMPORT_FAILED` | IFC 文件截断、解析或读取失败 |
 | `ICE3_TOOL_IFC_GEOMETRY_INVALID` | IFC Geometry、transform 或 index 无效 |
+| `ICE3_TOOL_FBX_BLENDER_UNAVAILABLE` | Binary FBX bridge 所需 Blender 不存在 |
+| `ICE3_TOOL_FBX_BLENDER_VERSION_INVALID` | Blender 版本不是 `5.2.3` |
+| `ICE3_TOOL_FBX_TIMEOUT` | FBX bridge 超时 |
+| `ICE3_TOOL_FBX_IMPORT_FAILED` | FBX 读取或 ASCII conversion 失败 |
+| `ICE3_TOOL_FBX_EXPORT_FAILED` | Bridge 未生成有效 raw GLB |
+| `ICE3_TOOL_FBX_GEOMETRY_INVALID` | FBX Geometry、Bounds 或 transform 无效 |
 
 Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
 warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
@@ -72,6 +79,11 @@ warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
 IFC 产品使用 `GlobalId` 作为 Selection identity。重复 GlobalId 会追加 express ID；
 缺失 GlobalId 使用稳定的 express-ID fallback。Pset、Qto 和 System membership 会保留
 在 Prepared GLB node metadata。复杂且不可 JSON 序列化的 property 会省略并产生 warning。
+
+FBX Binary 使用 Blender `5.2.3`。通过 `BLENDER_BIN` 指定可执行文件，通过
+`ICE3_FBX_TIMEOUT_MS` 设置 bridge timeout。ASCII FBX 使用进程内 WASM。FBX 对象层级、
+shared-mesh instance 和 primitive custom properties 会保留；动画、skin、camera、
+light、复杂材质和 Blender node tree 不支持。
 
 ## `inspect`
 
@@ -134,7 +146,7 @@ ice3-tool partition SOURCE \
   [--json]
 ```
 
-`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp` 或 `.ifc`。非 glTF source 会先由
+`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp`、`.ifc` 或 `.fbx`。非 glTF source 会先由
 对应 adapter 转为临时标准 source GLB，再执行同一 partition/LOD pipeline；中间文件
 不会进入最终 Tileset。
 

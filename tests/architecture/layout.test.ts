@@ -7,6 +7,7 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
   expect(existsSync('packages/cli/package.json')).toBe(true);
   expect(existsSync('packages/step-importer/package.json')).toBe(true);
   expect(existsSync('packages/ifc-importer/package.json')).toBe(true);
+  expect(existsSync('packages/fbx-importer/package.json')).toBe(true);
 
   const root = JSON.parse(readFileSync('package.json', 'utf8')) as {
     private?: boolean;
@@ -42,6 +43,17 @@ test('workspace contains an isolated preprocessing core and CLI', () => {
     readFileSync('packages/cli/package.json', 'utf8'),
   ) as { dependencies?: Record<string, string> };
   expect(cli.dependencies?.['web-ifc']).toBe('0.0.78');
+
+  const fbxImporter = JSON.parse(
+    readFileSync('packages/fbx-importer/package.json', 'utf8'),
+  ) as {
+    private?: boolean;
+    dependencies?: Record<string, string>;
+  };
+  expect(fbxImporter.private).toBe(true);
+  expect(fbxImporter.dependencies?.['assimpjs']).toBe('0.0.10');
+  expect(fbxImporter.dependencies?.blender).toBeUndefined();
+  expect(cli.dependencies?.['assimpjs']).toBe('0.0.10');
 });
 
 test('GLB authoring stays inside build-time tooling', () => {

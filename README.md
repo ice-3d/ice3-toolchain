@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0、STEP AP242、IFC 4.3 |
+| 输入 | glTF 2.0、STEP AP242、IFC 4.3、FBX |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -63,6 +63,11 @@ node packages/cli/dist/main.js import tests/fixtures/ifc/synthetic-plant.ifc \
   --report /tmp/prepared-ifc-plant.report.json \
   --asset-id synthetic-ifc-plant
 
+node packages/cli/dist/main.js import tests/fixtures/fbx/synthetic-binary.fbx \
+  --output /tmp/prepared-fbx.glb \
+  --report /tmp/prepared-fbx.report.json \
+  --asset-id synthetic-fbx
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -92,7 +97,8 @@ node packages/cli/dist/main.js partition tests/fixtures/ifc/synthetic-plant.ifc 
 | 当前 | glTF 2.0 `.gltf` / `.glb` | 原生 source reader；可选 mesh compression |
 | 当前 | STEP AP242 `.step` / `.stp` | 三角化 Geometry、装配层级、节点名称、颜色和米制 conversion |
 | 当前 | IFC 4.3 `.ifc` | 空间结构、产品 identity、Property Set、Quantity Set、System membership |
-| 后续 | FBX、USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
+| 当前 | FBX `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
+| 后续 | USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
 
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
@@ -109,6 +115,11 @@ IFC import 额外提供 L3 语义：IFC `GlobalId`、Pset、Qto 和 Distribution
 Prepared GLB metadata。大型 georeferenced model 使用统一的 document-local origin，
 避免世界坐标压缩到 float32 后丢失相对间距。旧 IFC schema、未知长度单位、无效
 Geometry 和截断文件会稳定失败。
+
+FBX Binary 使用固定的 Blender `5.2.3` headless bridge；ASCII FBX 使用进程内 WASM
+fallback。Blender 是可选系统依赖，不进入 npm package 或 Runtime。通过 `BLENDER_BIN`
+指定 executable，通过 `ICE3_FBX_TIMEOUT_MS` 设置 bridge timeout。对象层级、基础颜色、
+shared-mesh instance 和可序列化 custom properties 会保留在 Prepared GLB metadata。
 
 ## 污水处理厂演示
 

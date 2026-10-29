@@ -75,6 +75,41 @@ https://github.com/ThatOpen/engine_web-ifc
 ICE3 未修改该依赖。其 MPL-2.0 义务适用于该独立依赖及其文件，不改变 ICE3 自有代码采用
 的 MIT License。
 
+## FBX Adapter Dependencies
+
+### Blender
+
+FBX Binary adapter 使用外部 Blender `5.2.3` 完成 DCC import 和 raw GLB export。
+Blender executable 不随 ICE3 package 分发，用户需自行安装并配置 `BLENDER_BIN`。
+ICE3 只调用仓库内白名单脚本，不修改或重新分发 Blender。
+
+### assimpjs
+
+FBX ASCII adapter 依赖：
+
+| 项目 | 版本 | 许可证 |
+|---|---|---|
+| `assimpjs` | `0.0.10` | MIT |
+
+该依赖以独立 runtime dependency 安装，提供进程内 WASM 转换。相关文件位于依赖
+package 的 `dist/` 目录：
+
+- `assimpjs.js`
+- `assimpjs.wasm`
+- `LICENSE.md`
+
+精确对应版本的 package 和许可证可从 npm registry 取得：
+
+```bash
+npm pack assimpjs@0.0.10
+```
+
+上游源代码和构建配置位于：
+
+https://github.com/kovacsv/assimpjs
+
+ICE3 未修改该依赖。
+
 ## 关联文档
 
 - `ICE3-TOOL-IDX-001` — [文档索引](docs/README.md)
