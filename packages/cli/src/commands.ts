@@ -794,6 +794,18 @@ async function loadSourceImporters(
       );
     }
   }
+  if (requestedAdapter === 'auto' || requestedAdapter === 'usd') {
+    try {
+      const module = await import('../../usd-importer/src/index.js');
+      importers.push(module.createUsdImporter());
+    } catch (error) {
+      throw new Error(
+        `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: usd (${
+          error instanceof Error ? error.message : String(error)
+        })`,
+      );
+    }
+  }
   if (importers.length > 0) return importers;
   throw new Error(
     `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}; install an adapter provider with this id`,
@@ -840,7 +852,7 @@ function printHelp(): void {
     '',
     'Commands:',
     '  build SOURCE --output FILE',
-    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc]',
+    '  import SOURCE --output FILE --asset-id ID [--adapter auto|step|ifc|fbx|usd]',
     '  inspect SOURCE',
     '  validate FILE',
     '  partition SOURCE --output DIRECTORY --asset-id ID',

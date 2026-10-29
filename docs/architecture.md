@@ -12,7 +12,7 @@ Toolchain 将 model-authoring format 转换为有界 Runtime format。它是离�
 Browser Runtime 永不导入。
 
 ```text
-source glTF / GLB / STEP AP242 / IFC 4.3 / FBX
+source glTF / GLB / STEP AP242 / IFC 4.3 / FBX / USD
        ↓
 adapter registry → standard source GLB
        ↓
@@ -65,6 +65,12 @@ raw GLB export。ASCII FBX 使用进程内 WASM fallback。两条路径最终都
 TypeScript canonicalizer，由其负责实例、Selection、custom properties、坐标和确定性。
 Blender 与 FBX parser 都不进入 Engine package 或 Browser bundle。
 
+USD adapter 同样使用固定版本 Blender bridge，支持 ASCII `.usda` 和 binary `.usdc`
+Mesh、层级、基础颜色与 native instance。Bridge 使用标准 USD stage 识别 instanceable
+prim，把 instance 物化为共享 mesh data 的独立 Node。TypeScript canonicalizer 负责
+Selection、USD prim path、custom properties、local origin 和确定性发布；`.usdz`、
+animation、camera、light 和复杂 material 不在当前支持范围。
+
 ## Source Import 边界
 
 | 等级 | 能力 | STEP 首期 |
@@ -77,7 +83,7 @@ Blender 与 FBX parser 都不进入 Engine package 或 Browser bundle。
 Success 输出始终是 Prepared GLB。Import adapter 返回的 source GLB 和临时 workspace
 只存在于构建过程中，不作为发布格式。
 
-`partition` 对 STEP 和 IFC 直接调用同一 adapter，在临时 workspace 获得 source GLB 后
+`partition` 对 STEP、IFC、FBX 和 USD 直接调用同一 adapter，在临时 workspace 获得 source GLB 后
 继续 spatial partition、LOD 和 Tileset publication。调用方不需要自行保存或传递中间
 source GLB。
 
@@ -115,6 +121,8 @@ Blender output。
   temporary path 或 parser handle。
 - FBX Blender 缺失、版本错误、timeout 和导入失败分别返回稳定 `ICE3_TOOL_FBX_*`
   Diagnostic，且不发布 output。
+- USD Blender 缺失、版本错误、timeout、导入或 Geometry 失败分别返回稳定
+  `ICE3_TOOL_USD_*` Diagnostic，且不发布 output。
 - Directory publication 失败时恢复上一个 Asset root。
 - 无论成功或失败，temporary workspace 都会被删除。
 

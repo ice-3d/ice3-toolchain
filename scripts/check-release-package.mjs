@@ -232,6 +232,67 @@ try {
     'fbx',
     'fbx-to-glb.py',
   ));
+  const usdFixture = join(
+    root,
+    'tests',
+    'fixtures',
+    'usd',
+    'synthetic-plant.usda',
+  );
+  const usdOutput = join(consumer, 'synthetic-usd.glb');
+  const usdReport = join(consumer, 'synthetic-usd.report.json');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      usdFixture,
+      '--output',
+      usdOutput,
+      '--report',
+      usdReport,
+      '--asset-id',
+      'synthetic-usd',
+      '--json',
+    ],
+    consumer,
+  ), 'published ASCII USD import');
+  const usdReportDocument = JSON.parse(await readFile(usdReport, 'utf8'));
+  if (usdReportDocument.adapter?.id !== 'usd') {
+    throw new Error('ICE3_RELEASE_USD_REPORT_INVALID');
+  }
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', usdOutput, '--json'],
+    consumer,
+  ), 'published ASCII USD output validation');
+  const usdBinaryOutput = join(consumer, 'synthetic-usd-binary.glb');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    [
+      'import',
+      join(root, 'tests', 'fixtures', 'usd', 'synthetic-plant.usdc'),
+      '--output',
+      usdBinaryOutput,
+      '--asset-id',
+      'synthetic-usd-binary',
+      '--json',
+    ],
+    consumer,
+  ), 'published binary USD import');
+  assertSuccess(run(
+    join(consumer, 'node_modules', '.bin', 'ice3-tool'),
+    ['validate', usdBinaryOutput, '--json'],
+    consumer,
+  ), 'published binary USD output validation');
+  await stat(join(
+    consumer,
+    'node_modules',
+    '@ice3',
+    'toolchain',
+    'dist',
+    'usd',
+    'usd-to-glb.py',
+  ));
   const wasmRuntime = await stat(join(
     consumer,
     'node_modules',

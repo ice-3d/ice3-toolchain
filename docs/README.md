@@ -40,6 +40,7 @@
 | `ICE3-TOOL-SPEC-001` | [多格式 Source Import 适配器与 STEP AP242 首期规格](specs/2026-10-29-source-import-adapters.md) | Approved | 定义 adapter contract、CLI 和首个 STEP 纵向切片 |
 | `ICE3-TOOL-SPEC-002` | [IFC 4.3 Source Importer 规格](specs/2026-10-29-ifc-4-3-importer.md) | Approved | 定义 IFC Geometry、空间结构、属性、系统和发布边界 |
 | `ICE3-TOOL-SPEC-003` | [FBX Source Importer 规格](specs/2026-10-29-fbx-importer.md) | Approved | 定义 Blender bridge、FBX 层级、实例、属性和发布边界 |
+| `ICE3-TOOL-SPEC-004` | [USD Source Importer 规格](specs/2026-10-29-usd-importer.md) | Approved | 定义 USD ASCII/Binary、实例、属性和发布边界 |
 
 ## 决策
 
@@ -57,3 +58,4 @@
 | `ICE3-TOOL-PLAN-002` | [多格式 Source Import 与 STEP AP242](plans/2026-10-29-source-import-adapters.md) | Implemented | adapter contract、STEP import 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-003` | [IFC 4.3 Source Importer](plans/2026-10-29-ifc-4-3-importer.md) | Implemented | IFC Geometry、语义、CLI、fixture 和发布验证的实施记录 |
 | `ICE3-TOOL-PLAN-004` | [FBX Source Importer](plans/2026-10-29-fbx-importer.md) | Implemented | Blender bridge、FBX 实例、metadata、CLI 和发布验证的实施记录 |
+| `ICE3-TOOL-PLAN-005` | [USD Source Importer](plans/2026-10-29-usd-importer.md) | Active | USD bridge、实例、metadata、CLI 和发布验证的实施计划 |

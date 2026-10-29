@@ -21,4 +21,8 @@ test('publishes the bundled toolchain as one scoped CLI package', () => {
     'occt-import-js': '0.0.23',
     'web-ifc': '0.0.78',
   });
+  expect(manifest.files).toEqual(expect.arrayContaining([
+    'dist/fbx/*.py',
+    'dist/usd/*.py',
+  ]));
 });

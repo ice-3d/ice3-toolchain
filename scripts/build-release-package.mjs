@@ -49,6 +49,7 @@ export function createPublicPackageManifest() {
       'dist/**/*.d.ts',
       'dist/**/*.map',
       'dist/fbx/*.py',
+      'dist/usd/*.py',
       'THIRD_PARTY_NOTICES.md',
     ],
     dependencies: runtimeDependencies,
@@ -79,6 +80,7 @@ export async function buildReleasePackage() {
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputDist, { recursive: true });
   await mkdir(join(outputDist, 'fbx'), { recursive: true });
+  await mkdir(join(outputDist, 'usd'), { recursive: true });
   await cp(
     join(packageRoot, 'README.md'),
     join(outputRoot, 'README.md'),
@@ -86,6 +88,10 @@ export async function buildReleasePackage() {
   await cp(
     join(root, 'packages', 'fbx-importer', 'scripts', 'fbx-to-glb.py'),
     join(outputDist, 'fbx', 'fbx-to-glb.py'),
+  );
+  await cp(
+    join(root, 'packages', 'usd-importer', 'scripts', 'usd-to-glb.py'),
+    join(outputDist, 'usd', 'usd-to-glb.py'),
   );
   await cp(
     join(root, 'LICENSE'),

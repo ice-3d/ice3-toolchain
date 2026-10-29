@@ -31,7 +31,7 @@ ice3-tool <build|import|inspect|validate|partition> [arguments]
 ice3-tool import SOURCE \
   --output FILE \
   --asset-id ID \
-  [--adapter auto|step] \
+  [--adapter auto|step|ifc|fbx|usd] \
   [--report FILE] \
   [--budget PROFILE|FILE] \
   [--warnings-as-errors] \
@@ -49,6 +49,7 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `step` | `.step`、`.stp` | STEP AP242 Geometry、层级、名称、颜色和米制 conversion |
 | `ifc` | `.ifc` | IFC 4.3 spatial hierarchy、identity、Pset、Qto、System 和米制 conversion |
 | `fbx` | `.fbx` | ASCII/Binary 层级、Geometry、基础颜色、实例和 custom properties |
+| `usd` | `.usda`、`.usdc` | USD 层级、Geometry、基础颜色、实例、prim path 和 custom properties |
 
 `--adapter auto` 按 extension 选择 adapter。`--report` 在标准 Asset Report 顶层增加
 `adapter` 字段，记录 adapter identity、source format、capability 和 adapter warning。
@@ -72,6 +73,12 @@ Prepared GLB，而不是源模型或中间 source GLB。
 | `ICE3_TOOL_FBX_IMPORT_FAILED` | FBX 读取或 ASCII conversion 失败 |
 | `ICE3_TOOL_FBX_EXPORT_FAILED` | Bridge 未生成有效 raw GLB |
 | `ICE3_TOOL_FBX_GEOMETRY_INVALID` | FBX Geometry、Bounds 或 transform 无效 |
+| `ICE3_TOOL_USD_BLENDER_UNAVAILABLE` | USD bridge 所需 Blender 不可用 |
+| `ICE3_TOOL_USD_BLENDER_VERSION_INVALID` | Blender 版本不是 `5.2.3` |
+| `ICE3_TOOL_USD_TIMEOUT` | USD bridge 超时 |
+| `ICE3_TOOL_USD_IMPORT_FAILED` | USD 截断、语法或 import 失败 |
+| `ICE3_TOOL_USD_EXPORT_FAILED` | USD bridge 未生成有效 raw GLB |
+| `ICE3_TOOL_USD_GEOMETRY_INVALID` | USD Geometry、Bounds 或 transform 无效 |
 
 Adapter warning 会进入 report。`--warnings-as-errors` 启用时，任意 adapter 或 source
 warning 都会阻止 publication。`--budget` 的 contract 与 `build` 相同。
@@ -84,6 +91,11 @@ FBX Binary 使用 Blender `5.2.3`。通过 `BLENDER_BIN` 指定可执行文件�
 `ICE3_FBX_TIMEOUT_MS` 设置 bridge timeout。ASCII FBX 使用进程内 WASM。FBX 对象层级、
 shared-mesh instance 和 primitive custom properties 会保留；动画、skin、camera、
 light、复杂材质和 Blender node tree 不支持。
+
+USD Binary 与 ASCII 使用同一个固定版本 Blender bridge，可通过 `BLENDER_BIN` 指定
+可执行文件，通过 `ICE3_USD_TIMEOUT_MS` 设置 timeout。当前支持 `.usda` 和 `.usdc`，
+不支持 `.usdz`。USD 层级、基础颜色、shared-mesh instance、prim path 和可序列化
+custom properties 会保留；animation、skeleton、camera、light、volume 和复杂材质不支持。
 
 ## `inspect`
 
@@ -146,7 +158,8 @@ ice3-tool partition SOURCE \
   [--json]
 ```
 
-`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp`、`.ifc` 或 `.fbx`。非 glTF source 会先由
+`SOURCE` 可以是 glTF/GLB，也可以是 `.step`、`.stp`、`.ifc`、`.fbx`、`.usda` 或
+`.usdc`。非 glTF source 会先由
 对应 adapter 转为临时标准 source GLB，再执行同一 partition/LOD pipeline；中间文件
 不会进入最终 Tileset。
 
