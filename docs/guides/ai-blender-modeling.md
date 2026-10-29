@@ -87,7 +87,7 @@ Prepared GLB 格式的一部分。
 
 ## 两种接入方式
 
-### 1. Scene Specification authoring
+### 1. Scene Specification 编写方式
 
 这是当前最适合落地的路径。
 
@@ -134,7 +134,7 @@ AI 只生成或修改结构化数据：
 - Geometry 非空，Bounds 有限，对象全部位于合法场地范围。
 - 输出仍满足当前 GLB、triangle、byte 和 Selection ID 约束。
 
-### 2. Controlled modeling tools
+### 2. 受控建模工具
 
 需要 AI 进行多轮交互建模时，可以提供受控工具层，但不允许模型直接操作 Blender
 对象或调用 `bpy`。建议的工具粒度：

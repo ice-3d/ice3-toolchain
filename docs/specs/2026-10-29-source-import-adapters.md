@@ -2,13 +2,13 @@
 
 > Document ID: ICE3-TOOL-SPEC-001
 >
-> Status: Draft
+> Status: Approved
 >
 > Owner: ICE3 Toolchain maintainers
 
 | 项目 | 内容 |
 | --- | --- |
-| 状态 | 待评审 |
+| 状态 | 已批准 |
 | 版本 | 1.0 |
 | 日期 | 2026-10-29 |
 | 适用范围 | `ice3-toolchain` source import、CLI、构建编排和验证 |
@@ -148,7 +148,7 @@ ice3-tool import SOURCE \
 7. 成功时 `--output` 是 Prepared GLB，不是 raw source GLB。
 8. `--report` 使用现有 report 结构，并增加 adapter metadata 和 warnings。
 
-## 7. STEP AP242 Adapter
+## 7. STEP AP242 导入适配器
 
 ### 7.1 支持的源能力
 
