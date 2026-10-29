@@ -46,6 +46,35 @@ npm pack occt-import-js@0.0.23
 ICE3 未修改该依赖。其 LGPL-2.1 义务由独立依赖及其许可证文本承担，不改变 ICE3 自有
 代码采用的 MIT License。
 
+## IFC Adapter Runtime
+
+`@ice3/toolchain` 的 IFC 4.3 adapter 依赖：
+
+| 项目 | 版本 | 许可证 |
+|---|---|---|
+| `web-ifc` | `0.0.78` | MPL-2.0 |
+
+该依赖提供 IFC schema、空间结构、属性和 Geometry 解析。发布 package 将 `web-ifc`
+保留为独立 runtime dependency，不把其 Node WASM binary 嵌入 ICE3 自有 source。
+安装后，相关文件位于依赖 package 根目录：
+
+- `web-ifc-api-node.js`
+- `web-ifc-node.wasm`
+- `LICENSE.md`
+
+精确对应版本的 package 和许可证可从 npm registry 取得：
+
+```bash
+npm pack web-ifc@0.0.78
+```
+
+对应源代码和构建配置位于：
+
+https://github.com/ThatOpen/engine_web-ifc
+
+ICE3 未修改该依赖。其 MPL-2.0 义务适用于该独立依赖及其文件，不改变 ICE3 自有代码采用
+的 MIT License。
+
 ## 关联文档
 
 - `ICE3-TOOL-IDX-001` — [文档索引](docs/README.md)

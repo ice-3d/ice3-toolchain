@@ -173,8 +173,11 @@ try {
     !notices.includes('occt-import-js')
     || !notices.includes('LGPL-2.1')
     || !notices.includes('occt-import-js.wasm')
+    || !notices.includes('web-ifc')
+    || !notices.includes('MPL-2.0')
+    || !notices.includes('web-ifc-node.wasm')
   ) {
-    throw new Error('ICE3_RELEASE_STEP_NOTICE_INVALID');
+    throw new Error('ICE3_RELEASE_SOURCE_NOTICE_INVALID');
   }
   await writeFile(
     join(consumer, 'index.ts'),

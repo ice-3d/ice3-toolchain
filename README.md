@@ -16,7 +16,7 @@ OGC 3D Tiles 1.1 hierarchy。
 
 | 领域 | 当前能力 |
 |---|---|
-| 输入 | glTF 2.0，以及通过 `import` 接收的 STEP AP242 |
+| 输入 | glTF 2.0、STEP AP242、IFC 4.3 |
 | 准备 | Geometry normalization、平光 display color、transform、profile metric 和可选 edge |
 | 验证 | GLB 结构检查、Asset budget、确定性报告和 Tileset validation |
 | Partitioning | 空间 leaf、hierarchical LOD、coarse chunk 和稳定 semantic ID |
@@ -58,6 +58,11 @@ node packages/cli/dist/main.js import tests/fixtures/step/synthetic-skid.step \
   --report /tmp/prepared-skid.report.json \
   --asset-id synthetic-skid
 
+node packages/cli/dist/main.js import tests/fixtures/ifc/synthetic-plant.ifc \
+  --output /tmp/prepared-ifc-plant.glb \
+  --report /tmp/prepared-ifc-plant.report.json \
+  --asset-id synthetic-ifc-plant
+
 node packages/cli/dist/main.js build tests/fixtures/cube.gltf \
   --output /tmp/prepared-cube.glb \
   --report /tmp/prepared-cube.report.json \
@@ -82,7 +87,8 @@ node packages/cli/dist/main.js partition tests/fixtures/partition-source.gltf \
 |---|---|---|
 | 当前 | glTF 2.0 `.gltf` / `.glb` | 原生 source reader；可选 mesh compression |
 | 当前 | STEP AP242 `.step` / `.stp` | 三角化 Geometry、装配层级、节点名称、颜色和米制 conversion |
-| 后续 | IFC 4.3、FBX、USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
+| 当前 | IFC 4.3 `.ifc` | 空间结构、产品 identity、Property Set、Quantity Set、System membership |
+| 后续 | FBX、USD、OBJ、JT | 独立 adapter 任务，不在当前版本承诺 |
 
 `import` 将源模型转换为临时标准 source GLB，再复用现有 validation、Prepared GLB、
 partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source format，也不
@@ -91,6 +97,11 @@ partition、LOD 和 Tileset pipeline。Browser Runtime 不加载任何 source fo
 STEP import 保证 L1 Mesh/Transform/Bounds 和 L2 Unit/Hierarchy/Name/Color。Source 缺失
 设备 identity、端口和连接时，不猜测业务语义。未知格式、不可用 adapter、空 Geometry
 和无效 Prepared GLB 分别返回稳定的 `ICE3_TOOL_IMPORT_*` Diagnostic。
+
+IFC import 额外提供 L3 语义：IFC `GlobalId`、Pset、Qto 和 Distribution System 会进入
+Prepared GLB metadata。大型 georeferenced model 使用统一的 document-local origin，
+避免世界坐标压缩到 float32 后丢失相对间距。旧 IFC schema、未知长度单位、无效
+Geometry 和截断文件会稳定失败。
 
 ## 污水处理厂演示
 
