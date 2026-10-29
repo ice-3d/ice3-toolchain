@@ -1,4 +1,5 @@
 import {
+  Logger,
   NodeIO,
   type Document,
   type Node,
@@ -30,7 +31,9 @@ export async function canonicalizeFbxGlb(
   outputPath: string,
   options: IFbxCanonicalizeOptions,
 ): Promise<IFbxSourceStats> {
-  const document = await new NodeIO().read(rawGlbPath);
+  const document = await new NodeIO()
+    .setLogger(new Logger(Logger.Verbosity.ERROR))
+    .read(rawGlbPath);
   removeUnsupportedResources(document);
   const reportByName = mergeBridgeReport(options.bridgeReport);
   const instanceMetadata = createInstanceMetadata(options.bridgeReport.objects);
@@ -40,7 +43,7 @@ export async function canonicalizeFbxGlb(
   let vertexCount = 0;
   let meshCount = 0;
   for (const [ordinal, node] of nodes.entries()) {
-    const name = node.getName() || `fbx/node/${ordinal}`;
+    const name = cleanNodeName(node.getName(), ordinal);
     node.setName(name);
     const reportObject = reportByName.get(name);
     if (!reportObject) warnings.push(`ICE3_TOOL_FBX_UNMATCHED_OBJECT:${ordinal}`);
@@ -48,10 +51,12 @@ export async function canonicalizeFbxGlb(
       ? instanceMetadata.groups.get(reportObject.meshData)
       : undefined;
     const customProperties = sanitizeProperties(
-      reportObject?.customProperties ?? {},
+      {
+        ...rawExtras(node),
+        ...(reportObject?.customProperties ?? {}),
+      },
     );
     node.setExtras({
-      ...node.getExtras(),
       ice3: {
         selectionId: `${options.assetId}/fbx/node/${ordinal}`,
         displayName: name,
@@ -107,7 +112,9 @@ export async function canonicalizeFbxGlb(
       },
     },
   };
-  await new NodeIO().write(outputPath, document);
+  await new NodeIO()
+    .setLogger(new Logger(Logger.Verbosity.ERROR))
+    .write(outputPath, document);
   return {
     outputPath,
     triangleCount,
@@ -118,6 +125,26 @@ export async function canonicalizeFbxGlb(
     sourceOrigin,
     warnings: [...new Set(warnings)].sort(),
   };
+}
+
+function rawExtras(node: Node): Record<string, unknown> {
+  const ignored = new Set([
+    'UserProperties',
+    'IsNull',
+    'DefaultAttributeIndex',
+    'InheritType',
+    'ice3',
+  ]);
+  return Object.fromEntries(
+    Object.entries(node.getExtras()).filter(([key]) => !ignored.has(key)),
+  );
+}
+
+function cleanNodeName(value: string, ordinal: number): string {
+  const normalized = value
+    .replace(/::Model$/u, '')
+    .trim();
+  return normalized || `fbx/node/${ordinal}`;
 }
 
 function removeUnsupportedResources(document: Document): void {

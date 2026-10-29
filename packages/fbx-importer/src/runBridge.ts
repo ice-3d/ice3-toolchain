@@ -55,7 +55,8 @@ export async function runFbxBridge(
   }
   if (
     report.success !== true
-    || report.blenderVersion !== SUPPORTED_BLENDER_VERSION
+    || report.converter !== 'blender'
+    || report.toolVersion !== SUPPORTED_BLENDER_VERSION
     || !Array.isArray(report.objects)
   ) {
     throw new Error('ICE3_TOOL_FBX_IMPORT_FAILED');

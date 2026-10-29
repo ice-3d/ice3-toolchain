@@ -10,7 +10,9 @@ export interface IFbxBridgeObject {
 
 export interface IFbxBridgeReport {
   readonly success: true;
-  readonly blenderVersion: string;
+  readonly converter: 'blender' | 'assimpjs';
+  readonly toolVersion: string;
+  readonly blenderVersion?: string;
   readonly objects: readonly IFbxBridgeObject[];
 }
 

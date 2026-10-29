@@ -157,6 +157,8 @@ def main():
         version = ".".join(str(value) for value in bpy.app.version[:3])
         write_json_atomic(args.report, {
             "success": True,
+            "converter": "blender",
+            "toolVersion": version,
             "blenderVersion": version,
             "objects": objects,
         })

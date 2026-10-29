@@ -58,13 +58,13 @@ test('an unavailable optional adapter reports an installable extension point', a
   try {
     const code = await runCli([
       'import',
-      join(root, 'spatial-model.fbx'),
+      join(root, 'spatial-model.usd'),
       '--output',
       output,
       '--asset-id',
       'spatial-model',
       '--adapter',
-      'fbx',
+      'usd',
     ]);
 
     expect(code).toBe(1);

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@gltf-transform/core": "4.5.1",
-    "@ice3/toolchain-core": "0.0.0"
+    "@ice3/toolchain-core": "0.0.0",
+    "assimpjs": "^0.0.10"
   }
 }

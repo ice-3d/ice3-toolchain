@@ -27,6 +27,8 @@ test('passes paths as separate arguments and reads a private report', async () =
         await writeFile(outputPath, Buffer.alloc(32));
         await writeFile(reportPath, JSON.stringify({
           success: true,
+          converter: 'blender',
+          toolVersion: '5.2.3',
           blenderVersion: '5.2.3',
           objects: [],
         }));
