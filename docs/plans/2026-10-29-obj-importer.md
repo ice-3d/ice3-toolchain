@@ -2,7 +2,7 @@
 
 > Document ID: ICE3-TOOL-PLAN-006
 >
-> Status: Active
+> Status: Implemented
 >
 > Owner: ICE3 Toolchain maintainers
 
@@ -58,7 +58,7 @@ reader 负责安全 sidecar、确定性 canonicalization、Selection、单位 wa
 
 - 产出：可分发、完全合成的 OBJ/MTL 测试输入。
 
-- [ ] **步骤 1：编写 fixture 失败测试**
+- [x] **步骤 1：编写 fixture 失败测试**
 
 ```ts
 test('OBJ fixture contains two named objects and materials', async () => {
@@ -71,17 +71,17 @@ test('OBJ fixture contains two named objects and materials', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认失败**
+- [x] **步骤 2：确认失败**
 
 运行：`npm test -- tests/obj/fixture.test.ts`
 
 预期：FAIL，fixture 尚不存在。
 
-- [ ] **步骤 3：编写 fixture**
+- [x] **步骤 3：编写 fixture**
 
 包含两个不同颜色的 box、一个 quad face、large-origin、empty 和 truncated 输入。
 
-- [ ] **步骤 4：验证并提交**
+- [x] **步骤 4：验证并提交**
 
 运行：`npm test -- tests/obj/fixture.test.ts`
 
@@ -109,7 +109,7 @@ export async function readObjResources(inputPath: string): Promise<{
 }>;
 ```
 
-- [ ] **步骤 1：编写安全边界测试**
+- [x] **步骤 1：编写安全边界测试**
 
 ```ts
 test('ignores MTL paths outside the OBJ directory', async () => {
@@ -119,22 +119,22 @@ test('ignores MTL paths outside the OBJ directory', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认失败**
+- [x] **步骤 2：确认失败**
 
 运行：`npm test -- tests/obj/readObjResources.test.ts`
 
 预期：FAIL，module 不存在。
 
-- [ ] **步骤 3：实现边界**
+- [x] **步骤 3：实现边界**
 
 只接受相对路径，解析后必须仍位于 OBJ 目录；缺失 MTL 返回
 `ICE3_TOOL_OBJ_MATERIAL_UNAVAILABLE`，不阻断 Geometry。
 
-- [ ] **步骤 4：覆盖 symlink 与 deterministic warning**
+- [x] **步骤 4：覆盖 symlink 与 deterministic warning**
 
 对越界 symlink 返回 `ICE3_TOOL_OBJ_RESOURCE_IGNORED`，重复读取保持相同顺序。
 
-- [ ] **步骤 5：运行并提交**
+- [x] **步骤 5：运行并提交**
 
 运行：`npm test -- tests/obj/readObjResources.test.ts`
 
@@ -161,7 +161,7 @@ git commit -m "feat(toolchain): read OBJ materials safely"
 export function createObjImporter(): ICESourceImporter;
 ```
 
-- [ ] **步骤 1：编写失败转换测试**
+- [x] **步骤 1：编写失败转换测试**
 
 ```ts
 test('preserves OBJ names, materials and local origin', async () => {
@@ -172,25 +172,25 @@ test('preserves OBJ names, materials and local origin', async () => {
 });
 ```
 
-- [ ] **步骤 2：确认失败**
+- [x] **步骤 2：确认失败**
 
 运行：`npm test -- tests/obj/canonicalizeObjGlb.test.ts`
 
 预期：FAIL，converter 和 canonicalizer 尚不存在。
 
-- [ ] **步骤 3：实现 WASM conversion**
+- [x] **步骤 3：实现 WASM conversion**
 
 `assimpjs` 接收 OBJ 和安全 sidecar，输出 GLB；不开启 Blender 或 Runtime dependency。
 
-- [ ] **步骤 4：实现 canonical metadata**
+- [x] **步骤 4：实现 canonical metadata**
 
 写入 `extras.ice3.obj`，设置平光材质，移除 unsupported resources，并应用 local origin。
 
-- [ ] **步骤 5：验证 warning 与大坐标**
+- [x] **步骤 5：验证 warning 与大坐标**
 
 断言 unit warning 必存在，large-origin source accessor 最大绝对坐标小于 20。
 
-- [ ] **步骤 6：运行并提交**
+- [x] **步骤 6：运行并提交**
 
 运行：`npm test -- tests/obj/canonicalizeObjGlb.test.ts`
 
@@ -218,7 +218,7 @@ git commit -m "feat(toolchain): canonicalize OBJ source GLB"
 - `--adapter auto` 和显式 `--adapter obj` 均可工作。
 - partition 直接接受 `.obj` 并保留 OBJ metadata。
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 ```ts
 expect(await runCli([
@@ -228,17 +228,17 @@ expect(await runCli([
 expect(JSON.parse(await readFile(report, 'utf8')).adapter.id).toBe('obj');
 ```
 
-- [ ] **步骤 2：确认失败**
+- [x] **步骤 2：确认失败**
 
 运行：`npm test -- tests/cli/objImportCommand.test.ts tests/obj/objPipeline.test.ts`
 
 预期：FAIL，registry 未注册 OBJ。
 
-- [ ] **步骤 3：实现注册与 metadata 保留**
+- [x] **步骤 3：实现注册与 metadata 保留**
 
 仅在 auto 或显式 obj 时 lazy import adapter。
 
-- [ ] **步骤 4：运行并提交**
+- [x] **步骤 4：运行并提交**
 
 运行：`npm test -- tests/cli/objImportCommand.test.ts tests/obj/objPipeline.test.ts`
 
@@ -265,7 +265,7 @@ git commit -m "feat(toolchain): expose OBJ import command"
 - 成功输出不包含 source 或 sidecar 路径。
 - 发布 tarball 可在有 Node.js 的环境中直接导入 OBJ。
 
-- [ ] **步骤 1：编写 determinism 测试**
+- [x] **步骤 1：编写 determinism 测试**
 
 ```ts
 test('repeated OBJ imports are byte-identical', async () => {
@@ -275,19 +275,19 @@ test('repeated OBJ imports are byte-identical', async () => {
 });
 ```
 
-- [ ] **步骤 2：编写失败测试**
+- [x] **步骤 2：编写失败测试**
 
 覆盖 empty、truncated、unsafe sidecar 和无 warnings-as-errors。
 
-- [ ] **步骤 3：确认失败并实现**
+- [x] **步骤 3：确认失败并实现**
 
 运行：`npm test -- tests/obj/objFailures.test.ts tests/obj/objDeterminism.test.ts`
 
-- [ ] **步骤 4：更新架构与 release check**
+- [x] **步骤 4：更新架构与 release check**
 
 从真实 tarball 安装后执行 OBJ import、Prepared validation 和 batching metadata。
 
-- [ ] **步骤 5：运行并提交**
+- [x] **步骤 5：运行并提交**
 
 ```bash
 npm run test:architecture
@@ -312,11 +312,11 @@ git commit -m "test(toolchain): verify OBJ import boundaries"
 - 修改：`THIRD_PARTY_NOTICES.md`
 - 修改：本计划
 
-- [ ] **步骤 1：更新文档**
+- [x] **步骤 1：更新文档**
 
 记录 `.obj`、sidecar MTL、米制 warning、资源边界、Diagnostic 和 CLI 示例。
 
-- [ ] **步骤 2：运行完整门禁**
+- [x] **步骤 2：运行完整门禁**
 
 ```bash
 nvm use
@@ -328,11 +328,11 @@ npm run release:check
 npm run verify
 ```
 
-- [ ] **步骤 3：整分支审查**
+- [x] **步骤 3：整分支审查**
 
 检查 sidecar 越界、WASM 资源、local origin、triangle metric、metadata、敏感路径和禁用名称。
 
-- [ ] **步骤 4：提交并合并**
+- [x] **步骤 4：提交并合并**
 
 确认 author/committer 为 `damoqiongqiu <damoqiongqiu@126.com>`，完整门禁通过后：
 
