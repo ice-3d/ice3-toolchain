@@ -55,6 +55,13 @@ export function createStepImporter(): ICESourceImporter {
         );
       }
       const bytes = await readFile(input.path);
+      const text = bytes.toString('utf8');
+      if (
+        !/^\uFEFF?ISO-10303-21;/u.test(text)
+        || !/END-ISO-10303-21;\s*$/u.test(text)
+      ) {
+        throw new Error('ICE3_TOOL_STEP_IMPORT_FAILED');
+      }
       const result = occt.ReadStepFile(
         new Uint8Array(bytes),
         TRIANGULATION,

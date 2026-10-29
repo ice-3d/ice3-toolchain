@@ -15,10 +15,24 @@ COLORS = (
 )
 
 
-def main(output_path: str) -> None:
+def main(output_path: str, empty_geometry: bool = False) -> None:
     document = App.newDocument("SyntheticSkid")
-    assembly = document.addObject("App::Part", "SyntheticSkid")
-    assembly.Label = "SyntheticSkid"
+    assembly_name = "EmptyAssembly" if empty_geometry else "SyntheticSkid"
+    assembly = document.addObject("App::Part", assembly_name)
+    assembly.Label = assembly_name
+
+    if empty_geometry:
+        wire = document.addObject("Part::Feature", "ReferenceCurve")
+        wire.Label = "ReferenceCurve"
+        wire.Shape = Part.makePolygon([
+            App.Vector(0.0, 0.0, 0.0),
+            App.Vector(1000.0, 0.0, 0.0),
+        ])
+        assembly.addObject(wire)
+        document.recompute()
+        Import.export([assembly], output_path)
+        App.closeDocument(document.Name)
+        return
 
     tank_shape = Part.makeBox(1200.0, 700.0, 900.0)
     tank = document.addObject("Part::Feature", "PrimaryTank")
@@ -98,6 +112,11 @@ def add_ap242_colors(output_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: generate-synthetic-skid.py OUTPUT.step")
-    main(sys.argv[1])
+    if len(sys.argv) not in (2, 3):
+        raise SystemExit(
+            "usage: generate-synthetic-skid.py OUTPUT.step [--empty]"
+        )
+    main(
+        sys.argv[1],
+        empty_geometry=len(sys.argv) == 3 and sys.argv[2] == "--empty",
+    )

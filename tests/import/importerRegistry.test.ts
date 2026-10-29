@@ -39,6 +39,9 @@ test('rejects an unsupported format and mismatched explicit adapter', () => {
   expect(() => registry.resolve('/tmp/model.step', 'other')).toThrow(
     'ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE',
   );
+  expect(() => registry.resolve('/tmp/model.glb', 'fake')).toThrow(
+    'ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE',
+  );
 });
 
 test('dispatches import through the selected adapter', async () => {

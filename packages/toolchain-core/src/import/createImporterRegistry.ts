@@ -30,18 +30,20 @@ export function createImporterRegistry(
 
   function resolve(path: string, requestedAdapter?: string) {
     const extension = extname(path).toLowerCase();
-    const byPath = byExtension.get(extension);
-    if (!byPath) {
-      throw new Error(`ICE3_TOOL_IMPORT_UNSUPPORTED: ${extension || path}`);
-    }
     if (requestedAdapter && requestedAdapter !== 'auto') {
       const requested = byId.get(requestedAdapter);
-      if (!requested || requested !== byPath) {
+      if (!requested || !requested.extensions.some((supported) => (
+        supported.toLowerCase() === extension
+      ))) {
         throw new Error(
           `ICE3_TOOL_IMPORT_ADAPTER_UNAVAILABLE: ${requestedAdapter}`,
         );
       }
       return requested;
+    }
+    const byPath = byExtension.get(extension);
+    if (!byPath) {
+      throw new Error(`ICE3_TOOL_IMPORT_UNSUPPORTED: ${extension || path}`);
     }
     return byPath;
   }
