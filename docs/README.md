@@ -21,6 +21,7 @@
 |---|---|---|---|
 | `ICE3-TOOL-GUIDE-001` | [构建、验证与拆分](guides/build-validate-partition.md) | Active | 操作主要 preprocessing command |
 | `ICE3-TOOL-GUIDE-002` | [大型模型性能](guides/large-model-performance.md) | Active | 使用 cache、memory 和 timing Diagnostic |
+| `ICE3-TOOL-GUIDE-003` | [从 GLB 到 Engine 的完整接入流程](guides/glb-to-engine.md) | Active | partition、coarse LOD、发布和 Runtime loading 的端到端说明 |
 
 ## 参考与声明
 

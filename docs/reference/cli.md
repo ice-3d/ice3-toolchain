@@ -108,6 +108,11 @@ parts/part-NNN.glb
 coarse/... (when LOD is enabled)
 ```
 
+`--coarse-chunk-max-bytes` 控制单个粗模 chunk 的目标大小。一个内部 Tile 可以发布
+单个 `coarse/<tile-id>.glb`，也可以通过标准 `contents` 发布多个
+`coarse/<tile-id>/part-NNN.glb`。详见
+[从 GLB 到 Engine 的完整接入流程](../guides/glb-to-engine.md)。
+
 ## Exit Status
 
 - `0`：command 完成且全部 required validation 通过。
@@ -117,5 +122,6 @@ coarse/... (when LOD is enabled)
 ## 关联文档
 
 - `ICE3-TOOL-GUIDE-001` — [构建、验证与拆分](../guides/build-validate-partition.md)
+- `ICE3-TOOL-GUIDE-003` — [从 GLB 到 Engine 的完整接入流程](../guides/glb-to-engine.md)
 - `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
 - `ICE3-ENG-REF-001` — [Runtime diagnostics](https://github.com/ice-3d/ice3-engine/blob/main/docs/diagnostics.md)

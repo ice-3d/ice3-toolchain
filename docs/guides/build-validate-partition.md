@@ -72,6 +72,9 @@ node packages/cli/dist/main.js partition path/to/source.glb \
 Output directory 不得预先存在。成功后创建 `tileset.json`、fine partition 和请求的
 coarse content。
 
+切分算法、粗模 chunk、Tileset 层级以及 Engine loading 的完整流程见
+[从 GLB 到 Engine 的完整接入流程](glb-to-engine.md)。
+
 ## 预期结果
 
 - 每个输出 GLB 都通过 validation。
@@ -85,3 +88,4 @@ coarse content。
 - `ICE3-TOOL-REF-001` — [CLI 参考](../reference/cli.md)
 - `ICE3-TOOL-ARC-001` — [Toolchain 架构](../architecture.md)
 - `ICE3-TOOL-GUIDE-002` — [大型模型性能](large-model-performance.md)
+- `ICE3-TOOL-GUIDE-003` — [从 GLB 到 Engine 的完整接入流程](glb-to-engine.md)

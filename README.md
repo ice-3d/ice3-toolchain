@@ -112,6 +112,7 @@ npm run verify
 - [文档索引](docs/README.md)
 - [处理架构](docs/architecture.md)
 - [构建、验证与拆分](docs/guides/build-validate-partition.md)
+- [从 GLB 到 Engine 的完整接入流程](docs/guides/glb-to-engine.md)
 - [大型模型性能](docs/guides/large-model-performance.md)
 - [CLI 参考](docs/reference/cli.md)
 - [架构决策](docs/decisions/README.md)
